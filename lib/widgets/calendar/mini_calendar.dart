@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/task_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/typography.dart';
-import '../../utils/constants.dart';
+
 import '../../utils/date_utils.dart';
 
 class MiniCalendar extends StatefulWidget {
@@ -87,8 +87,6 @@ class _MiniCalendarState extends State<MiniCalendar> {
       Set<int> daysWithTasks, Color accent) {
     final colors = context.appColors;
     final rows = <Widget>[];
-    int dayIdx = 0;
-
     final totalCells = firstWeekday - 1 + days.length;
     final numRows = (totalCells / 7).ceil();
 
