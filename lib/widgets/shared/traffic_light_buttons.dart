@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/colors.dart';
-
+import '../layout/window_controls.dart';
 
 class TrafficLightButtons extends StatefulWidget {
   const TrafficLightButtons({super.key});
@@ -18,12 +18,13 @@ class _TrafficLightButtonsState extends State<TrafficLightButtons> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _button(AppColors.trafficRed, 'close'),
+          _button(AppColors.red, 'close'),
           const SizedBox(width: 8),
-          _button(AppColors.trafficYellow, 'minimize'),
+          _button(AppColors.orange, 'minimize'),
           const SizedBox(width: 8),
-          _button(AppColors.trafficGreen, 'maximize'),
+          _button(AppColors.green, 'maximize'),
         ],
       ),
     );
@@ -48,6 +49,6 @@ class _TrafficLightButtonsState extends State<TrafficLightButtons> {
   }
 
   void _handleAction(String action) {
-    // Window management is handled at app level via bitsdojo_window
+    handleWindowAction(action);
   }
 }

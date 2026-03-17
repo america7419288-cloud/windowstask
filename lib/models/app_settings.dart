@@ -1,24 +1,36 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
-enum SortOption {
-  dueDate,
-  priority,
-  alphabetical,
-  createdDate,
-  manual,
-}
+enum SortOption { dueDate, priority, alphabetical, createdDate, manual }
+
+enum TaskViewLayout { list, grid, kanban, compact, magazine, calendar }
+
+enum FontDensity { compact, normal, comfortable }
+
+enum WallpaperType { none, solidColor, gradient, pattern }
 
 class AppSettings {
   final ThemeMode themeMode;
   final String accentColorHex;
   final String? defaultListId;
-  final int startOfWeek; // 1=Monday, 7=Sunday
-  final int focusDuration; // minutes
+  final int startOfWeek;
+  final int focusDuration;
   final int? dailySummaryHour;
   final int? dailySummaryMinute;
   final bool notificationsEnabled;
   final SortOption defaultSort;
+
+  // NEW: Layout
+  final double sidebarWidth;
+  final FontDensity fontDensity;
+  final TaskViewLayout defaultViewLayout;
+
+  // NEW: Wallpaper
+  final WallpaperType wallpaperType;
+  final String? wallpaperColorHex;
+  final String? wallpaperGradientId;
+  final String? wallpaperPatternId;
+  final double wallpaperOpacity;
 
   const AppSettings({
     this.themeMode = ThemeMode.system,
@@ -30,6 +42,14 @@ class AppSettings {
     this.dailySummaryMinute,
     this.notificationsEnabled = true,
     this.defaultSort = SortOption.manual,
+    this.sidebarWidth = 220,
+    this.fontDensity = FontDensity.normal,
+    this.defaultViewLayout = TaskViewLayout.list,
+    this.wallpaperType = WallpaperType.none,
+    this.wallpaperColorHex,
+    this.wallpaperGradientId,
+    this.wallpaperPatternId,
+    this.wallpaperOpacity = 0.15,
   });
 
   Color get accentColor {
@@ -52,6 +72,14 @@ class AppSettings {
     SortOption? defaultSort,
     bool clearDefaultListId = false,
     bool clearDailySummary = false,
+    double? sidebarWidth,
+    FontDensity? fontDensity,
+    TaskViewLayout? defaultViewLayout,
+    WallpaperType? wallpaperType,
+    String? wallpaperColorHex,
+    String? wallpaperGradientId,
+    String? wallpaperPatternId,
+    double? wallpaperOpacity,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -63,6 +91,14 @@ class AppSettings {
       dailySummaryMinute: clearDailySummary ? null : (dailySummaryMinute ?? this.dailySummaryMinute),
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       defaultSort: defaultSort ?? this.defaultSort,
+      sidebarWidth: sidebarWidth ?? this.sidebarWidth,
+      fontDensity: fontDensity ?? this.fontDensity,
+      defaultViewLayout: defaultViewLayout ?? this.defaultViewLayout,
+      wallpaperType: wallpaperType ?? this.wallpaperType,
+      wallpaperColorHex: wallpaperColorHex ?? this.wallpaperColorHex,
+      wallpaperGradientId: wallpaperGradientId ?? this.wallpaperGradientId,
+      wallpaperPatternId: wallpaperPatternId ?? this.wallpaperPatternId,
+      wallpaperOpacity: wallpaperOpacity ?? this.wallpaperOpacity,
     );
   }
 
@@ -76,10 +112,18 @@ class AppSettings {
         'dailySummaryMinute': dailySummaryMinute,
         'notificationsEnabled': notificationsEnabled,
         'defaultSort': defaultSort.index,
+        'sidebarWidth': sidebarWidth,
+        'fontDensity': fontDensity.index,
+        'defaultViewLayout': defaultViewLayout.index,
+        'wallpaperType': wallpaperType.index,
+        'wallpaperColorHex': wallpaperColorHex,
+        'wallpaperGradientId': wallpaperGradientId,
+        'wallpaperPatternId': wallpaperPatternId,
+        'wallpaperOpacity': wallpaperOpacity,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
-        themeMode: ThemeMode.values[json['themeMode'] as int? ?? 0],
+        themeMode: ThemeMode.values[json['themeMode'] as int? ?? 2],
         accentColorHex: json['accentColorHex'] as String? ?? '007AFF',
         defaultListId: json['defaultListId'] as String?,
         startOfWeek: json['startOfWeek'] as int? ?? 1,
@@ -88,5 +132,13 @@ class AppSettings {
         dailySummaryMinute: json['dailySummaryMinute'] as int?,
         notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
         defaultSort: SortOption.values[json['defaultSort'] as int? ?? 0],
+        sidebarWidth: (json['sidebarWidth'] as num?)?.toDouble() ?? 220,
+        fontDensity: FontDensity.values[json['fontDensity'] as int? ?? 1],
+        defaultViewLayout: TaskViewLayout.values[json['defaultViewLayout'] as int? ?? 0],
+        wallpaperType: WallpaperType.values[json['wallpaperType'] as int? ?? 0],
+        wallpaperColorHex: json['wallpaperColorHex'] as String?,
+        wallpaperGradientId: json['wallpaperGradientId'] as String?,
+        wallpaperPatternId: json['wallpaperPatternId'] as String?,
+        wallpaperOpacity: (json['wallpaperOpacity'] as num?)?.toDouble() ?? 0.15,
       );
 }

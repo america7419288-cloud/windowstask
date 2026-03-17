@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'resizable_sidebar.dart';
 
 class ResponsiveLayout extends StatelessWidget {
   final Widget sidebar;
@@ -68,7 +69,6 @@ class _CompactLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
       drawer: Drawer(width: 260, child: sidebar),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -102,7 +102,6 @@ class _MediumLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: Row(
         children: [
           SizedBox(width: 220, child: sidebar),
@@ -142,10 +141,9 @@ class _ExpandedLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: Row(
         children: [
-          SizedBox(width: 220, child: sidebar),
+          ResizableSidebar(child: sidebar),
           const VerticalDivider(width: 1),
           Expanded(child: content),
           if (showDetailPanel && detailPanel != null) ...[

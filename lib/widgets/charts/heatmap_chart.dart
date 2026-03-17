@@ -29,7 +29,8 @@ class HeatmapChart extends StatelessWidget {
         Row(
           children: [
             for (final week in weeks)
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.only(right: 2),
                 child: Column(
                   children: week.map((e) {
                     final intensity = maxVal > 0 ? e.value / maxVal : 0.0;
@@ -37,7 +38,7 @@ class HeatmapChart extends StatelessWidget {
                     final parts = date.split('-');
                     final day = int.tryParse(parts.last) ?? 0;
                     return Padding(
-                      padding: const EdgeInsets.all(1.5),
+                      padding: const EdgeInsets.only(bottom: 2),
                       child: Tooltip(
                         message: '${e.value} tasks on $date',
                         child: Container(

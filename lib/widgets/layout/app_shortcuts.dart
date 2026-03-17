@@ -3,13 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/task_provider.dart';
-
-// ── Intent classes ────────────────────────────────────────────────────────────
-class NewTaskIntent extends Intent { const NewTaskIntent(); }
-class SearchIntent extends Intent { const SearchIntent(); }
-class SettingsIntent extends Intent { const SettingsIntent(); }
-class ToggleCompleteIntent extends Intent { const ToggleCompleteIntent(); }
-class CloseDetailIntent extends Intent { const CloseDetailIntent(); }
+import '../../utils/constants.dart';
 
 class AppShortcuts extends StatelessWidget {
   final Widget child;
@@ -17,62 +11,50 @@ class AppShortcuts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: {
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN): const NewTaskIntent(),
-        LogicalKeySet(LogicalKeyboardKey.meta,    LogicalKeyboardKey.keyN): const NewTaskIntent(),
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF): const SearchIntent(),
-        LogicalKeySet(LogicalKeyboardKey.meta,    LogicalKeyboardKey.keyF): const SearchIntent(),
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): const SettingsIntent(),
-        LogicalKeySet(LogicalKeyboardKey.meta,    LogicalKeyboardKey.comma): const SettingsIntent(),
-        LogicalKeySet(LogicalKeyboardKey.escape): const CloseDetailIntent(),
-        LogicalKeySet(LogicalKeyboardKey.space):  const ToggleCompleteIntent(),
-      },
-      child: Actions(
-        actions: {
-          NewTaskIntent: CallbackAction<NewTaskIntent>(
-            onInvoke: (_) {
-              context.read<NavigationProvider>().openSearch();
-              return null;
-            },
-          ),
-          SearchIntent: CallbackAction<SearchIntent>(
-            onInvoke: (_) {
-              context.read<NavigationProvider>().openSearch();
-              return null;
-            },
-          ),
-          SettingsIntent: CallbackAction<SettingsIntent>(
-            onInvoke: (_) {
-              context.read<NavigationProvider>().selectNav('settings');
-              return null;
-            },
-          ),
-          CloseDetailIntent: CallbackAction<CloseDetailIntent>(
-            onInvoke: (_) {
-              final nav = context.read<NavigationProvider>();
-              if (nav.isDetailPanelOpen) {
-                nav.closeDetailPanel();
-              } else if (nav.isSearchOpen) {
-                nav.closeSearch();
-              }
-              return null;
-            },
-          ),
-          ToggleCompleteIntent: CallbackAction<ToggleCompleteIntent>(
-            onInvoke: (_) {
-              final nav = context.read<NavigationProvider>();
-              if (nav.selectedTaskId != null) {
-                context.read<TaskProvider>().toggleComplete(nav.selectedTaskId!);
-              }
-              return null;
-            },
-          ),
+    return CallbackShortcuts(
+      bindings: {
+        // Search — both Ctrl and Meta (Mac)
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            () => context.read<NavigationProvider>().openSearch(),
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+            () => context.read<NavigationProvider>().openSearch(),
+
+        // Settings
+        const SingleActivator(LogicalKeyboardKey.comma, control: true):
+            () => context.read<NavigationProvider>().selectNav(AppConstants.navSettings),
+        const SingleActivator(LogicalKeyboardKey.comma, meta: true):
+            () => context.read<NavigationProvider>().selectNav(AppConstants.navSettings),
+
+        // Undo
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true):
+            () => context.read<TaskProvider>().undo(),
+        const SingleActivator(LogicalKeyboardKey.keyZ, meta: true):
+            () => context.read<TaskProvider>().undo(),
+
+        // Escape — close detail panel or search
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          final nav = context.read<NavigationProvider>();
+          if (nav.isDetailPanelOpen) {
+            nav.closeDetailPanel();
+          } else if (nav.isSearchOpen) {
+            nav.closeSearch();
+          }
         },
-        child: Focus(
-          autofocus: true,
-          child: child,
-        ),
+
+        // Space — toggle complete on selected task
+        const SingleActivator(LogicalKeyboardKey.space): () {
+          final nav = context.read<NavigationProvider>();
+          if (nav.selectedTaskId != null) {
+            context.read<TaskProvider>().toggleComplete(nav.selectedTaskId!);
+          }
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        // canRequestFocus ensures the Focus node grabs keyboard events
+        // even if a text field is not active
+        canRequestFocus: false,
+        child: child,
       ),
     );
   }

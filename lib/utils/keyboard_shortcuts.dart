@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class AppShortcuts {
-  AppShortcuts._();
+class AppShortcutBindings {
+  AppShortcutBindings._();
 
   static final Map<ShortcutActivator, String> shortcuts = {
     const SingleActivator(LogicalKeyboardKey.keyN, control: true): 'newTask',

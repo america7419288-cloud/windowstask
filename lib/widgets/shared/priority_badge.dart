@@ -14,18 +14,18 @@ class PriorityBadge extends StatelessWidget {
   final Priority priority;
   final bool showLabel;
 
-  static Color colorForPriority(Priority p) {
-    switch (p) {
+  static Color colorForPriority(Priority priority) {
+    switch (priority) {
       case Priority.none:
-        return AppColors.priorityNone;
+        return Colors.transparent;
       case Priority.low:
-        return AppColors.priorityLow;
+        return AppColors.green;
       case Priority.medium:
-        return AppColors.priorityMedium;
+        return AppColors.orange;
       case Priority.high:
-        return AppColors.priorityHigh;
+        return AppColors.red;
       case Priority.urgent:
-        return AppColors.priorityUrgent;
+        return AppColors.pinkRed;
     }
   }
 

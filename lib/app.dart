@@ -8,6 +8,7 @@ import 'providers/navigation_provider.dart';
 import 'providers/focus_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/layout/density_scaled_app.dart';
 
 class TaskiApp extends StatelessWidget {
   const TaskiApp({super.key});
@@ -31,7 +32,7 @@ class TaskiApp extends StatelessWidget {
             themeMode: settings.themeMode,
             theme: AppTheme.light(settings.accentColor),
             darkTheme: AppTheme.dark(settings.accentColor),
-            home: const HomeScreen(),
+            home: DensityScaledApp(child: const HomeScreen()),
           );
         },
       ),

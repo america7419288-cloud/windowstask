@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/typography.dart';
-import '../../utils/constants.dart';
+import '../shared/pressable_scale.dart';
 
 class SidebarItem extends StatefulWidget {
   const SidebarItem({
@@ -33,32 +33,43 @@ class _SidebarItemState extends State<SidebarItem> {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
 
+    // Crossfade background color with 180ms ease
+    final bgColor = widget.isSelected
+        ? colors.sidebarActive
+        : _hovered
+            ? (colors.isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04))
+            : Colors.transparent;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+      child: PressableScale(
+        scaleDown: 0.98,
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: AppConstants.animFast,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: widget.isSelected
-                ? accent.withOpacity(0.12)
-                : _hovered
-                    ? (colors.isDark
-                        ? Colors.white.withOpacity(0.06)
-                        : Colors.black.withOpacity(0.04))
-                    : Colors.transparent,
+            color: bgColor,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
-              Icon(
-                widget.icon,
-                size: AppConstants.iconInline,
-                color: widget.isSelected ? accent : colors.textSecondary,
+              // Icon shifts color with 200ms ColorTween implicitly via AnimatedTheme/AnimatedContainer?
+              // Standard TweenAnimationBuilder for explicit color crossfade:
+              TweenAnimationBuilder<Color?>(
+                tween: ColorTween(
+                  begin: colors.textSecondary,
+                  end: widget.isSelected ? accent : colors.textSecondary,
+                ),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                builder: (context, color, child) {
+                  return Icon(widget.icon, size: 18, color: color);
+                },
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -66,8 +77,7 @@ class _SidebarItemState extends State<SidebarItem> {
                   widget.label,
                   style: AppTypography.body.copyWith(
                     color: widget.isSelected ? accent : colors.textPrimary,
-                    fontWeight:
-                        widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ),
@@ -77,9 +87,7 @@ class _SidebarItemState extends State<SidebarItem> {
                   decoration: BoxDecoration(
                     color: widget.isSelected
                         ? accent
-                        : colors.isDark
-                            ? Colors.white.withOpacity(0.15)
-                            : Colors.black.withOpacity(0.1),
+                        : colors.isDark ? Colors.white.withOpacity(0.15) : Colors.black.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(

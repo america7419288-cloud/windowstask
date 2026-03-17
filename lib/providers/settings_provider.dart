@@ -12,6 +12,7 @@ class SettingsProvider extends ChangeNotifier {
     _settings = StorageService.instance.getSettings();
   }
 
+  // ─── Existing getters ───────────────────────────────────────────────────────
   ThemeMode get themeMode => _settings.themeMode;
   Color get accentColor => _settings.accentColor;
   String get accentColorHex => _settings.accentColorHex;
@@ -20,6 +21,37 @@ class SettingsProvider extends ChangeNotifier {
   int get startOfWeek => _settings.startOfWeek;
   SortOption get defaultSort => _settings.defaultSort;
 
+  // ─── New getters ─────────────────────────────────────────────────────────────
+  double get sidebarWidth => _settings.sidebarWidth;
+  FontDensity get fontDensity => _settings.fontDensity;
+  TaskViewLayout get currentLayout => _settings.defaultViewLayout;
+
+  double get fontScale {
+    switch (_settings.fontDensity) {
+      case FontDensity.compact:     return 0.85;
+      case FontDensity.normal:      return 1.0;
+      case FontDensity.comfortable: return 1.12;
+    }
+  }
+
+  // Card/item padding based on density
+  double get cardPadding {
+    switch (_settings.fontDensity) {
+      case FontDensity.compact:     return 10;
+      case FontDensity.normal:      return 14;
+      case FontDensity.comfortable: return 18;
+    }
+  }
+
+  double get listItemHeight {
+    switch (_settings.fontDensity) {
+      case FontDensity.compact:     return 40;
+      case FontDensity.normal:      return 48;
+      case FontDensity.comfortable: return 56;
+    }
+  }
+
+  // ─── Existing setters ────────────────────────────────────────────────────────
   Future<void> setThemeMode(ThemeMode mode) async {
     _settings = _settings.copyWith(themeMode: mode);
     await _save();
@@ -64,6 +96,45 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 
+  // ─── New setters ─────────────────────────────────────────────────────────────
+  Future<void> setSidebarWidth(double width) async {
+    _settings = _settings.copyWith(sidebarWidth: width.clamp(180, 320));
+    await _save();
+  }
+
+  Future<void> setFontDensity(FontDensity density) async {
+    _settings = _settings.copyWith(fontDensity: density);
+    await _save();
+  }
+
+  Future<void> setViewLayout(TaskViewLayout layout) async {
+    _settings = _settings.copyWith(defaultViewLayout: layout);
+    await _save();
+  }
+
+  Future<void> setWallpaper(WallpaperType type, {String? value}) async {
+    switch (type) {
+      case WallpaperType.solidColor:
+        _settings = _settings.copyWith(wallpaperType: type, wallpaperColorHex: value);
+        break;
+      case WallpaperType.gradient:
+        _settings = _settings.copyWith(wallpaperType: type, wallpaperGradientId: value);
+        break;
+      case WallpaperType.pattern:
+        _settings = _settings.copyWith(wallpaperType: type, wallpaperPatternId: value);
+        break;
+      case WallpaperType.none:
+        _settings = _settings.copyWith(wallpaperType: WallpaperType.none);
+        break;
+    }
+    await _save();
+  }
+
+  Future<void> setWallpaperOpacity(double opacity) async {
+    _settings = _settings.copyWith(wallpaperOpacity: opacity.clamp(0.05, 0.40));
+    await _save();
+  }
+
   Future<void> _save() async {
     await StorageService.instance.saveSettings(_settings);
     notifyListeners();
@@ -72,9 +143,10 @@ class SettingsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get accentColorOptions => [
     {'hex': '007AFF', 'color': AppColors.blue, 'name': 'Blue'},
     {'hex': 'AF52DE', 'color': AppColors.purple, 'name': 'Purple'},
-    {'hex': 'FF2D55', 'color': AppColors.pink, 'name': 'Pink'},
+    {'hex': 'FF2D55', 'color': AppColors.pinkRed, 'name': 'Pink'},
     {'hex': 'FF3B30', 'color': AppColors.red, 'name': 'Red'},
     {'hex': 'FF9500', 'color': AppColors.orange, 'name': 'Orange'},
+    {'hex': 'FFCC00', 'color': const Color(0xFFFFCC00), 'name': 'Yellow'},
     {'hex': '34C759', 'color': AppColors.green, 'name': 'Green'},
     {'hex': '5AC8FA', 'color': AppColors.teal, 'name': 'Teal'},
   ];

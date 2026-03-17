@@ -9,27 +9,27 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: ColorScheme.light(
+      scaffoldBackgroundColor: AppColors.canvasLight,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: accentColor,
+        brightness: Brightness.light,
+        surface: AppColors.surfaceLight,
+        onSurface: AppColors.textPrimaryLight,
         primary: accentColor,
-        secondary: accentColor,
-        surface: AppColors.lightSurface,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: AppColors.lightTextPrimary,
+        error: AppColors.red,
       ),
-      scaffoldBackgroundColor: AppColors.lightBackground,
       textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
-        bodyColor: AppColors.lightTextPrimary,
-        displayColor: AppColors.lightTextPrimary,
+        bodyColor: AppColors.textPrimaryLight,
+        displayColor: AppColors.textPrimaryLight,
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.lightTextSecondary,
+        color: AppColors.textSecondaryLight,
         size: 20,
       ),
-      dividerColor: AppColors.lightDivider,
+      dividerColor: AppColors.dividerLight,
       dividerTheme: const DividerThemeData(
-        color: AppColors.lightDivider,
-        thickness: 1,
+        color: AppColors.dividerLight,
+        thickness: 0.5,
         space: 1,
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -39,22 +39,8 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         hintStyle: GoogleFonts.inter(
           fontSize: 13,
-          color: AppColors.lightTextSecondary,
+          color: AppColors.textSecondaryLight,
         ),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return accentColor;
-          return Colors.transparent;
-        }),
-        checkColor: WidgetStateProperty.all(Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        side: BorderSide(color: AppColors.lightTextSecondary.withOpacity(0.5), width: 1.5),
-      ),
-      scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.all(AppColors.lightTextSecondary.withOpacity(0.3)),
-        radius: const Radius.circular(4),
-        thickness: WidgetStateProperty.all(4),
       ),
       extensions: const [AppColorsExtension.light()],
     );
@@ -64,27 +50,27 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.dark(
+      scaffoldBackgroundColor: AppColors.canvasDark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: accentColor,
+        brightness: Brightness.dark,
+        surface: AppColors.surfaceDark,
+        onSurface: AppColors.textPrimaryDark,
         primary: accentColor,
-        secondary: accentColor,
-        surface: AppColors.darkSurface,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: AppColors.darkTextPrimary,
+        error: AppColors.red,
       ),
-      scaffoldBackgroundColor: AppColors.darkBackground,
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: AppColors.darkTextPrimary,
-        displayColor: AppColors.darkTextPrimary,
+        bodyColor: AppColors.textPrimaryDark,
+        displayColor: AppColors.textPrimaryDark,
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.darkTextSecondary,
+        color: AppColors.textSecondaryDark,
         size: 20,
       ),
-      dividerColor: AppColors.darkDivider,
+      dividerColor: AppColors.dividerDark,
       dividerTheme: const DividerThemeData(
-        color: AppColors.darkDivider,
-        thickness: 1,
+        color: AppColors.dividerDark,
+        thickness: 0.5,
         space: 1,
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -94,22 +80,8 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         hintStyle: GoogleFonts.inter(
           fontSize: 13,
-          color: AppColors.darkTextSecondary,
+          color: AppColors.textSecondaryDark,
         ),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return accentColor;
-          return Colors.transparent;
-        }),
-        checkColor: WidgetStateProperty.all(Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        side: BorderSide(color: AppColors.darkTextSecondary.withOpacity(0.5), width: 1.5),
-      ),
-      scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.all(AppColors.darkTextSecondary.withOpacity(0.3)),
-        radius: const Radius.circular(4),
-        thickness: WidgetStateProperty.all(4),
       ),
       extensions: const [AppColorsExtension.dark()],
     );
@@ -121,62 +93,86 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   const AppColorsExtension({
     required this.background,
     required this.surface,
+    required this.surfaceElevated,
     required this.sidebar,
+    required this.sidebarActive,
     required this.textPrimary,
     required this.textSecondary,
-    required this.divider,
+    required this.textTertiary,
+    required this.textQuaternary,
     required this.border,
+    required this.divider,
     required this.isDark,
   });
 
   const AppColorsExtension.light()
-      : background = AppColors.lightBackground,
-        surface = AppColors.lightSurface,
-        sidebar = AppColors.lightSidebar,
-        textPrimary = AppColors.lightTextPrimary,
-        textSecondary = AppColors.lightTextSecondary,
-        divider = AppColors.lightDivider,
-        border = AppColors.lightBorder,
+      : background = AppColors.canvasLight,
+        surface = AppColors.surfaceLight,
+        surfaceElevated = AppColors.surfaceElevatedLight,
+        sidebar = AppColors.sidebarLight,
+        sidebarActive = const Color(0x1A007AFF), // rgba(0,122,255,0.10)
+        textPrimary = AppColors.textPrimaryLight,
+        textSecondary = AppColors.textSecondaryLight,
+        textTertiary = AppColors.textTertiaryLight,
+        textQuaternary = AppColors.textQuaternaryLight,
+        border = const Color(0x0F000000), // rgba(0,0,0,0.06)
+        divider = AppColors.dividerLight,
         isDark = false;
 
   const AppColorsExtension.dark()
-      : background = AppColors.darkBackground,
-        surface = AppColors.darkSurface,
-        sidebar = AppColors.darkSidebar,
-        textPrimary = AppColors.darkTextPrimary,
-        textSecondary = AppColors.darkTextSecondary,
-        divider = AppColors.darkDivider,
-        border = AppColors.darkBorder,
+      : background = AppColors.canvasDark,
+        surface = AppColors.surfaceDark,
+        surfaceElevated = AppColors.surfaceElevatedDark,
+        sidebar = AppColors.sidebarDark,
+        sidebarActive = const Color(0x2E007AFF), // rgba(0,122,255,0.18)
+        textPrimary = AppColors.textPrimaryDark,
+        textSecondary = AppColors.textSecondaryDark,
+        textTertiary = AppColors.textTertiaryDark,
+        textQuaternary = AppColors.textQuaternaryDark,
+        border = const Color(0x19FFFFFF), // rgba(255,255,255,0.1)
+        divider = AppColors.dividerDark,
         isDark = true;
 
   final Color background;
   final Color surface;
+  final Color surfaceElevated;
   final Color sidebar;
+  final Color sidebarActive;
   final Color textPrimary;
   final Color textSecondary;
-  final Color divider;
+  final Color textTertiary;
+  final Color textQuaternary;
   final Color border;
+  final Color divider;
   final bool isDark;
 
   @override
   AppColorsExtension copyWith({
     Color? background,
     Color? surface,
+    Color? surfaceElevated,
     Color? sidebar,
+    Color? sidebarActive,
     Color? textPrimary,
     Color? textSecondary,
-    Color? divider,
+    Color? textTertiary,
+    Color? textQuaternary,
     Color? border,
+    Color? divider,
     bool? isDark,
   }) {
     return AppColorsExtension(
       background: background ?? this.background,
       surface: surface ?? this.surface,
+      surfaceElevated: surfaceElevated ?? this.surfaceElevated,
       sidebar: sidebar ?? this.sidebar,
+      sidebarActive: sidebarActive ?? this.sidebarActive,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
-      divider: divider ?? this.divider,
+      textTertiary: textTertiary ?? this.textTertiary,
+      textQuaternary: textQuaternary ?? this.textQuaternary,
       border: border ?? this.border,
+      divider: divider ?? this.divider,
       isDark: isDark ?? this.isDark,
     );
   }
@@ -187,11 +183,15 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     return AppColorsExtension(
       background: Color.lerp(background, other.background, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
+      surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
       sidebar: Color.lerp(sidebar, other.sidebar, t)!,
+      sidebarActive: Color.lerp(sidebarActive, other.sidebarActive, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      divider: Color.lerp(divider, other.divider, t)!,
+      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
+      textQuaternary: Color.lerp(textQuaternary, other.textQuaternary, t)!,
       border: Color.lerp(border, other.border, t)!,
+      divider: Color.lerp(divider, other.divider, t)!,
       isDark: t > 0.5 ? other.isDark : isDark,
     );
   }

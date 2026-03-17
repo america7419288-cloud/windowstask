@@ -116,7 +116,41 @@ class _QuickAddBarState extends State<QuickAddBar> {
     if (title.isEmpty) return;
     final tasks = context.read<TaskProvider>();
     final settings = context.read<SettingsProvider>();
-    tasks.createTask(title: title, listId: settings.settings.defaultListId);
+    final nav = context.read<NavigationProvider>();
+    final navItem = nav.selectedNavItem;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    DateTime? dueDate;
+    String? listId = settings.settings.defaultListId;
+    bool isFlagged = false;
+
+    switch (navItem) {
+      case AppConstants.navToday:
+        dueDate = today;
+        break;
+      case AppConstants.navUpcoming:
+        dueDate = today.add(const Duration(days: 1));
+        break;
+      case AppConstants.navScheduled:
+        dueDate = today;
+        break;
+      case AppConstants.navFlagged:
+        isFlagged = true;
+        break;
+      default:
+        if (navItem.startsWith('list_')) {
+          listId = navItem.substring(5);
+        }
+    }
+
+    tasks.createTask(
+      title: title,
+      listId: listId,
+      dueDate: dueDate,
+      isFlagged: isFlagged,
+    );
     _controller.clear();
     setState(() {});
   }

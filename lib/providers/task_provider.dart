@@ -36,21 +36,21 @@ class TaskProvider extends ChangeNotifier {
     switch (navItem) {
       case AppConstants.navToday:
         base = _tasks.where((t) {
-          if (t.isDeleted || t.isCompleted) return false;
+          if (t.isDeleted) return false;
           if (t.dueDate == null) return false;
-          return AppDateUtils.isToday(t.dueDate!) || t.isOverdue;
+          return AppDateUtils.isToday(t.dueDate!) || (t.isOverdue && !t.isCompleted);
         }).toList();
         break;
       case AppConstants.navUpcoming:
         base = _tasks.where((t) {
-          if (t.isDeleted || t.isCompleted) return false;
+          if (t.isDeleted) return false;
           if (t.dueDate == null) return false;
           return AppDateUtils.isWithinNextDays(t.dueDate!, 7) &&
               !AppDateUtils.isToday(t.dueDate!);
         }).toList();
         break;
       case AppConstants.navAll:
-        base = _tasks.where((t) => !t.isDeleted && !t.isCompleted).toList();
+        base = _tasks.where((t) => !t.isDeleted).toList();
         break;
       case AppConstants.navCompleted:
         base = _tasks.where((t) => !t.isDeleted && t.isCompleted).toList();
@@ -61,22 +61,21 @@ class TaskProvider extends ChangeNotifier {
       case AppConstants.navHighPriority:
         base = _tasks.where((t) =>
             !t.isDeleted &&
-            !t.isCompleted &&
             (t.priority == Priority.high || t.priority == Priority.urgent)).toList();
         break;
       case AppConstants.navScheduled:
         base = _tasks.where((t) =>
-            !t.isDeleted && !t.isCompleted && t.dueDate != null).toList();
+            !t.isDeleted && t.dueDate != null).toList();
         break;
       case AppConstants.navFlagged:
         base = _tasks.where((t) =>
-            !t.isDeleted && !t.isCompleted && t.isFlagged).toList();
+            !t.isDeleted && t.isFlagged).toList();
         break;
       default:
         if (navItem.startsWith('list_')) {
           final listId = navItem.substring(5);
           base = _tasks.where((t) =>
-              !t.isDeleted && !t.isCompleted && t.listId == listId).toList();
+              !t.isDeleted && t.listId == listId).toList();
         } else {
           base = [];
         }
@@ -145,6 +144,7 @@ class TaskProvider extends ChangeNotifier {
     int? dueMinute,
     String? listId,
     List<String>? tags,
+    bool isFlagged = false,
   }) async {
     final now = DateTime.now();
     final task = Task(
@@ -157,6 +157,7 @@ class TaskProvider extends ChangeNotifier {
       dueMinute: dueMinute,
       listId: listId,
       tags: tags ?? [],
+      isFlagged: isFlagged,
       createdAt: now,
       updatedAt: now,
       sortOrder: _tasks.length,
@@ -192,6 +193,64 @@ class TaskProvider extends ChangeNotifier {
     await StorageService.instance.saveTask(updated);
     notifyListeners();
   }
+
+  Future<void> toggleFlag(String id) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final updated = _tasks[idx].copyWith(isFlagged: !_tasks[idx].isFlagged, updatedAt: DateTime.now());
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
+  }
+
+  Future<void> updatePriority(String id, Priority priority) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final updated = _tasks[idx].copyWith(priority: priority, updatedAt: DateTime.now());
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
+  }
+
+  Future<void> updateDueDate(String id, DateTime date) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final updated = _tasks[idx].copyWith(
+      dueDate: date, 
+      dueHour: date.hour,
+      dueMinute: date.minute,
+      updatedAt: DateTime.now()
+    );
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
+  }
+
+  Future<void> moveToList(String id, String? listId) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final updated = _tasks[idx].copyWith(listId: listId, clearListId: listId == null, updatedAt: DateTime.now());
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
+  }
+
+  Future<void> updateTaskStatus(String id, TaskStatus status) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final now = DateTime.now();
+    final updated = _tasks[idx].copyWith(
+      status: status,
+      completedAt: status == TaskStatus.done ? now : null,
+      clearCompletedAt: status != TaskStatus.done,
+      updatedAt: now,
+    );
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
+  }
+
+  Future<void> restoreTask(String id) async => restoreFromTrash(id);
 
   Future<void> moveToTrash(String id) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
@@ -363,10 +422,20 @@ class TaskProvider extends ChangeNotifier {
   int get currentStreak {
     int streak = 0;
     DateTime check = DateTime.now();
-    while (true) {
-      final hasCompleted = _tasks.any((t) =>
-          t.isCompleted && t.completedAt != null && AppDateUtils.isToday(t.completedAt!));
-      if (!hasCompleted && streak == 0) break;
+
+    // Safety limit: never check more than 365 days back
+    for (int i = 0; i < 365; i++) {
+      final checkDay = DateTime(check.year, check.month, check.day);
+      final hasCompleted = _tasks.any((t) {
+        if (!t.isCompleted || t.completedAt == null) return false;
+        final completedDay = DateTime(
+          t.completedAt!.year,
+          t.completedAt!.month,
+          t.completedAt!.day,
+        );
+        return completedDay == checkDay;
+      });
+
       if (!hasCompleted) break;
       streak++;
       check = check.subtract(const Duration(days: 1));

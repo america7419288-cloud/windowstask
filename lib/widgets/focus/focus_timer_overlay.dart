@@ -6,6 +6,8 @@ import '../../theme/typography.dart';
 import '../../theme/colors.dart';
 import '../../utils/constants.dart';
 
+/// WARNING: This overlay returns a Positioned as its root widget.
+/// It MUST be a direct child of a Stack in the application layout.
 class FocusTimerOverlay extends StatelessWidget {
   const FocusTimerOverlay({super.key});
 

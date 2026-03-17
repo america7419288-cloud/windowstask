@@ -8,12 +8,14 @@ import '../theme/app_theme.dart';
 import '../theme/typography.dart';
 import '../utils/constants.dart';
 import '../widgets/sidebar/sidebar.dart';
-import '../widgets/tasks/task_list_view.dart';
+import '../widgets/tasks/multi_layout_task_view.dart';
 import '../widgets/tasks/task_detail_panel.dart';
 import '../widgets/shared/traffic_light_buttons.dart';
 import '../widgets/focus/focus_timer_overlay.dart';
 import '../widgets/layout/responsive_layout.dart';
 import '../widgets/layout/app_shortcuts.dart';
+import '../widgets/layout/window_controls.dart';
+import '../widgets/layout/app_wallpaper.dart';
 import 'settings_screen.dart';
 import 'insights_screen.dart';
 
@@ -22,65 +24,83 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppShortcuts(
-      child: Consumer<NavigationProvider>(
-        builder: (context, nav, _) {
-          // Build main content area based on nav selection
-          Widget mainContent;
-          switch (nav.selectedNavItem) {
-            case AppConstants.navSettings:
-              mainContent = const SettingsScreen();
-              break;
-            case AppConstants.navInsights:
-              mainContent = const InsightsScreen();
-              break;
-            default:
-              mainContent = const TaskListView();
-          }
-
-          // Detail panel only when a task is selected
-          final showDetail = nav.isDetailPanelOpen && nav.selectedTaskId != null;
-          Widget? detailPanel;
-          if (showDetail) {
-            final task = context.watch<TaskProvider>().getById(nav.selectedTaskId!);
-            if (task != null) {
-              detailPanel = TaskDetailPanel(task: task);
+    return AppWallpaper(
+      child: AppShortcuts(
+        child: Consumer<NavigationProvider>(
+          builder: (context, nav, _) {
+            // Build main content area based on nav selection
+            Widget mainContent;
+            switch (nav.selectedNavItem) {
+              case AppConstants.navSettings:
+                mainContent = const SettingsScreen();
+                break;
+              case AppConstants.navInsights:
+                mainContent = const InsightsScreen();
+                break;
+              default:
+                mainContent = const MultiLayoutTaskView();
             }
-          }
 
-          return Stack(
-            children: [
-              ResponsiveLayout(
-                sidebar: Column(
-                  children: [
-                    // Custom TitleBar traffic lights area for desktop
-                    const _TitleBarArea(),
-                    Expanded(child: const Sidebar()),
-                  ],
-                ),
-                content: Column(
-                  children: [
-                    _ContentHeader(),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: AppConstants.animMedium,
-                        child: mainContent,
+            // Detail panel only when a task is selected
+            final showDetail = nav.isDetailPanelOpen && nav.selectedTaskId != null;
+            Widget? detailPanel;
+            if (showDetail) {
+              final task = context.watch<TaskProvider>().getById(nav.selectedTaskId!);
+              if (task != null) {
+                detailPanel = TaskDetailPanel(task: task);
+              }
+            }
+
+            return Stack(
+              children: [
+                ResponsiveLayout(
+                  sidebar: Column(
+                    children: [
+                      // Custom TitleBar traffic lights area for desktop
+                      const WindowDragArea(child: _TitleBarArea()),
+                      Expanded(child: const Sidebar()),
+                    ],
+                  ),
+                  content: Column(
+                    children: [
+                      WindowDragArea(child: _ContentHeader()),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0, 0.03),
+                                  end: Offset.zero,
+                                ).animate(CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
+                                )),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: mainContent,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  detailPanel: detailPanel,
+                  showDetailPanel: showDetail,
                 ),
-                detailPanel: detailPanel,
-                showDetailPanel: showDetail,
-              ),
-              // Floating focus timer
-              const FocusTimerOverlay(),
-            ],
-          );
-        },
+                // Floating focus timer
+                const FocusTimerOverlay(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
+
 
 class _TitleBarArea extends StatelessWidget {
   const _TitleBarArea();

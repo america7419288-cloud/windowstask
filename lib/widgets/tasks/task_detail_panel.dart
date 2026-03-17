@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/task.dart';
 import '../../models/app_settings.dart';
+import '../../providers/settings_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/list_provider.dart';
@@ -31,6 +33,7 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
   late TextEditingController _descController;
   late TextEditingController _subtaskController;
   late Task _task;
+  Timer? _saveDebounce;
 
   @override
   void initState() {
@@ -55,6 +58,7 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
 
   @override
   void dispose() {
+    _saveDebounce?.cancel();
     _titleController.dispose();
     _descController.dispose();
     _subtaskController.dispose();
@@ -62,13 +66,17 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
   }
 
   void _save() {
-    final tasks = context.read<TaskProvider>();
-    final updated = _task.copyWith(
-      title: _titleController.text.trim(),
-      description: _descController.text,
-      updatedAt: DateTime.now(),
-    );
-    tasks.updateTask(updated);
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      final tasks = context.read<TaskProvider>();
+      final updated = _task.copyWith(
+        title: _titleController.text.trim(),
+        description: _descController.text,
+        updatedAt: DateTime.now(),
+      );
+      tasks.updateTask(updated);
+    });
   }
 
   @override
@@ -103,7 +111,7 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                   context.read<FocusProvider>().startFocus(
                     taskId: _task.id,
                     taskTitle: _task.title,
-                    durationMinutes: context.read<FocusProvider>().isActive ? 25 : 25,
+                    durationMinutes: context.read<SettingsProvider>().focusDuration,
                   );
                 },
               ),

@@ -14,7 +14,7 @@ class StorageService {
   late Box<Task> _tasksBox;
   late Box<TaskList> _listsBox;
   late Box<Tag> _tagsBox;
-  late SharedPreferences _prefs;
+  SharedPreferences? _prefs;
 
   Future<void> init() async {
     _tasksBox = await Hive.openBox<Task>(AppConstants.tasksBox);
@@ -64,7 +64,8 @@ class StorageService {
   // ─── Settings ─────────────────────────────────────────────────────────────
 
   AppSettings getSettings() {
-    final json = _prefs.getString(AppConstants.settingsKey);
+    if (_prefs == null) return const AppSettings();
+    final json = _prefs!.getString(AppConstants.settingsKey);
     if (json == null) return const AppSettings();
     try {
       return AppSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
@@ -74,7 +75,8 @@ class StorageService {
   }
 
   Future<void> saveSettings(AppSettings settings) async {
-    await _prefs.setString(AppConstants.settingsKey, jsonEncode(settings.toJson()));
+    if (_prefs == null) return;
+    await _prefs!.setString(AppConstants.settingsKey, jsonEncode(settings.toJson()));
   }
 
   // ─── Export / Import ──────────────────────────────────────────────────────

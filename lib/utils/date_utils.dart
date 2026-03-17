@@ -59,6 +59,10 @@ class AppDateUtils {
     return dateStr;
   }
 
+  static String formatDueDate(DateTime date, int? hour, int? minute) {
+    return formatDateTime(date, hour: hour, minute: minute);
+  }
+
   static String formatRelative(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
