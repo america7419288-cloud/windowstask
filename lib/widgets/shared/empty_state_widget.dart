@@ -120,87 +120,74 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
             // But since flutter architecture makes passing animation to immutable config tricky, 
             // we will let the CustomPaint redraw on this AnimatedBuilder tick.
 
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-              decoration: BoxDecoration(
-                color: colors.isDark
-                    ? Colors.white.withValues(alpha: 0.03)
-                    : Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: colors.isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.05),
-                  width: 0.75,
-                ),
-              ),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
               child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Illustration
-                Transform.scale(
-                  scale: _illusScaleZ.value,
-                  child: Opacity(
-                    opacity: _illusFade.value,
-                    child: SizedBox(
-                      width: 180,
-                      height: 180,
-                      child: CustomPaint(
-                        painter: widget.config.painterBuilder(_idleController.value),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Illustration
+                  Transform.scale(
+                    scale: _illusScaleZ.value,
+                    child: Opacity(
+                      opacity: _illusFade.value,
+                      child: SizedBox(
+                        width: 120,
+                        height: 120,
+                        child: CustomPaint(
+                          painter: widget.config.painterBuilder(_idleController.value),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                
-                // Headline
-                Transform.translate(
-                  offset: Offset(0, _headTranslateY.value),
-                  child: Opacity(
-                    opacity: _headFade.value,
-                    child: Text(
-                      widget.config.headline,
-                      style: AppTypography.title2.copyWith(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                        color: colors.textPrimary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Subline
-                Transform.translate(
-                  offset: Offset(0, _subTranslateY.value),
-                  child: Opacity(
-                    opacity: _subFade.value,
-                    child: Text(
-                      widget.config.subline,
-                      style: AppTypography.body.copyWith(
-                        fontSize: 14,
-                        color: colors.textTertiary,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                    ),
-                  ),
-                ),
-
-                // CTA (optional)
-                if (widget.config.ctaLabel != null) ...[
                   const SizedBox(height: 24),
-                  Opacity(
-                    opacity: _ctaFade.value,
-                    child: _buildCta(context),
+                  
+                  // Headline
+                  Transform.translate(
+                    offset: Offset(0, _headTranslateY.value),
+                    child: Opacity(
+                      opacity: _headFade.value,
+                      child: Text(
+                        widget.config.headline,
+                        style: AppTypography.title2.copyWith(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          color: colors.textPrimary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 8),
+
+                  // Subline
+                  Transform.translate(
+                    offset: Offset(0, _subTranslateY.value),
+                    child: Opacity(
+                      opacity: _subFade.value,
+                      child: Text(
+                        widget.config.subline,
+                        style: AppTypography.body.copyWith(
+                          fontSize: 13.5,
+                          color: colors.textTertiary,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 3,
+                      ),
+                    ),
+                  ),
+
+                  // CTA (optional)
+                  if (widget.config.ctaLabel != null) ...[
+                    const SizedBox(height: 24),
+                    Opacity(
+                      opacity: _ctaFade.value,
+                      child: _buildCta(context),
+                    ),
+                  ],
                 ],
-                ],
-            ),
+              ),
             );
           },
         ),

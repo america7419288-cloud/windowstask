@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/typography.dart';
+import 'package:provider/provider.dart';
+import '../../providers/celebration_provider.dart';
 
 class TodayHeader extends StatelessWidget {
   final int taskCount;
@@ -15,6 +17,7 @@ class TodayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: BoxDecoration(
         gradient: _timeBasedGradient(),
         borderRadius: BorderRadius.circular(18),
@@ -23,71 +26,47 @@ class TodayHeader extends StatelessWidget {
             color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 6),
-            spreadRadius: -2,
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.12),
-            blurRadius: 0,
-            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          children: [
-            // Shimmer overlay
-            Positioned.fill(
-              child: CustomPaint(painter: _HeaderShimmerPainter()),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _greeting(),
-                          style: AppTypography.title2.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _dateString(),
-                          style: AppTypography.callout.copyWith(
-                            color: Colors.white.withValues(alpha: 0.78),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '• ${_taskSummary()}',
-                          style: AppTypography.caption.copyWith(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _greeting(),
+                  style: AppTypography.title2.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
                   ),
-                  _DailyProgressRing(
-                    completed: completedCount,
-                    total: taskCount,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _dateString(),
+                  style: AppTypography.callout.copyWith(
+                    color: Colors.white.withValues(alpha: 0.78),
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '• ${_taskSummary()}',
+                  style: AppTypography.caption.copyWith(
+                    color: Colors.white.withValues(alpha: 0.88),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          _DailyProgressRing(
+            completed: completedCount,
+            total: taskCount,
+          ),
+        ],
       ),
     );
   }
@@ -145,7 +124,7 @@ class _DailyProgressRing extends StatelessWidget {
   final int completed;
   final int total;
 
-  const _DailyProgressRing({required this.completed, required this.total});
+  const _DailyProgressRing({super.key, required this.completed, required this.total});
 
   @override
   Widget build(BuildContext context) {
@@ -155,17 +134,17 @@ class _DailyProgressRing extends StatelessWidget {
     final ringColor = isAllDone ? const Color(0xFFFFD60A) : Colors.white;
 
     return SizedBox(
-      width: 72,
-      height: 72,
+      width: 60,
+      height: 60,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Background track
           SizedBox(
-            width: 72, height: 72,
+            width: 60, height: 60,
             child: CircularProgressIndicator(
               value: 1.0,
-              strokeWidth: 6,
+              strokeWidth: 5,
               valueColor: AlwaysStoppedAnimation<Color>(
                 Colors.white.withValues(alpha: 0.2),
               ),
@@ -180,10 +159,10 @@ class _DailyProgressRing extends StatelessWidget {
               tween: ColorTween(begin: Colors.white, end: ringColor),
               duration: const Duration(milliseconds: 600),
               builder: (_, color, __) => SizedBox(
-                width: 72, height: 72,
+                width: 60, height: 60,
                 child: CircularProgressIndicator(
                   value: value,
-                  strokeWidth: 6,
+                  strokeWidth: 5,
                   strokeCap: StrokeCap.round,
                   valueColor: AlwaysStoppedAnimation(color ?? Colors.white),
                 ),
@@ -201,7 +180,7 @@ class _DailyProgressRing extends StatelessWidget {
                   '$percent%',
                   style: AppTypography.bodySemibold.copyWith(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

@@ -5,6 +5,7 @@ import '../../../models/task.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/list_provider.dart';
+import '../../../providers/celebration_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
@@ -126,7 +127,10 @@ class _HoverActionBar extends StatelessWidget {
                   ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill)
                   : PhosphorIcons.circle(),
               color: task.isCompleted ? AppColors.green : colors.textSecondary,
-              onTap: () => context.read<TaskProvider>().toggleComplete(task.id),
+              onTap: () => context.read<TaskProvider>().toggleComplete(
+                task.id,
+                celebration: context.read<CelebrationProvider>(),
+              ),
               tooltip: task.isCompleted ? 'Mark incomplete' : 'Complete',
             ),
             const SizedBox(width: 2),
@@ -226,7 +230,10 @@ class _HoverActionBottomBar extends StatelessWidget {
           const SizedBox(width: 16),
           // Complete
           GestureDetector(
-            onTap: () => context.read<TaskProvider>().toggleComplete(task.id),
+            onTap: () => context.read<TaskProvider>().toggleComplete(
+              task.id,
+              celebration: context.read<CelebrationProvider>(),
+            ),
             behavior: HitTestBehavior.opaque,
             child: Row(
               children: [

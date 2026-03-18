@@ -51,10 +51,6 @@ class TaskListView extends StatelessWidget {
           final todayCompleted = taskList.where((t) => t.isCompleted).length;
           content = Column(
             children: [
-              TodayHeader(
-                taskCount: taskList.length,
-                completedCount: todayCompleted,
-              ),
               const QuickAddBar(),
               Expanded(child: _GroupedList(tasks: taskList)),
             ],

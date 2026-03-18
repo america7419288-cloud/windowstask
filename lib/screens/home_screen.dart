@@ -13,6 +13,8 @@ import '../widgets/tasks/multi_layout_task_view.dart';
 import '../widgets/tasks/task_detail_panel.dart';
 import '../widgets/shared/traffic_light_buttons.dart';
 import '../widgets/focus/focus_timer_overlay.dart';
+import '../widgets/shared/task_completed_overlay.dart';
+import '../providers/celebration_provider.dart';
 import '../widgets/layout/responsive_layout.dart';
 import '../widgets/layout/app_shortcuts.dart';
 import '../widgets/layout/window_controls.dart';
@@ -88,6 +90,8 @@ class HomeScreen extends StatelessWidget {
                     showDetailPanel: showDetail,
                   ),
                   const FocusTimerOverlay(),
+                  if (context.watch<CelebrationProvider>().isCelebrating)
+                    const TaskCompletedOverlay(),
                 ],
               ),
             ); // Container return
@@ -105,20 +109,12 @@ class _ContentHeader extends StatelessWidget {
     final nav = context.watch<NavigationProvider>();
 
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: colors.background,
         border: Border(
-          bottom: BorderSide(color: colors.divider, width: 0.75),
+          bottom: BorderSide(color: colors.divider, width: 0.5),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -126,9 +122,9 @@ class _ContentHeader extends StatelessWidget {
             Text(
               nav.pageTitle,
               style: AppTypography.headline.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 color: colors.textPrimary,
-                fontSize: 18,
+                fontSize: 20,
                 letterSpacing: -0.5,
               ),
             ),

@@ -6,6 +6,7 @@ import 'providers/tag_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/focus_provider.dart';
+import 'providers/celebration_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/layout/density_scaled_app.dart';
@@ -23,6 +24,7 @@ class TaskiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TagProvider()..init()),
         ChangeNotifierProvider(create: (_) => TaskProvider()..init()),
         ChangeNotifierProvider(create: (_) => FocusProvider()),
+        ChangeNotifierProvider(create: (_) => CelebrationProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {

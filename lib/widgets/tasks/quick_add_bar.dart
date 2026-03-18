@@ -56,42 +56,20 @@ class _QuickAddBarState extends State<QuickAddBar> {
     final isDark = colors.isDark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2E2B28) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _focused
-              ? AppColors.primary.withValues(alpha: 0.4)
-              : (isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.08)),
-          width: _focused ? 1.5 : 0.75,
+        color: isDark ? const Color(0xFF1E1C1A) : Colors.white,
+        border: Border(
+          bottom: BorderSide(color: colors.divider, width: 0.5),
         ),
-        boxShadow: _focused
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
       ),
       child: Row(
         children: [
           // Plus icon
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.all(8),
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
               gradient: _focused ? AppColors.gradientPrimary : null,
               color: _focused
@@ -125,7 +103,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
                 ),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
               ),
               onSubmitted: _submit,
             ),
@@ -136,33 +114,28 @@ class _QuickAddBarState extends State<QuickAddBar> {
             child: _focused && _controller.text.isNotEmpty
                 ? Padding(
                     key: const ValueKey('add_btn'),
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: 4),
                     child: GestureDetector(
                       onTap: () => _submit(_controller.text),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           gradient: AppColors.gradientPrimary,
-                          borderRadius: BorderRadius.circular(7),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 6,
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           'Add',
                           style: AppTypography.caption.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ),
                   )
-                : const SizedBox(key: ValueKey('empty'), width: 8),
+                : const SizedBox(key: ValueKey('empty'), width: 4),
           ),
         ],
       ),

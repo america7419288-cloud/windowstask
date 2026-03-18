@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/search_service.dart';
 import '../utils/date_utils.dart';
 import '../utils/constants.dart';
+import 'celebration_provider.dart';
 
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
@@ -178,20 +179,29 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> toggleComplete(String id) async {
+  Future<void> toggleComplete(String id, {CelebrationProvider? celebration}) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
     final task = _tasks[idx];
+    final wasCompleted = task.isCompleted;
     final now = DateTime.now();
     final updated = task.copyWith(
-      status: task.isCompleted ? TaskStatus.todo : TaskStatus.done,
-      completedAt: task.isCompleted ? null : now,
-      clearCompletedAt: task.isCompleted,
+      status: wasCompleted ? TaskStatus.todo : TaskStatus.done,
+      completedAt: wasCompleted ? null : now,
+      clearCompletedAt: wasCompleted,
       updatedAt: now,
     );
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
     notifyListeners();
+
+    if (!wasCompleted && celebration != null) {
+      final todayTasks = getTasksForNav(AppConstants.navToday);
+      final remaining = todayTasks.where((t) => !t.isCompleted).length;
+      if (remaining == 0 && todayTasks.isNotEmpty) {
+        celebration.triggerCelebration();
+      }
+    }
   }
 
   Future<void> toggleFlag(String id) async {

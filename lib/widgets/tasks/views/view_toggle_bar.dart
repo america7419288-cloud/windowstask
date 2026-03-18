@@ -16,53 +16,36 @@ class ViewToggleBar extends StatelessWidget {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
 
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: colors.surfaceElevated,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border, width: 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: TaskViewLayout.values.map((layout) {
-          final isActive = layout == current;
-          return Tooltip(
-            message: _label(layout),
-            waitDuration: const Duration(milliseconds: 500),
-            child: GestureDetector(
-              onTap: () {
-                context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
-                settings.setViewLayout(layout);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 170),
-                curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.symmetric(horizontal: 1),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isActive ? accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(7),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 1),
-                          )
-                        ]
-                      : [],
-                ),
-                child: Icon(
-                  isActive ? _iconFilled(layout) : _iconOutline(layout),
-                  size: 15,
-                  color: isActive ? Colors.white : colors.textTertiary,
-                ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: TaskViewLayout.values.map((layout) {
+        final isActive = layout == current;
+        return Tooltip(
+          message: _label(layout),
+          waitDuration: const Duration(milliseconds: 500),
+          child: GestureDetector(
+            onTap: () {
+              context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
+              settings.setViewLayout(layout);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 170),
+              curve: Curves.easeOutCubic,
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isActive ? accent.withValues(alpha: 0.12) : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                isActive ? _iconFilled(layout) : _iconOutline(layout),
+                size: 14,
+                color: isActive ? accent : colors.textTertiary,
               ),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 

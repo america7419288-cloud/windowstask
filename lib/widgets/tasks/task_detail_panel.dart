@@ -9,6 +9,7 @@ import '../../providers/task_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/list_provider.dart';
 import '../../providers/tag_provider.dart';
+import '../../providers/celebration_provider.dart';
 import '../../providers/focus_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/typography.dart';
@@ -158,7 +159,10 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                               trailing: Switch(
                                 value: _task.isCompleted,
                                 onChanged: (v) {
-                                  context.read<TaskProvider>().toggleComplete(_task.id);
+                                  context.read<TaskProvider>().toggleComplete(
+                                    _task.id,
+                                    celebration: context.read<CelebrationProvider>(),
+                                  );
                                 },
                                 activeColor: Theme.of(context).colorScheme.primary,
                               ),

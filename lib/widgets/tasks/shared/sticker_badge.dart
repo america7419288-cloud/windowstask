@@ -23,8 +23,8 @@ class StickerBadge extends StatelessWidget {
       case StickerSize.jumbo: scale = 1.8; break;
     }
 
-    final double outerSize = 40 * scale;
-    final double innerSize = 32 * scale;
+    final double outerSize = 32 * scale;
+    final double innerSize = 25 * scale;
 
     return Container(
       width: outerSize, height: outerSize,

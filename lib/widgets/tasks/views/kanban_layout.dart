@@ -4,6 +4,7 @@ import '../../../models/task.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../providers/tag_provider.dart';
+import '../../../providers/celebration_provider.dart'; // Added this import
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
@@ -134,7 +135,10 @@ class _KanbanColumnWidgetState extends State<_KanbanColumnWidget> {
             tp.updateTaskStatus(taskId, TaskStatus.inProgress);
             break;
           case KanbanColumn.done:
-            tp.toggleComplete(taskId);
+            tp.toggleComplete(
+              taskId,
+              celebration: context.read<CelebrationProvider>(),
+            );
             break;
         }
       },

@@ -29,6 +29,14 @@ class Sidebar extends StatelessWidget {
               ? [const Color(0xFF201E1C), const Color(0xFF1A1917)]
               : [const Color(0xFFF5F2EE), const Color(0xFFECE9E4)],
         ),
+        border: Border(
+          right: BorderSide(
+            color: colors.isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.08),
+            width: 0.75,
+          ),
+        ),
       ),
       child: Column(
         children: [
@@ -193,14 +201,14 @@ class _NavContentState extends State<_NavContent> {
   Widget _sectionHeader(BuildContext context, String title) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
       child: Text(
         title.toUpperCase(),
         style: AppTypography.micro.copyWith(
           fontSize: 10,
           color: colors.textQuaternary,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1.2,
         ),
       ),
     );

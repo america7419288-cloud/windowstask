@@ -4,6 +4,7 @@ import '../../../models/task.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../providers/tag_provider.dart';
+import '../../../providers/celebration_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
@@ -72,55 +73,43 @@ class _MagazineCardState extends State<_MagazineCard> {
       child: GestureDetector(
         onTap: () => nav.selectTask(t.id),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: AppColors.elevatedDecoration(
-            isDark: isDark,
-            borderRadius: 20,
-          ).copyWith(
-            color: t.isCompleted 
-                ? (isDark ? colors.surfaceElevated.withValues(alpha: 0.5) : colors.surfaceElevated.withValues(alpha: 0.7))
-                : null,
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: t.isCompleted
+                ? (isDark
+                    ? colors.surfaceElevated.withValues(alpha: 0.5)
+                    : colors.surfaceElevated.withValues(alpha: 0.7))
+                : (isDark ? const Color(0xFF2A2725) : Colors.white),
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              left: BorderSide(
+                color: t.priority != Priority.none
+                    ? _priorityColor(t.priority)
+                    : t.isCompleted
+                        ? AppColors.green
+                        : Colors.transparent,
+                width: 3,
+              ),
+              top: BorderSide(color: colors.border, width: 0.5),
+              right: BorderSide(color: colors.border, width: 0.5),
+              bottom: BorderSide(color: colors.border, width: 0.5),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Top priority strip
-              if (t.priority != Priority.none)
-                Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [priorityColor, priorityColor.withValues(alpha: 0.4)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(19),
-                      topRight: Radius.circular(19),
-                    ),
-                  ),
-                )
-              else if (t.isCompleted)
-                Container(
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppColors.green,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(19),
-                      topRight: Radius.circular(19),
-                    ),
-                  ),
-                ),
-              // Content
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Meta header
                     Row(
                       children: [
                         if (t.priority != Priority.none) ...[
@@ -140,7 +129,7 @@ class _MagazineCardState extends State<_MagazineCard> {
                               ),
                             ),
                           ),
-                          Text(' · ', style: TextStyle(color: colors.textTertiary, fontSize: 11)),
+                          const Text(' · ', style: TextStyle(color: Colors.grey, fontSize: 11)),
                         ],
                         if (t.dueDate != null)
                           Text(
@@ -154,12 +143,11 @@ class _MagazineCardState extends State<_MagazineCard> {
                         if (t.isFlagged)
                           GestureDetector(
                             onTap: () => context.read<TaskProvider>().toggleFlag(t.id),
-                            child: Icon(Icons.flag_rounded, size: 16, color: AppColors.orange),
+                            child: const Icon(Icons.flag_rounded, size: 16, color: AppColors.orange),
                           ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Title
                     Text(
                       t.title,
                       maxLines: 2,
@@ -174,7 +162,13 @@ class _MagazineCardState extends State<_MagazineCard> {
                         decoration: t.isCompleted ? TextDecoration.lineThrough : null,
                       ),
                     ),
-                    // Description
+                    if (t.stickerId != null && t.stickerId!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 48,
+                        child: StickerBadge(stickerId: t.stickerId!),
+                      ),
+                    ],
                     if (t.description.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -187,7 +181,6 @@ class _MagazineCardState extends State<_MagazineCard> {
                         ),
                       ),
                     ],
-                    // List Name
                     if (listName != null) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -198,7 +191,6 @@ class _MagazineCardState extends State<_MagazineCard> {
                         ),
                       ),
                     ],
-                    // Subtask progress bar
                     if (totalSubtasks > 0) ...[
                       const SizedBox(height: 16),
                       Row(
@@ -225,15 +217,16 @@ class _MagazineCardState extends State<_MagazineCard> {
                         ],
                       ),
                     ],
-                    // Footer
                     const SizedBox(height: 16),
                     Divider(height: 1, color: colors.divider),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        // Complete toggle pill
                         GestureDetector(
-                          onTap: () => context.read<TaskProvider>().toggleComplete(t.id),
+                          onTap: () => context.read<TaskProvider>().toggleComplete(
+                            t.id,
+                            celebration: context.read<CelebrationProvider>(),
+                          ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                             decoration: BoxDecoration(
@@ -252,16 +245,12 @@ class _MagazineCardState extends State<_MagazineCard> {
                             ),
                             child: Row(
                               children: [
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 150),
-                                  child: Icon(
-                                    t.isCompleted
-                                        ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill)
-                                        : PhosphorIcons.circle(),
-                                    key: ValueKey<bool>(t.isCompleted),
-                                    size: 13,
-                                    color: t.isCompleted ? AppColors.green : colors.textSecondary,
-                                  ),
+                                Icon(
+                                  t.isCompleted
+                                      ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill)
+                                      : PhosphorIcons.circle(),
+                                  size: 13,
+                                  color: t.isCompleted ? AppColors.green : colors.textSecondary,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
@@ -277,7 +266,6 @@ class _MagazineCardState extends State<_MagazineCard> {
                           ),
                         ),
                         const Spacer(),
-                        // Tags
                         ...t.tags.take(3).map((tagId) {
                           final tagName = context.read<TagProvider>().getById(tagId)?.name ?? 'Tag';
                           return Container(
@@ -291,27 +279,22 @@ class _MagazineCardState extends State<_MagazineCard> {
                               '#$tagName',
                               style: AppTypography.caption.copyWith(
                                 fontSize: 11,
-                              )));
-                            }),
-                          ],
-                        ),
+                              ),
+                            ),
+                          );
+                        }),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              if (t.stickerId != null && t.stickerId!.isNotEmpty)
-                Positioned(
-                  bottom: -10,
-                  right: 16,
-                  child: StickerBadge(stickerId: t.stickerId!),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
   Color _priorityColor(Priority p) {
     switch (p) {
       case Priority.none:    return Colors.transparent;

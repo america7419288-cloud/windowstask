@@ -35,9 +35,7 @@ class MultiLayoutTaskView extends StatelessWidget {
     final bool showControls = navItem != AppConstants.navTrash &&
         navItem != AppConstants.navCompleted;
 
-    final bool showHeader = navItem != AppConstants.navTrash &&
-        navItem != AppConstants.navCompleted &&
-        layout != TaskViewLayout.list;
+    final bool showHeader = navItem == AppConstants.navToday;
 
     return Column(
       children: [
@@ -93,16 +91,25 @@ class _LayoutHeader extends StatelessWidget {
     final colors = context.appColors;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
+        color: colors.isDark ? const Color(0xFF1E1C1A) : Colors.white,
         border: Border(bottom: BorderSide(color: colors.divider, width: 0.5)),
       ),
       child: Row(
         children: [
           if (showQuickAdd) const Expanded(child: QuickAddBar()),
-          if (!showQuickAdd) const Spacer(),
-          const SizedBox(width: 12),
-          const ViewToggleBar(),
+          if (!showQuickAdd) ...[
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: ViewToggleBar(),
+            ),
+          ],
+          if (showQuickAdd) 
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: ViewToggleBar(),
+            ),
         ],
       ),
     );

@@ -46,32 +46,21 @@ class _SidebarItemState extends State<SidebarItem> {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              margin: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
               decoration: BoxDecoration(
-                gradient: isSelected
-                    ? LinearGradient(
-                        colors: [
-                          accent.withValues(alpha: 0.13),
-                          accent.withValues(alpha: 0.06),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      )
-                    : null,
-                color: !isSelected && _hovered
-                    ? (colors.isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.black.withValues(alpha: 0.04))
-                    : (!isSelected ? Colors.transparent : null),
-                borderRadius: BorderRadius.circular(9),
+                color: isSelected
+                    ? accent.withValues(alpha: 0.10)
+                    : _hovered
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : Colors.transparent,
               ),
               child: Row(
                 children: [
                   Icon(
                     widget.icon,
-                    size: isSelected ? 18 : 17,
-                    color: isSelected ? accent : colors.textSecondary,
+                    size: 16,
+                    color: isSelected ? accent : colors.textTertiary,
                   ),
                   const SizedBox(width: 9),
                   Expanded(
@@ -80,7 +69,7 @@ class _SidebarItemState extends State<SidebarItem> {
                       style: AppTypography.body.copyWith(
                         fontSize: 13.5,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? accent : colors.textPrimary,
+                        color: isSelected ? Colors.white : colors.textSecondary,
                       ),
                     ),
                   ),
@@ -98,22 +87,17 @@ class _SidebarItemState extends State<SidebarItem> {
             // Left accent bar
             if (isSelected)
               Positioned(
-                left: 8,
-                top: 5,
-                bottom: 5,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutBack,
+                left: 0,
+                top: 2,
+                bottom: 2,
+                child: Container(
                   width: 3,
                   decoration: BoxDecoration(
                     color: accent,
-                    borderRadius: BorderRadius.circular(2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.withValues(alpha: 0.5),
-                        blurRadius: 6,
-                      ),
-                    ],
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(2),
+                      bottomRight: Radius.circular(2),
+                    ),
                   ),
                 ),
               ),

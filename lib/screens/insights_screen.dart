@@ -19,15 +19,13 @@ class InsightsScreen extends StatelessWidget {
     return Container(
       color: Colors.transparent, // ← wallpaper shows through
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Insights', style: AppTypography.title1.copyWith(color: colors.textPrimary)),
-            const SizedBox(height: 24),
             // Stats row
             _StatsRow(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             // Completion chart
             _Section(
               title: 'Completed (Last 14 Days)',
@@ -68,21 +66,21 @@ class _StatsRow extends StatelessWidget {
           icon: Icons.today_rounded,
           color: AppColors.blue,
         )),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'This Week',
           value: '${tasks.completedInRange(weekStart, now)}',
           icon: Icons.date_range_rounded,
           color: AppColors.purple,
         )),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'This Month',
           value: '${tasks.completedInRange(monthStart, now)}',
           icon: Icons.calendar_month_rounded,
           color: AppColors.green,
         )),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'Streak',
           value: '${tasks.currentStreak}d',
@@ -111,14 +109,14 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colors.isDark
             ? const Color(0xFF2A2725).withValues(alpha: 0.90)
             : Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(AppConstants.radiusCard),
-        border: Border.all(color: colors.border),
-        boxShadow: [
+        border: Border.all(color: colors.isDark ? colors.border : colors.border.withValues(alpha: 0.5)),
+        boxShadow: colors.isDark ? [] : [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
@@ -157,14 +155,14 @@ class _Section extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colors.isDark
             ? const Color(0xFF2A2725).withValues(alpha: 0.90)
             : Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(AppConstants.radiusCard),
-        border: Border.all(color: colors.border),
-        boxShadow: [
+        border: Border.all(color: colors.isDark ? colors.border : colors.border.withValues(alpha: 0.5)),
+        boxShadow: colors.isDark ? [] : [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
@@ -175,8 +173,8 @@ class _Section extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTypography.bodySemibold.copyWith(color: colors.textPrimary)),
-          const SizedBox(height: 16),
+          Text(title, style: AppTypography.bodySemibold.copyWith(color: colors.textPrimary, fontSize: 13)),
+          const SizedBox(height: 12),
           child,
         ],
       ),
@@ -200,6 +198,8 @@ class _CategoryBreakdown extends StatelessWidget {
     }
 
     if (listCounts.isEmpty) return const SizedBox.shrink();
+    final total = listCounts.values.fold(0, (a, b) => a + b);
+    if (total == 0) return const SizedBox.shrink();
 
     final sections = listCounts.entries.map((e) {
       final list = e.key != 'none' ? lists.getById(e.key) : null;
@@ -209,7 +209,7 @@ class _CategoryBreakdown extends StatelessWidget {
       return PieChartSectionData(
         value: e.value.toDouble(),
         color: color,
-        radius: 50,
+        radius: 32,
         title: '',
         showTitle: false,
       );
@@ -217,19 +217,21 @@ class _CategoryBreakdown extends StatelessWidget {
 
     return _Section(
       title: 'Tasks by List',
-      child: Row(
-        children: [
-          SizedBox(
-            width: 140,
-            height: 140,
-            child: PieChart(
-              PieChartData(
-                sections: sections,
-                centerSpaceRadius: 40,
-                sectionsSpace: 2,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 120),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 100,
+              height: 100,
+              child: PieChart(
+                PieChartData(
+                  sections: sections,
+                  centerSpaceRadius: 28,
+                  sectionsSpace: 2,
+                ),
               ),
             ),
-          ),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
@@ -253,10 +255,10 @@ class _CategoryBreakdown extends StatelessWidget {
                   ),
                 );
               }).toList(),
-            ),
+
           ),
-        ],
-      ),
-    );
+        ),
+      ]),
+    ));
   }
 }

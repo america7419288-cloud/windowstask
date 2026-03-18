@@ -28,8 +28,9 @@ class GroupHeader extends StatelessWidget {
       child: PressableScale(
         scaleDown: 0.98,
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 22, 18, 8),
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               // Animated chevron
@@ -42,7 +43,7 @@ class GroupHeader extends StatelessWidget {
                     angle: value * (math.pi / 2),
                     child: Icon(
                       Icons.chevron_right_rounded,
-                      size: 16,
+                      size: 12,
                       color: colors.textTertiary,
                     ),
                   );
@@ -53,10 +54,10 @@ class GroupHeader extends StatelessWidget {
               Text(
                 label.toUpperCase(),
                 style: AppTypography.micro.copyWith(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: colors.textTertiary,
+                  color: colors.textQuaternary,
                 ),
               ),
               const SizedBox(width: 8),
@@ -64,24 +65,23 @@ class GroupHeader extends StatelessWidget {
               Expanded(
                 child: Container(
                   height: 0.5,
-                  color: colors.isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.08),
+                  color: colors.divider,
                 ),
               ),
               const SizedBox(width: 8),
               // Count badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: colors.isDark
                       ? Colors.white.withValues(alpha: 0.08)
                       : AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '$count',
                   style: AppTypography.micro.copyWith(
+                    fontSize: 10,
                     color: colors.isDark
                         ? colors.textSecondary
                         : AppColors.primary,

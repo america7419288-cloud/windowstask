@@ -69,13 +69,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () => setState(() => _selectedSection = i),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: isActive ? AppColors.gradientBlue : null,
                           color: !isActive && i == _selectedSection ? Colors.transparent : null,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: isActive ? [
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: isActive && !colors.isDark ? [
                             BoxShadow(
                               color: AppColors.blue.withValues(alpha: 0.2),
                               blurRadius: 8,
@@ -112,9 +112,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Colors.transparent, // ← wallpaper shows through
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: Center(
+              child: Align(
+                alignment: Alignment.topLeft,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
+                  constraints: const BoxConstraints(maxWidth: 680),
                   child: _buildSection(_selectedSection),
                 ),
               ),
@@ -167,9 +168,9 @@ class _SectionCard extends StatelessWidget {
               Text(
                 title.toUpperCase(),
                 style: AppTypography.micro.copyWith(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
+                  letterSpacing: 1.0,
                   color: colors.textQuaternary,
                 ),
               ),
@@ -181,24 +182,22 @@ class _SectionCard extends StatelessWidget {
             color: colors.isDark
                 ? const Color(0xFF2A2725).withValues(alpha: 0.90)
                 : Colors.white.withValues(alpha: 0.88),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: colors.isDark
                   ? Colors.white.withValues(alpha: 0.07)
                   : Colors.black.withValues(alpha: 0.07),
               width: 0.75,
             ),
-            boxShadow: [
+            boxShadow: colors.isDark ? [] : [
               BoxShadow(
-                color: Colors.black.withValues(
-                    alpha: colors.isDark ? 0.30 : 0.045),
+                color: Colors.black.withValues(alpha: 0.045),
                 blurRadius: 12,
                 offset: const Offset(0, 3),
                 spreadRadius: -1,
               ),
               BoxShadow(
-                color: Colors.black.withValues(
-                    alpha: colors.isDark ? 0.15 : 0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 3,
                 offset: const Offset(0, 1),
               ),
@@ -208,7 +207,7 @@ class _SectionCard extends StatelessWidget {
             children: children,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -236,7 +235,7 @@ class _SettingsRow extends StatelessWidget {
         if (!isFirst)
           Divider(height: 1, color: colors.divider, indent: 16, endIndent: 16),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             crossAxisAlignment: subtitle != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
@@ -245,13 +244,13 @@ class _SettingsRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(label, style: AppTypography.body.copyWith(
-                      fontSize: 15, fontWeight: FontWeight.w500,
+                      fontSize: 14, fontWeight: FontWeight.w500,
                       color: colors.textPrimary,
                     )),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(subtitle!, style: AppTypography.caption.copyWith(
-                        fontSize: 13, color: colors.textTertiary,
+                        fontSize: 12, color: colors.textTertiary,
                       )),
                     ],
                   ],

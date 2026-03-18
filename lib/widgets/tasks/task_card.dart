@@ -5,6 +5,7 @@ import '../../providers/navigation_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/list_provider.dart';
 import '../../providers/tag_provider.dart';
+import '../../providers/celebration_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
@@ -15,7 +16,6 @@ import '../../models/sticker.dart';
 import '../shared/sticker_widget.dart';
 import 'shared/sticker_badge.dart';
 import '../shared/pressable_scale.dart';
-import '../../painters/confetti_painter.dart';
 import '../context_menu/context_menu_controller.dart';
 
 class TaskCard extends StatefulWidget {
@@ -41,17 +41,15 @@ class _TaskCardState extends State<TaskCard> {
 
   void _handleComplete() {
     final wasCompleted = widget.task.isCompleted;
-    context.read<TaskProvider>().toggleComplete(widget.task.id);
+    context.read<TaskProvider>().toggleComplete(
+      widget.task.id,
+      celebration: context.read<CelebrationProvider>(),
+    );
     if (!wasCompleted) {
       setState(() {
         _justCompleted = true;
         _completionFlash = true;
       });
-      final box = context.findRenderObject() as RenderBox?;
-      if (box != null) {
-        final pos = box.localToGlobal(const Offset(30, 20));
-        ConfettiOverlay.show(context, pos);
-      }
       Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted) setState(() => _completionFlash = false);
       });
@@ -91,43 +89,23 @@ class _TaskCardState extends State<TaskCard> {
     final borderWidth = widget.isSelected ? 1.5 : 0.75;
 
     // Shadows
-    final shadows = isCompleted
+    final shadows = isCompleted || isDark
         ? <BoxShadow>[]
-        : isDark
+        : _hovered
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: _hovered ? 20 : 12,
-                  offset: Offset(0, _hovered ? 6 : 3),
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ]
-            : _hovered
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.09),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                      spreadRadius: -1,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.055),
-                      blurRadius: 12,
-                      offset: const Offset(0, 3),
-                      spreadRadius: -1,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.025),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ];
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ];
 
     final card = MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -153,36 +131,30 @@ class _TaskCardState extends State<TaskCard> {
               context.read<NavigationProvider>().selectTask(t.id);
             }
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          child: Container(
+            margin: EdgeInsets.zero,
             decoration: BoxDecoration(
-              color: widget.isSelected
-                  ? AppColors.primary.withValues(alpha: 0.025)
-                  : cardBg,
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: borderColor, width: borderWidth),
+              color: isDark ? const Color(0xFF1E1C1A) : Colors.white,
+              border: Border(
+                left: widget.isSelected 
+                    ? const BorderSide(color: AppColors.primary, width: 3)
+                    : BorderSide.none,
+                bottom: BorderSide(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.05),
+                  width: 0.5,
+                ),
+              ),
               boxShadow: shadows,
             ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _PriorityBar(priority: t.priority),
-                      Expanded(child: _buildContent(context, t, colors, isOverdue, isCompleted)),
-                    ],
-                  ),
-                ),
-                if (t.stickerId != null && t.stickerId!.isNotEmpty)
-                  Positioned(
-                    bottom: -10,
-                    right: 8,
-                    child: StickerBadge(stickerId: t.stickerId!),
-                  ),
-              ],
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  _PriorityBar(priority: t.priority),
+                  Expanded(child: _buildContent(context, t, colors, isOverdue, isCompleted)),
+                ],
+              ),
             ),
           ),
         ),
@@ -203,7 +175,7 @@ class _TaskCardState extends State<TaskCard> {
 
   Widget _buildContent(BuildContext context, Task t, AppColorsExtension colors, bool isOverdue, bool isCompleted) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -211,6 +183,7 @@ class _TaskCardState extends State<TaskCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // 1. Checkbox
               CustomCheckbox(
                 value: isCompleted,
                 onChanged: (_) {
@@ -220,57 +193,49 @@ class _TaskCardState extends State<TaskCard> {
                 size: 22,
               ),
               const SizedBox(width: 10),
+
+              // 2. Title text (Expanded)
               Expanded(
-                child: isCompleted
-                    ? Text(
-                        t.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.body.copyWith(
-                          color: colors.textTertiary,
-                          decoration: TextDecoration.lineThrough,
-                          decorationColor: colors.textTertiary,
-                        ),
-                      )
-                    : Text(
-                        t.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySemibold.copyWith(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.2,
-                          color: isOverdue
-                              ? AppColors.priorityHigh
-                              : colors.textPrimary,
-                        ),
-                      ),
+                child: Text(
+                  t.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: (isCompleted ? AppTypography.body : AppTypography.bodySemibold).copyWith(
+                    fontSize: 13.5,
+                    fontWeight: isCompleted ? FontWeight.w400 : FontWeight.w500,
+                    letterSpacing: -0.1,
+                    color: isCompleted
+                        ? colors.textTertiary
+                        : isOverdue
+                            ? AppColors.priorityHigh
+                            : colors.textPrimary,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                    decorationColor: colors.textTertiary,
+                  ),
+                ),
               ),
+
+              // 3. Flag icon (if flagged)
               if (t.isFlagged)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
                   child: Icon(Icons.bookmark_rounded,
                       size: 14, color: AppColors.priorityMedium),
                 ),
+
+              // 4. Subtask badge (if has subtasks)
               if (t.subtasks.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: _MiniSubtaskBadge(task: t),
                 ),
-              if (t.isDeleted) ...[
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () => context.read<TaskProvider>().restoreTask(t.id),
-                  icon: const Icon(Icons.restore_from_trash_rounded, size: 16),
-                  label: Text('Restore', style: AppTypography.caption),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
+
+              // 5. Sticker (if assigned) — INLINE, NOT POSITIONED
+              if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: _StickerBadge(stickerId: t.stickerId!),
                 ),
-              ],
             ],
           ),
           // Description
@@ -363,16 +328,11 @@ class _PriorityBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (priority == Priority.none) return const SizedBox(width: 5);
+    if (priority == Priority.none) return const SizedBox(width: 3);
     return Container(
-      width: 5,
+      width: 3,
       decoration: BoxDecoration(
         color: _color,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(13),
-          bottomLeft: Radius.circular(13),
-        ),
-        boxShadow: _glow,
       ),
     );
   }
@@ -477,3 +437,26 @@ class _TagPill extends StatelessWidget {
     );
   }
 }
+
+class _StickerBadge extends StatelessWidget {
+  final String stickerId;
+  const _StickerBadge({required this.stickerId});
+
+  @override
+  Widget build(BuildContext context) {
+    final sticker = StickerRegistry.findById(stickerId);
+    if (sticker == null) return const SizedBox.shrink();
+
+    // Small inline badge — sits in the title row
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: StickerWidget(
+        sticker: sticker,
+        size: 28,
+        animate: true,
+      ),
+    );
+  }
+}
+

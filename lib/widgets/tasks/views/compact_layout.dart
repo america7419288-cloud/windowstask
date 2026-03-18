@@ -4,6 +4,7 @@ import '../../../models/task.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../providers/tag_provider.dart';
+import '../../../providers/celebration_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
@@ -92,7 +93,7 @@ class _CompactRowState extends State<_CompactRow> {
                     width: 3,
                     decoration: BoxDecoration(
                       color: t.isCompleted
-                          ? AppColors.green
+                          ? Colors.transparent
                           : (t.priority != Priority.none
                               ? priorityColor
                               : Colors.transparent),
@@ -113,7 +114,10 @@ class _CompactRowState extends State<_CompactRow> {
                             CustomCheckbox(
                               value: t.isCompleted,
                               onChanged: (val) =>
-                                  context.read<TaskProvider>().toggleComplete(t.id),
+                                  context.read<TaskProvider>().toggleComplete(
+                                    t.id,
+                                    celebration: context.read<CelebrationProvider>(),
+                                  ),
                               activeColor: accent,
                               size: 16,
                             ),
