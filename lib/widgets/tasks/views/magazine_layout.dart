@@ -81,18 +81,9 @@ class _MagazineCardState extends State<_MagazineCard> {
                     : colors.surfaceElevated.withValues(alpha: 0.7))
                 : (isDark ? const Color(0xFF2A2725) : Colors.white),
             borderRadius: BorderRadius.circular(12),
-            border: Border(
-              left: BorderSide(
-                color: t.priority != Priority.none
-                    ? _priorityColor(t.priority)
-                    : t.isCompleted
-                        ? AppColors.green
-                        : Colors.transparent,
-                width: 3,
-              ),
-              top: BorderSide(color: colors.border, width: 0.5),
-              right: BorderSide(color: colors.border, width: 0.5),
-              bottom: BorderSide(color: colors.border, width: 0.5),
+            border: Border.all(
+              color: colors.border,
+              width: 0.5,
             ),
             boxShadow: [
               BoxShadow(
@@ -102,9 +93,29 @@ class _MagazineCardState extends State<_MagazineCard> {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left priority bar
+                Container(
+                  width: 3,
+                  decoration: BoxDecoration(
+                    color: t.priority != Priority.none
+                        ? _priorityColor(t.priority)
+                        : t.isCompleted
+                            ? AppColors.green
+                            : Colors.transparent,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -288,7 +299,11 @@ class _MagazineCardState extends State<_MagazineCard> {
                   ],
                 ),
               ),
-            ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
