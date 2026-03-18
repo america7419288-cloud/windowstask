@@ -73,7 +73,6 @@ class ViewToggleBar extends StatelessWidget {
       case TaskViewLayout.kanban:   return 'Kanban';
       case TaskViewLayout.compact:  return 'Compact';
       case TaskViewLayout.magazine: return 'Magazine';
-      case TaskViewLayout.calendar: return 'Calendar';
     }
   }
 
@@ -84,7 +83,6 @@ class ViewToggleBar extends StatelessWidget {
       case TaskViewLayout.kanban:   return PhosphorIcons.kanban();
       case TaskViewLayout.compact:  return PhosphorIcons.rows();
       case TaskViewLayout.magazine: return PhosphorIcons.newspaper();
-      case TaskViewLayout.calendar: return PhosphorIcons.calendarBlank();
     }
   }
 
@@ -95,7 +93,6 @@ class ViewToggleBar extends StatelessWidget {
       case TaskViewLayout.kanban:   return PhosphorIcons.kanban(PhosphorIconsStyle.fill);
       case TaskViewLayout.compact:  return PhosphorIcons.rows(PhosphorIconsStyle.fill);
       case TaskViewLayout.magazine: return PhosphorIcons.newspaper(PhosphorIconsStyle.fill);
-      case TaskViewLayout.calendar: return PhosphorIcons.calendarBlank(PhosphorIconsStyle.fill);
     }
   }
 }

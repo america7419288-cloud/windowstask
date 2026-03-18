@@ -11,7 +11,9 @@ import '../../../utils/date_utils.dart';
 import '../../shared/empty_state_widget.dart';
 import '../../../painters/empty_state_painters.dart';
 import '../shared/task_interaction_wrapper.dart';
+import '../shared/task_interaction_wrapper.dart';
 import '../shared/custom_checkbox.dart';
+import '../shared/sticker_badge.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class CompactLayout extends StatelessWidget {
@@ -157,6 +159,11 @@ class _CompactRowState extends State<_CompactRow> {
                                   size: 13,
                                   color: AppColors.orange,
                                 ),
+                              ),
+                            if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 10),
+                                child: StickerBadge(stickerId: t.stickerId!),
                               ),
                             if (isOverdue && t.dueDate != null)
                               Padding(

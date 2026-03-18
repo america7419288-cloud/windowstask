@@ -18,6 +18,12 @@ import '../../utils/date_utils.dart';
 import '../shared/priority_badge.dart';
 import '../shared/tag_chip.dart';
 import '../shared/date_picker_popover.dart';
+import 'shared/custom_checkbox.dart';
+import '../shared/pressable_scale.dart';
+import '../../data/sticker_packs.dart';
+import '../../models/sticker.dart';
+import '../shared/sticker_widget.dart';
+import '../shared/sticker_picker.dart';
 import 'subtask_item.dart';
 
 class TaskDetailPanel extends StatefulWidget {
@@ -187,6 +193,9 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                                 activeColor: AppColors.orange,
                               ),
                             ),
+                            _thinDivider(colors),
+                            // Sticker
+                            _StickerRow(task: _task),
                             _thinDivider(colors),
                             // List
                             _ListRow(task: _task),
@@ -719,5 +728,118 @@ class _Timestamps extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _StickerRow extends StatelessWidget {
+  final Task task;
+  const _StickerRow({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+    final sticker = task.stickerId != null
+        ? StickerRegistry.findById(task.stickerId!)
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(Icons.emoji_emotions_outlined,
+              size: 16, color: colors.textSecondary),
+          const SizedBox(width: 10),
+          Text('Sticker',
+            style: AppTypography.body.copyWith(
+                color: colors.textPrimary)),
+          const Spacer(),
+
+          if (sticker != null) ...[
+            // Large animated sticker preview
+            GestureDetector(
+              onTap: () => _openPicker(context),
+              child: Container(
+                width: 56, height: 56,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: StickerWidget(
+                    sticker: sticker,
+                    size: 44,
+                    animate: true,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Remove button
+            GestureDetector(
+              onTap: () => context.read<TaskProvider>()
+                  .setSticker(task.id, null),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: AppColors.red.withValues(alpha: 0.2)),
+                ),
+                child: Icon(Icons.close_rounded,
+                    size: 14, color: AppColors.red),
+              ),
+            ),
+          ] else
+            // No sticker — show add button
+            GestureDetector(
+              onTap: () => _openPicker(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.add_rounded,
+                        size: 14, color: accent),
+                    const SizedBox(width: 4),
+                    Text('Add sticker',
+                      style: AppTypography.caption.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w600,
+                      )),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPicker(BuildContext context) async {
+    final result = await StickerPicker.show(
+      context,
+      currentStickerId: task.stickerId,
+    );
+    if (result == null) return; // dismissed — no change
+    if (!context.mounted) return;
+
+    // Empty string means remove
+    final newId = result.isEmpty ? null : result;
+    context.read<TaskProvider>().setSticker(task.id, newId);
   }
 }

@@ -10,6 +10,7 @@ import '../../../theme/typography.dart';
 import '../../../utils/date_utils.dart';
 import '../shared/task_interaction_wrapper.dart';
 import '../../context_menu/context_menu_controller.dart';
+import '../shared/sticker_badge.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 enum KanbanColumn { todo, inProgress, done }
@@ -405,10 +406,13 @@ class _KanbanCardState extends State<_KanbanCard> {
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(13.5),
-          child: Opacity(
-            opacity: t.isCompleted ? 0.45 : 1.0,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(13.5),
+              child: Opacity(
+                opacity: t.isCompleted ? 0.45 : 1.0,
             child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -573,8 +577,8 @@ class _KanbanCardState extends State<_KanbanCard> {
             ),
           ),
         ),
-      ),
-    );
+
+    ]),));
   }
 
   Color _priorityColor(Priority p) {

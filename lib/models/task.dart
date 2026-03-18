@@ -98,6 +98,9 @@ class Task extends HiveObject {
   @HiveField(22)
   int sortOrder;
 
+  @HiveField(23)
+  String? stickerId;
+
   Task({
     required this.id,
     required this.title,
@@ -122,6 +125,7 @@ class Task extends HiveObject {
     this.isDeleted = false,
     this.deletedAt,
     this.sortOrder = 0,
+    this.stickerId,
   })  : tags = tags ?? [],
         subtasks = subtasks ?? [],
         attachments = attachments ?? [];
@@ -171,10 +175,12 @@ class Task extends HiveObject {
     bool? isDeleted,
     DateTime? deletedAt,
     int? sortOrder,
+    String? stickerId,
     bool clearDueDate = false,
     bool clearDueTime = false,
     bool clearListId = false,
     bool clearCompletedAt = false,
+    bool clearSticker = false,
   }) {
     return Task(
       id: id ?? this.id,
@@ -198,8 +204,9 @@ class Task extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
-      deletedAt: deletedAt ?? this.deletedAt,
+      deletedAt: isDeleted == true ? (deletedAt ?? this.deletedAt) : null,
       sortOrder: sortOrder ?? this.sortOrder,
+      stickerId: clearSticker ? null : (stickerId ?? this.stickerId),
     );
   }
 
@@ -227,6 +234,7 @@ class Task extends HiveObject {
         'isDeleted': isDeleted,
         'deletedAt': deletedAt?.toIso8601String(),
         'sortOrder': sortOrder,
+        'stickerId': stickerId,
       };
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -255,12 +263,17 @@ class Task extends HiveObject {
         estimatedMinutes: json['estimatedMinutes'] as int?,
         pomodoroCount: json['pomodoroCount'] as int? ?? 0,
         attachments: List<String>.from(json['attachments'] as List? ?? []),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : DateTime.now(),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'] as String)
+            : DateTime.now(),
         isDeleted: json['isDeleted'] as bool? ?? false,
         deletedAt: json['deletedAt'] != null
             ? DateTime.parse(json['deletedAt'] as String)
             : null,
         sortOrder: json['sortOrder'] as int? ?? 0,
+        stickerId: json['stickerId'] as String?,
       );
 }

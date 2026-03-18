@@ -13,6 +13,7 @@ import '../../context_menu/context_menu_controller.dart';
 import '../../../providers/list_provider.dart';
 import '../../shared/empty_state_widget.dart';
 import '../../../painters/empty_state_painters.dart';
+import '../shared/sticker_badge.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class MagazineLayout extends StatelessWidget {
@@ -80,8 +81,11 @@ class _MagazineCardState extends State<_MagazineCard> {
                 ? (isDark ? colors.surfaceElevated.withValues(alpha: 0.5) : colors.surfaceElevated.withValues(alpha: 0.7))
                 : null,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Top priority strip
               if (t.priority != Priority.none)
@@ -287,17 +291,21 @@ class _MagazineCardState extends State<_MagazineCard> {
                               '#$tagName',
                               style: AppTypography.caption.copyWith(
                                 fontSize: 11,
-                                color: AppColors.indigo,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          );
-                        }),
+                              )));
+                            }),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+              if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                Positioned(
+                  bottom: -10,
+                  right: 16,
+                  child: StickerBadge(stickerId: t.stickerId!),
+                ),
             ],
           ),
         ),

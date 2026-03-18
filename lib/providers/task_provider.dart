@@ -250,6 +250,19 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setSticker(String taskId, String? stickerId) async {
+    final idx = _tasks.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+    final updated = _tasks[idx].copyWith(
+      stickerId: stickerId,
+      clearSticker: stickerId == null || stickerId.isEmpty,
+      updatedAt: DateTime.now(),
+    );
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
+  }
+
   Future<void> restoreTask(String id) async => restoreFromTrash(id);
 
   Future<void> moveToTrash(String id) async {

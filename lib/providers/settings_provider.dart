@@ -21,10 +21,15 @@ class SettingsProvider extends ChangeNotifier {
   int get startOfWeek => _settings.startOfWeek;
   SortOption get defaultSort => _settings.defaultSort;
 
-  // ─── New getters ─────────────────────────────────────────────────────────────
+  // ─── Layout getters ───────────────────────────────────────────────────────
   double get sidebarWidth => _settings.sidebarWidth;
   FontDensity get fontDensity => _settings.fontDensity;
   TaskViewLayout get currentLayout => _settings.defaultViewLayout;
+  StickerSize get stickerSize => _settings.stickerSize;
+
+  // ─── Wallpaper getters ──────────────────────────────────────────────────────
+  double get wallpaperBrightness => _settings.wallpaperBrightness;
+  String? get wallpaperImagePath => _settings.wallpaperImagePath;
 
   double get fontScale {
     switch (_settings.fontDensity) {
@@ -34,7 +39,6 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
-  // Card/item padding based on density
   double get cardPadding {
     switch (_settings.fontDensity) {
       case FontDensity.compact:     return 10;
@@ -96,7 +100,12 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 
-  // ─── New setters ─────────────────────────────────────────────────────────────
+  Future<void> setStickerSize(StickerSize size) async {
+    _settings = _settings.copyWith(stickerSize: size);
+    await _save();
+  }
+
+  // ─── Layout setters ─────────────────────────────────────────────────────────
   Future<void> setSidebarWidth(double width) async {
     _settings = _settings.copyWith(sidebarWidth: width.clamp(180, 320));
     await _save();
@@ -112,6 +121,7 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 
+  // ─── Wallpaper setters ──────────────────────────────────────────────────────
   Future<void> setWallpaper(WallpaperType type, {String? value}) async {
     switch (type) {
       case WallpaperType.solidColor:
@@ -123,6 +133,9 @@ class SettingsProvider extends ChangeNotifier {
       case WallpaperType.pattern:
         _settings = _settings.copyWith(wallpaperType: type, wallpaperPatternId: value);
         break;
+      case WallpaperType.customImage:
+        _settings = _settings.copyWith(wallpaperType: type, wallpaperImagePath: value);
+        break;
       case WallpaperType.none:
         _settings = _settings.copyWith(wallpaperType: WallpaperType.none);
         break;
@@ -132,6 +145,24 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setWallpaperOpacity(double opacity) async {
     _settings = _settings.copyWith(wallpaperOpacity: opacity.clamp(0.05, 0.40));
+    await _save();
+  }
+
+  Future<void> setWallpaperBrightness(double brightness) async {
+    _settings = _settings.copyWith(
+      wallpaperBrightness: brightness.clamp(0.3, 1.0),
+    );
+    await _save();
+  }
+
+  Future<void> setWallpaperImage(String? path) async {
+    _settings = _settings.copyWith(
+      wallpaperType: path != null
+          ? WallpaperType.customImage
+          : WallpaperType.none,
+      wallpaperImagePath: path,
+      clearWallpaperImage: path == null,
+    );
     await _save();
   }
 

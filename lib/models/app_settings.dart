@@ -3,11 +3,13 @@ import '../theme/colors.dart';
 
 enum SortOption { dueDate, priority, alphabetical, createdDate, manual }
 
-enum TaskViewLayout { list, grid, kanban, compact, magazine, calendar }
+enum TaskViewLayout { list, grid, kanban, compact, magazine }
 
 enum FontDensity { compact, normal, comfortable }
 
-enum WallpaperType { none, solidColor, gradient, pattern }
+enum WallpaperType { none, solidColor, gradient, pattern, customImage }
+
+enum StickerSize { small, normal, large, jumbo }
 
 class AppSettings {
   final ThemeMode themeMode;
@@ -20,17 +22,26 @@ class AppSettings {
   final bool notificationsEnabled;
   final SortOption defaultSort;
 
-  // NEW: Layout
+  // Layout
   final double sidebarWidth;
   final FontDensity fontDensity;
   final TaskViewLayout defaultViewLayout;
 
-  // NEW: Wallpaper
+  // Wallpaper
   final WallpaperType wallpaperType;
   final String? wallpaperColorHex;
   final String? wallpaperGradientId;
   final String? wallpaperPatternId;
   final double wallpaperOpacity;
+
+  // Wallpaper brightness/dim control (0.0 = darkest, 1.0 = original)
+  final double wallpaperBrightness;
+
+  // Custom image — stored as file path on Windows, base64 key on web
+  final String? wallpaperImagePath;
+
+  // Sticker size
+  final StickerSize stickerSize;
 
   const AppSettings({
     this.themeMode = ThemeMode.system,
@@ -50,6 +61,9 @@ class AppSettings {
     this.wallpaperGradientId,
     this.wallpaperPatternId,
     this.wallpaperOpacity = 0.15,
+    this.wallpaperBrightness = 0.85,
+    this.wallpaperImagePath,
+    this.stickerSize = StickerSize.normal,
   });
 
   Color get accentColor {
@@ -80,6 +94,10 @@ class AppSettings {
     String? wallpaperGradientId,
     String? wallpaperPatternId,
     double? wallpaperOpacity,
+    double? wallpaperBrightness,
+    String? wallpaperImagePath,
+    bool clearWallpaperImage = false,
+    StickerSize? stickerSize,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -99,6 +117,11 @@ class AppSettings {
       wallpaperGradientId: wallpaperGradientId ?? this.wallpaperGradientId,
       wallpaperPatternId: wallpaperPatternId ?? this.wallpaperPatternId,
       wallpaperOpacity: wallpaperOpacity ?? this.wallpaperOpacity,
+      wallpaperBrightness: wallpaperBrightness ?? this.wallpaperBrightness,
+      wallpaperImagePath: clearWallpaperImage
+          ? null
+          : (wallpaperImagePath ?? this.wallpaperImagePath),
+      stickerSize: stickerSize ?? this.stickerSize,
     );
   }
 
@@ -120,25 +143,41 @@ class AppSettings {
         'wallpaperGradientId': wallpaperGradientId,
         'wallpaperPatternId': wallpaperPatternId,
         'wallpaperOpacity': wallpaperOpacity,
+        'wallpaperBrightness': wallpaperBrightness,
+        'wallpaperImagePath': wallpaperImagePath,
+        'stickerSize': stickerSize.index,
       };
 
-  factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
-        themeMode: ThemeMode.values[json['themeMode'] as int? ?? 2],
-        accentColorHex: json['accentColorHex'] as String? ?? '007AFF',
-        defaultListId: json['defaultListId'] as String?,
-        startOfWeek: json['startOfWeek'] as int? ?? 1,
-        focusDuration: json['focusDuration'] as int? ?? 25,
-        dailySummaryHour: json['dailySummaryHour'] as int?,
-        dailySummaryMinute: json['dailySummaryMinute'] as int?,
-        notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
-        defaultSort: SortOption.values[json['defaultSort'] as int? ?? 0],
-        sidebarWidth: (json['sidebarWidth'] as num?)?.toDouble() ?? 220,
-        fontDensity: FontDensity.values[json['fontDensity'] as int? ?? 1],
-        defaultViewLayout: TaskViewLayout.values[json['defaultViewLayout'] as int? ?? 0],
-        wallpaperType: WallpaperType.values[json['wallpaperType'] as int? ?? 0],
-        wallpaperColorHex: json['wallpaperColorHex'] as String?,
-        wallpaperGradientId: json['wallpaperGradientId'] as String?,
-        wallpaperPatternId: json['wallpaperPatternId'] as String?,
-        wallpaperOpacity: (json['wallpaperOpacity'] as num?)?.toDouble() ?? 0.15,
-      );
+  factory AppSettings.fromJson(Map<String, dynamic> json) {
+    // Safely clamp wallpaperType index to valid range
+    final wtIndex = json['wallpaperType'] as int? ?? 0;
+    final safeWtIndex = wtIndex.clamp(0, WallpaperType.values.length - 1);
+
+    // Safely clamp layout index
+    final vlIndex = json['defaultViewLayout'] as int? ?? 0;
+    final safeVlIndex = vlIndex.clamp(0, TaskViewLayout.values.length - 1);
+
+    return AppSettings(
+      themeMode: ThemeMode.values[json['themeMode'] as int? ?? 2],
+      accentColorHex: json['accentColorHex'] as String? ?? '007AFF',
+      defaultListId: json['defaultListId'] as String?,
+      startOfWeek: json['startOfWeek'] as int? ?? 1,
+      focusDuration: json['focusDuration'] as int? ?? 25,
+      dailySummaryHour: json['dailySummaryHour'] as int?,
+      dailySummaryMinute: json['dailySummaryMinute'] as int?,
+      notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
+      defaultSort: SortOption.values[json['defaultSort'] as int? ?? 0],
+      sidebarWidth: (json['sidebarWidth'] as num?)?.toDouble() ?? 220,
+      fontDensity: FontDensity.values[json['fontDensity'] as int? ?? 1],
+      defaultViewLayout: TaskViewLayout.values[safeVlIndex],
+      wallpaperType: WallpaperType.values[safeWtIndex],
+      wallpaperColorHex: json['wallpaperColorHex'] as String?,
+      wallpaperGradientId: json['wallpaperGradientId'] as String?,
+      wallpaperPatternId: json['wallpaperPatternId'] as String?,
+      wallpaperOpacity: (json['wallpaperOpacity'] as num?)?.toDouble() ?? 0.15,
+      wallpaperBrightness: (json['wallpaperBrightness'] as num?)?.toDouble() ?? 0.85,
+      wallpaperImagePath: json['wallpaperImagePath'] as String?,
+      stickerSize: StickerSize.values[json['stickerSize'] as int? ?? 1], // Default normal
+    );
+  }
 }

@@ -15,7 +15,6 @@ import 'views/grid_view_layout.dart';
 import 'views/compact_layout.dart';
 import 'views/magazine_layout.dart';
 import 'views/kanban_layout.dart';
-import 'views/calendar_layout.dart';
 
 class MultiLayoutTaskView extends StatelessWidget {
   const MultiLayoutTaskView({super.key});
@@ -81,10 +80,6 @@ class MultiLayoutTaskView extends StatelessWidget {
         return CompactLayout(key: key, tasks: tasks);
       case TaskViewLayout.magazine:
         return MagazineLayout(key: key, tasks: tasks);
-      case TaskViewLayout.calendar:
-        return CalendarLayout(key: key, allTasks: allTasks);
-      default:
-        return const TaskListView();
     }
   }
 }

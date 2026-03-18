@@ -16,31 +16,34 @@ class InsightsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Insights', style: AppTypography.title1.copyWith(color: colors.textPrimary)),
-          const SizedBox(height: 24),
-          // Stats row
-          _StatsRow(),
-          const SizedBox(height: 24),
-          // Completion chart
-          _Section(
-            title: 'Completed (Last 14 Days)',
-            child: const CompletionChart(),
-          ),
-          const SizedBox(height: 20),
-          // Heatmap
-          _Section(
-            title: 'Activity Heatmap (Last 70 Days)',
-            child: const HeatmapChart(),
-          ),
-          const SizedBox(height: 20),
-          // Category breakdown
-          _CategoryBreakdown(),
-        ],
+    return Container(
+      color: Colors.transparent, // ← wallpaper shows through
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Insights', style: AppTypography.title1.copyWith(color: colors.textPrimary)),
+            const SizedBox(height: 24),
+            // Stats row
+            _StatsRow(),
+            const SizedBox(height: 24),
+            // Completion chart
+            _Section(
+              title: 'Completed (Last 14 Days)',
+              child: const CompletionChart(),
+            ),
+            const SizedBox(height: 20),
+            // Heatmap
+            _Section(
+              title: 'Activity Heatmap (Last 70 Days)',
+              child: const HeatmapChart(),
+            ),
+            const SizedBox(height: 20),
+            // Category breakdown
+            _CategoryBreakdown(),
+          ],
+        ),
       ),
     );
   }
@@ -110,7 +113,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.isDark ? const Color(0xFF2C2C2E) : Colors.white,
+        color: colors.isDark
+            ? const Color(0xFF2A2725).withValues(alpha: 0.90)
+            : Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(AppConstants.radiusCard),
         border: Border.all(color: colors.border),
         boxShadow: [
@@ -154,7 +159,9 @@ class _Section extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colors.isDark ? const Color(0xFF2C2C2E) : Colors.white,
+        color: colors.isDark
+            ? const Color(0xFF2A2725).withValues(alpha: 0.90)
+            : Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(AppConstants.radiusCard),
         border: Border.all(color: colors.border),
         boxShadow: [

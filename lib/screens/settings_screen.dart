@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -10,6 +11,7 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../theme/wallpaper_presets.dart';
 import '../painters/wallpaper_pattern_painter.dart';
+import '../services/wallpaper_image_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,7 +42,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(
           width: 200,
           decoration: BoxDecoration(
-            color: colors.sidebar,
+            color: colors.isDark
+                ? Colors.black.withValues(alpha: 0.35)
+                : Colors.white.withValues(alpha: 0.55),
             border: Border(right: BorderSide(color: colors.border, width: 0.5)),
           ),
           child: Column(
@@ -105,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Right content
         Expanded(
           child: Container(
-            color: colors.background,
+            color: Colors.transparent, // ← wallpaper shows through
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Center(
@@ -143,25 +147,62 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 8, left: 4),
-          child: Text(
-            title.toUpperCase(),
-            style: AppTypography.caption.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-              color: colors.textTertiary,
-            ),
+          child: Row(
+            children: [
+              Container(
+                width: 4, height: 4,
+                margin: const EdgeInsets.only(right: 6, bottom: 1),
+                decoration: BoxDecoration(
+                  color: accent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Text(
+                title.toUpperCase(),
+                style: AppTypography.micro.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: colors.textQuaternary,
+                ),
+              ),
+            ],
           ),
         ),
         Container(
-          decoration: AppColors.elevatedDecoration(
-            isDark: colors.isDark,
-            borderRadius: 16,
+          decoration: BoxDecoration(
+            color: colors.isDark
+                ? const Color(0xFF2A2725).withValues(alpha: 0.90)
+                : Colors.white.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: colors.isDark
+                  ? Colors.white.withValues(alpha: 0.07)
+                  : Colors.black.withValues(alpha: 0.07),
+              width: 0.75,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                    alpha: colors.isDark ? 0.30 : 0.045),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+                spreadRadius: -1,
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(
+                    alpha: colors.isDark ? 0.15 : 0.02),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: Column(
             children: children,
@@ -564,6 +605,21 @@ class _LayoutDensitySection extends StatelessWidget {
             ),
           ],
         ),
+        _SectionCard(
+          title: 'Stickers',
+          children: [
+            _SettingsRow(
+              isFirst: true,
+              isLast: true,
+              label: 'Sticker Size',
+              subtitle: 'Adjust the scale of animated task badges',
+              control: _StickerSizeSelector(
+                current: settings.stickerSize,
+                onChanged: settings.setStickerSize,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -575,7 +631,6 @@ class _LayoutDensitySection extends StatelessWidget {
       case TaskViewLayout.kanban:   return 'Kanban';
       case TaskViewLayout.compact:  return 'Compact';
       case TaskViewLayout.magazine: return 'Magazine';
-      case TaskViewLayout.calendar: return 'Calendar';
     }
   }
 
@@ -586,7 +641,6 @@ class _LayoutDensitySection extends StatelessWidget {
       case TaskViewLayout.kanban:   return Icons.view_kanban_rounded;
       case TaskViewLayout.compact:  return Icons.density_small_rounded;
       case TaskViewLayout.magazine: return Icons.article_rounded;
-      case TaskViewLayout.calendar: return Icons.calendar_month_rounded;
     }
   }
 
@@ -607,6 +661,63 @@ class _LayoutDensitySection extends StatelessWidget {
   }
 }
 
+class _StickerSizeSelector extends StatelessWidget {
+  final StickerSize current;
+  final void Function(StickerSize) onChanged;
+  const _StickerSizeSelector({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+    final options = [
+      (StickerSize.small, 'Small'),
+      (StickerSize.normal, 'Normal'),
+      (StickerSize.large, 'Large'),
+      (StickerSize.jumbo, 'Jumbo'),
+    ];
+
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: colors.isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: options.map((opt) {
+          final (size, label) = opt;
+          final isActive = size == current;
+          return GestureDetector(
+            onTap: () => onChanged(size),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: isActive ? (colors.isDark ? const Color(0xFF3A3A3C) : Colors.white) : Colors.transparent,
+                borderRadius: BorderRadius.circular(7),
+                boxShadow: isActive ? [BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 4, offset: const Offset(0, 1),
+                )] : [],
+              ),
+              child: Text(
+                label,
+                style: AppTypography.caption.copyWith(
+                  fontSize: 12,
+                  color: isActive ? colors.textPrimary : colors.textSecondary,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 // ─── WALLPAPER SECTION ────────────────────────────────────────────────────────
 
 class _WallpaperSection extends StatelessWidget {
@@ -622,74 +733,239 @@ class _WallpaperSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+
+        // ── TYPE SELECTOR ─────────────────────────────────────────
         _SectionCard(
-          title: 'Wallpaper Type',
+          title: 'Background',
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: WallpaperType.values.map((type) {
-                  final isActive = wallType == type;
-                  return GestureDetector(
-                    onTap: () => settings.setWallpaper(type),
-                    child: Column(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Applies to the main content area only.',
+                    style: AppTypography.caption.copyWith(
+                      color: colors.textTertiary, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          width: 72,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: colors.isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isActive ? accent : colors.border,
-                              width: isActive ? 2 : 0.5,
-                            ),
-                          ),
-                          child: _WallpaperTypePreview(type: type),
+                        _WallpaperTypeTile(
+                          label: 'None',
+                          icon: Icons.block_rounded,
+                          isActive: wallType == WallpaperType.none,
+                          onTap: () => settings.setWallpaper(WallpaperType.none),
                         ),
-                        const SizedBox(height: 4),
-                        Text(_typeLabel(type), style: AppTypography.caption.copyWith(
-                          fontSize: 11,
-                          color: isActive ? accent : colors.textSecondary,
-                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                        )),
+                        const SizedBox(width: 8),
+                        _WallpaperTypeTile(
+                          label: 'Gradient',
+                          icon: Icons.gradient_rounded,
+                          isActive: wallType == WallpaperType.gradient,
+                          onTap: () => settings.setWallpaper(
+                              WallpaperType.gradient,
+                              value: settings.settings.wallpaperGradientId ?? 'aurora'),
+                        ),
+                        const SizedBox(width: 8),
+                        _WallpaperTypeTile(
+                          label: 'Pattern',
+                          icon: Icons.grid_4x4_rounded,
+                          isActive: wallType == WallpaperType.pattern,
+                          onTap: () => settings.setWallpaper(
+                              WallpaperType.pattern,
+                              value: settings.settings.wallpaperPatternId ?? 'dots'),
+                        ),
+                        const SizedBox(width: 8),
+                        _WallpaperTypeTile(
+                          label: 'Color',
+                          icon: Icons.circle_rounded,
+                          isActive: wallType == WallpaperType.solidColor,
+                          onTap: () => settings.setWallpaper(
+                              WallpaperType.solidColor,
+                              value: settings.settings.wallpaperColorHex ?? 'A5B4FC'),
+                        ),
+                        const SizedBox(width: 8),
+                        _WallpaperTypeTile(
+                          label: 'My Photo',
+                          icon: Icons.photo_rounded,
+                          isActive: wallType == WallpaperType.customImage,
+                          onTap: () => _pickCustomImage(context, settings),
+                        ),
                       ],
                     ),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        // Opacity slider (hidden for None)
+
+        // ── BRIGHTNESS SLIDER (shown for all except none) ─────────
         if (wallType != WallpaperType.none)
           _SectionCard(
-            title: 'Opacity',
+            title: 'Visibility',
             children: [
               _SettingsRow(
                 isFirst: true,
                 isLast: true,
-                label: 'Wallpaper Opacity',
-                subtitle: 'Keep low to avoid distraction',
-                control: SizedBox(
-                  width: 200,
-                  child: Slider(
-                    value: settings.settings.wallpaperOpacity,
-                    min: 0.05,
-                    max: 0.40,
-                    divisions: 7,
-                    label: '${(settings.settings.wallpaperOpacity * 100).round()}%',
-                    activeColor: accent,
-                    onChanged: (v) => settings.setWallpaperOpacity(v),
-                    onChangeEnd: (v) => settings.setWallpaperOpacity(v),
-                  ),
+                label: 'Background Brightness',
+                subtitle: 'Lower = less distraction',
+                control: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.wb_sunny_outlined,
+                        size: 14, color: Color(0xFF94A3B8)),
+                    SizedBox(
+                      width: 160,
+                      child: Slider(
+                        value: settings.wallpaperBrightness,
+                        min: 0.30,
+                        max: 1.0,
+                        divisions: 14,
+                        activeColor: accent,
+                        inactiveColor: colors.border,
+                        onChanged: (v) => settings.setWallpaperBrightness(v),
+                        onChangeEnd: (v) => settings.setWallpaperBrightness(v),
+                      ),
+                    ),
+                    const Icon(Icons.wb_sunny_rounded,
+                        size: 18, color: Color(0xFF94A3B8)),
+                  ],
                 ),
               ),
             ],
           ),
+
+        // ── GRADIENT PICKER ────────────────────────────────────────
+        if (wallType == WallpaperType.gradient)
+          _SectionCard(
+            title: 'Gradient',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: WallpaperPresets.gradientIds.map((id) {
+                    final gradient = WallpaperPresets.gradients[id]!;
+                    final label = WallpaperPresets.gradientLabels[id] ?? id;
+                    final isSelected =
+                        settings.settings.wallpaperGradientId == id;
+                    return GestureDetector(
+                      onTap: () => settings.setWallpaper(
+                          WallpaperType.gradient, value: id),
+                      child: Column(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 64,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              gradient: gradient,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? accent : Colors.transparent,
+                                width: 2.5,
+                              ),
+                              boxShadow: isSelected
+                                  ? [BoxShadow(
+                                      color: accent.withValues(alpha: 0.35),
+                                      blurRadius: 10)]
+                                  : [BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.12),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2))],
+                            ),
+                            child: isSelected
+                                ? const Center(
+                                    child: Icon(Icons.check_rounded,
+                                        color: Colors.white, size: 18))
+                                : null,
+                          ),
+                          const SizedBox(height: 5),
+                          Text(label,
+                              style: AppTypography.caption.copyWith(
+                                fontSize: 10,
+                                color: isSelected ? accent : colors.textTertiary,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700 : FontWeight.w400,
+                              )),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+
+        // ── PATTERN PICKER ─────────────────────────────────────────
+        if (wallType == WallpaperType.pattern)
+          _SectionCard(
+            title: 'Pattern',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: WallpaperPresets.patternIds.map((id) {
+                    final label = WallpaperPresets.patternLabels[id] ?? id;
+                    final isSelected =
+                        settings.settings.wallpaperPatternId == id;
+                    return GestureDetector(
+                      onTap: () => settings.setWallpaper(
+                          WallpaperType.pattern, value: id),
+                      child: Column(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 72,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: colors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? accent : colors.border,
+                                width: isSelected ? 2 : 0.75,
+                              ),
+                              boxShadow: isSelected
+                                  ? [BoxShadow(
+                                      color: accent.withValues(alpha: 0.25),
+                                      blurRadius: 8)]
+                                  : [],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(9),
+                              child: CustomPaint(
+                                painter: WallpaperPatternPainter(
+                                  patternId: id,
+                                  color: isSelected
+                                      ? accent : colors.textTertiary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(label,
+                              style: AppTypography.caption.copyWith(
+                                fontSize: 10,
+                                color: isSelected ? accent : colors.textTertiary,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700 : FontWeight.w400,
+                              )),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+
+        // ── SOLID COLOR PICKER ────────────────────────────────────
         if (wallType == WallpaperType.solidColor)
           _SectionCard(
             title: 'Color',
@@ -700,43 +976,37 @@ class _WallpaperSection extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    'FF3B30', 'FF9500', 'FFCC00', '34C759',
-                    '007AFF', 'AF52DE', 'FF2D55', '5AC8FA',
-                    '8E8E93', '1C1C1E',
-                  ].map((colorHex) {
-                    final color = Color(int.parse('FF$colorHex', radix: 16));
+                    'A5B4FC', 'FCA5A5', 'FCD34D', '86EFAC',
+                    'BAE6FD', 'F9A8D4', 'C4B5FD', 'FED7AA',
+                    'D1FAE5', 'E0E7FF', 'FCE7F3', 'FEF3C7',
+                  ].map((hex) {
+                    final color = Color(int.parse('FF$hex', radix: 16));
                     final isSelected = settings.settings.wallpaperColorHex
                             ?.toUpperCase() ==
-                        colorHex.toUpperCase();
+                        hex.toUpperCase();
                     return GestureDetector(
                       onTap: () => settings.setWallpaper(
-                        WallpaperType.solidColor,
-                        value: colorHex,
-                      ),
+                          WallpaperType.solidColor, value: hex),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
-                        width: isSelected ? 40 : 36,
-                        height: isSelected ? 40 : 36,
+                        width: isSelected ? 40 : 34,
+                        height: isSelected ? 40 : 34,
                         decoration: BoxDecoration(
                           color: color,
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(color: Colors.white, width: 2.5)
+                              ? Border.all(color: accent, width: 2.5)
                               : Border.all(
                                   color: Colors.black.withValues(alpha: 0.08),
                                   width: 0.5),
                           boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: color.withValues(alpha: 0.45),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
+                              ? [BoxShadow(
+                                  color: color.withValues(alpha: 0.5),
+                                  blurRadius: 10, spreadRadius: 1)]
                               : [],
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check,
+                            ? const Icon(Icons.check_rounded,
                                 size: 16, color: Colors.white)
                             : null,
                       ),
@@ -746,92 +1016,93 @@ class _WallpaperSection extends StatelessWidget {
               ),
             ],
           ),
-        // Gradient options
-        if (wallType == WallpaperType.gradient)
+
+        // ── CUSTOM IMAGE ──────────────────────────────────────────
+        if (wallType == WallpaperType.customImage)
           _SectionCard(
-            title: 'Gradient',
+            title: 'Custom Photo',
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: WallpaperPresets.gradientIds.map((id) {
-                    final gradient = WallpaperPresets.gradients[id]!;
-                    final isSelected = settings.settings.wallpaperGradientId == id;
-                    return GestureDetector(
-                      onTap: () => settings.setWallpaper(WallpaperType.gradient, value: id),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _pickCustomImage(context, settings),
                       child: Container(
-                        width: 60,
-                        height: 60,
+                        width: double.infinity,
+                        height: 120,
                         decoration: BoxDecoration(
-                          gradient: gradient,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected ? accent : Colors.transparent,
-                            width: 2,
-                          ),
+                          color: colors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colors.border, width: 0.75),
                         ),
-                        child: isSelected
-                            ? const Center(child: Icon(Icons.check, color: Colors.white, size: 20))
-                            : null,
+                        child: settings.settings.wallpaperImagePath != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(11),
+                                child: Image.file(
+                                  File(settings.settings.wallpaperImagePath!),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildImagePlaceholder(colors),
+                                ),
+                              )
+                            : _buildImagePlaceholder(colors),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        // Pattern options
-        if (wallType == WallpaperType.pattern)
-          _SectionCard(
-            title: 'Pattern',
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: WallpaperPresets.patternIds.map((id) {
-                    final isSelected = settings.settings.wallpaperPatternId == id;
-                    return GestureDetector(
-                      onTap: () => settings.setWallpaper(WallpaperType.pattern, value: id),
-                      child: Column(
+                    ),
+                    if (settings.settings.wallpaperImagePath != null) ...[
+                      const SizedBox(height: 10),
+                      Row(
                         children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: colors.isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected ? accent : colors.border,
-                                width: isSelected ? 2 : 0.5,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(7),
-                              child: CustomPaint(
-                                painter: WallpaperPatternPainter(
-                                  patternId: id,
-                                  color: accent,
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () =>
+                                  _pickCustomImage(context, settings),
+                              child: Container(
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: accent.withValues(alpha: 0.2)),
+                                ),
+                                child: Center(
+                                  child: Text('Change Photo',
+                                      style: AppTypography.body.copyWith(
+                                          color: accent,
+                                          fontWeight: FontWeight.w600)),
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            WallpaperPresets.patternLabels[id] ?? id,
-                            style: AppTypography.caption.copyWith(
-                              fontSize: 10,
-                              color: isSelected ? accent : colors.textSecondary,
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              settings.setWallpaper(WallpaperType.none);
+                              settings.setWallpaperImage(null);
+                            },
+                            child: Container(
+                              height: 36,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.red.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: AppColors.red.withValues(alpha: 0.2)),
+                              ),
+                              child: Center(
+                                child: Text('Remove',
+                                    style: AppTypography.body.copyWith(
+                                        color: AppColors.red,
+                                        fontWeight: FontWeight.w600)),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -840,43 +1111,103 @@ class _WallpaperSection extends StatelessWidget {
     );
   }
 
-  String _typeLabel(WallpaperType t) {
-    switch (t) {
-      case WallpaperType.none:       return 'None';
-      case WallpaperType.solidColor: return 'Color';
-      case WallpaperType.gradient:   return 'Gradient';
-      case WallpaperType.pattern:    return 'Pattern';
+  Widget _buildImagePlaceholder(AppColorsExtension colors) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.add_photo_alternate_rounded,
+            size: 32, color: colors.textTertiary),
+        const SizedBox(height: 8),
+        Text('Choose from device',
+            style: AppTypography.body.copyWith(color: colors.textTertiary)),
+        const SizedBox(height: 4),
+        Text('JPG, PNG, WEBP',
+            style: AppTypography.caption.copyWith(
+                color: colors.textQuaternary, fontSize: 11)),
+      ],
+    );
+  }
+
+  Future<void> _pickCustomImage(
+      BuildContext context, SettingsProvider settings) async {
+    final path = await WallpaperImageService.pickImage();
+    if (path == null) return;
+
+    final isValid = await WallpaperImageService.validateSize(path);
+    if (!isValid && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Image too large. Please choose a file under 10MB.'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+      return;
     }
+
+    await settings.setWallpaperImage(path);
   }
 }
 
-class _WallpaperTypePreview extends StatelessWidget {
-  final WallpaperType type;
-  const _WallpaperTypePreview({required this.type});
+class _WallpaperTypeTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _WallpaperTypeTile({
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
-    switch (type) {
-      case WallpaperType.none:
-        return const Icon(Icons.block, size: 20, color: Colors.grey);
-      case WallpaperType.solidColor:
-        return Container(color: AppColors.blue.withValues(alpha: 0.3));
-      case WallpaperType.gradient:
-        return Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF00C9FF), Color(0xFF92FE9D)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 64,
+            height: 52,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? accent.withValues(alpha: 0.10)
+                  : colors.surfaceElevated,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isActive ? accent : colors.border,
+                width: isActive ? 1.75 : 0.75,
+              ),
+              boxShadow: isActive
+                  ? [BoxShadow(
+                      color: accent.withValues(alpha: 0.20),
+                      blurRadius: 8)]
+                  : [],
+            ),
+            child: Center(
+              child: Icon(icon,
+                  size: 22,
+                  color: isActive ? accent : colors.textTertiary),
             ),
           ),
-        );
-      case WallpaperType.pattern:
-        return CustomPaint(
-          painter: WallpaperPatternPainter(patternId: 'dots', color: accent),
-        );
-    }
+          const SizedBox(height: 5),
+          Text(label,
+              style: AppTypography.caption.copyWith(
+                fontSize: 11,
+                color: isActive ? accent : colors.textTertiary,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+              )),
+        ],
+      ),
+    );
   }
 }
 

@@ -13,6 +13,7 @@ import '../../shared/empty_state_widget.dart';
 import '../../../painters/empty_state_painters.dart';
 import '../../../painters/grid_cover_painter.dart';
 import '../shared/task_interaction_wrapper.dart';
+import '../shared/sticker_badge.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class GridViewLayout extends StatelessWidget {
@@ -96,19 +97,30 @@ class _GridTaskCardState extends State<_GridTaskCard> {
             scale: _hovered ? 1.02 : 1.0,
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOutCubic,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(13.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // COVER — 40%
-                  Expanded(flex: 4, child: _CardCover(task: t)),
-                  // BODY — 45%
-                  Expanded(flex: 4, child: _CardBody(task: t)),
-                  // FOOTER
-                  _CardFooter(task: t),
-                ],
-              ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(13.5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // COVER — 40%
+                      Expanded(flex: 4, child: _CardCover(task: t)),
+                      // BODY — 45%
+                      Expanded(flex: 4, child: _CardBody(task: t)),
+                      // FOOTER
+                      _CardFooter(task: t),
+                    ],
+                  ),
+                ),
+                if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: StickerBadge(stickerId: t.stickerId!),
+                  ),
+              ],
             ),
           ),
         ),
@@ -223,7 +235,6 @@ class _CardCover extends StatelessWidget {
           const Color(0xFFAF52DE).withValues(alpha: oEnd + 0.1),
         ]);
       case Priority.none:
-      default:
         if (isDark) {
           return LinearGradient(colors: [
             Colors.white.withValues(alpha: 0.05),
@@ -243,8 +254,7 @@ class _CardCover extends StatelessWidget {
       case Priority.medium: return AppColors.orange;
       case Priority.high:   return AppColors.red;
       case Priority.urgent: return AppColors.pink;
-      case Priority.none:
-      default:              return Colors.grey;
+      case Priority.none:   return Colors.grey;
     }
   }
 }

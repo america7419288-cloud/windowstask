@@ -16,7 +16,7 @@ import '../widgets/focus/focus_timer_overlay.dart';
 import '../widgets/layout/responsive_layout.dart';
 import '../widgets/layout/app_shortcuts.dart';
 import '../widgets/layout/window_controls.dart';
-import '../widgets/layout/app_wallpaper.dart';
+import '../widgets/layout/content_wallpaper.dart';
 import 'settings_screen.dart';
 import 'insights_screen.dart';
 
@@ -25,9 +25,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppWallpaper(
-      child: AppShortcuts(
-        child: Consumer<NavigationProvider>(
+    return AppShortcuts(
+      child: Consumer<NavigationProvider>(
           builder: (context, nav, _) {
             final colors = context.appColors;
             Widget mainContent;
@@ -57,9 +56,10 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   ResponsiveLayout(
                     sidebar: const Sidebar(),
-                    content: Column(
-                      children: [
-                        WindowDragArea(child: _ContentHeader()),
+                    content: ContentWallpaper(
+                      child: Column(
+                        children: [
+                          WindowDragArea(child: _ContentHeader()),
                         Expanded(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
@@ -81,7 +81,8 @@ class HomeScreen extends StatelessWidget {
                             child: mainContent,
                           ),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                     detailPanel: detailPanel,
                     showDetailPanel: showDetail,
@@ -89,11 +90,10 @@ class HomeScreen extends StatelessWidget {
                   const FocusTimerOverlay(),
                 ],
               ),
-            );
-          },
-        ),
-      ),
-    );
+            ); // Container return
+          }, // builder
+        ), // Consumer
+    ); // AppShortcuts return
   }
 }
 

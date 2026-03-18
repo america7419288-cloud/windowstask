@@ -10,6 +10,10 @@ import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../../utils/date_utils.dart';
 import 'shared/custom_checkbox.dart';
+import '../../data/sticker_packs.dart';
+import '../../models/sticker.dart';
+import '../shared/sticker_widget.dart';
+import 'shared/sticker_badge.dart';
 import '../shared/pressable_scale.dart';
 import '../../painters/confetti_painter.dart';
 import '../context_menu/context_menu_controller.dart';
@@ -160,14 +164,25 @@ class _TaskCardState extends State<TaskCard> {
               border: Border.all(color: borderColor, width: borderWidth),
               boxShadow: shadows,
             ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _PriorityBar(priority: t.priority),
-                  Expanded(child: _buildContent(context, t, colors, isOverdue, isCompleted)),
-                ],
-              ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _PriorityBar(priority: t.priority),
+                      Expanded(child: _buildContent(context, t, colors, isOverdue, isCompleted)),
+                    ],
+                  ),
+                ),
+                if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                  Positioned(
+                    bottom: -10,
+                    right: 8,
+                    child: StickerBadge(stickerId: t.stickerId!),
+                  ),
+              ],
             ),
           ),
         ),
@@ -198,7 +213,9 @@ class _TaskCardState extends State<TaskCard> {
             children: [
               CustomCheckbox(
                 value: isCompleted,
-                onChanged: (_) => _handleComplete(),
+                onChanged: (_) {
+                  if (!t.isDeleted) _handleComplete();
+                },
                 activeColor: Theme.of(context).colorScheme.primary,
                 size: 22,
               ),
@@ -240,6 +257,20 @@ class _TaskCardState extends State<TaskCard> {
                   padding: const EdgeInsets.only(left: 8),
                   child: _MiniSubtaskBadge(task: t),
                 ),
+              if (t.isDeleted) ...[
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => context.read<TaskProvider>().restoreTask(t.id),
+                  icon: const Icon(Icons.restore_from_trash_rounded, size: 16),
+                  label: Text('Restore', style: AppTypography.caption),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
             ],
           ),
           // Description
