@@ -17,7 +17,7 @@ class PriorityBadge extends StatelessWidget {
   static Color colorForPriority(Priority priority) {
     switch (priority) {
       case Priority.none:
-        return Colors.transparent;
+        return const Color(0xFF94A3B8);
       case Priority.low:
         return AppColors.green;
       case Priority.medium:
@@ -25,7 +25,7 @@ class PriorityBadge extends StatelessWidget {
       case Priority.high:
         return AppColors.red;
       case Priority.urgent:
-        return AppColors.pinkRed;
+        return AppColors.pink;
     }
   }
 
@@ -63,9 +63,9 @@ class PriorityBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppConstants.radiusChip),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

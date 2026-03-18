@@ -51,7 +51,7 @@ class _SubtaskItemState extends State<SubtaskItem> {
                   border: Border.all(
                     color: widget.subtask.isCompleted
                         ? accent
-                        : colors.textSecondary.withOpacity(0.5),
+                        : colors.textSecondary.withValues(alpha: 0.5),
                     width: 1.5,
                   ),
                 ),

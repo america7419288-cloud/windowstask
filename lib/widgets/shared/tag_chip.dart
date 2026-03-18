@@ -34,16 +34,17 @@ class TagChip extends StatelessWidget {
         vertical: isSmall ? 2 : 3,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppConstants.radiusChip),
-        border: Border.all(color: color.withOpacity(0.25), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: (isSmall ? AppTypography.caption : AppTypography.caption).copyWith(
+            style: AppTypography.caption.copyWith(
+              fontSize: isSmall ? 10 : 12,
               color: color,
               fontWeight: FontWeight.w500,
             ),
@@ -52,7 +53,7 @@ class TagChip extends StatelessWidget {
             const SizedBox(width: 4),
             GestureDetector(
               onTap: onDelete,
-              child: Icon(Icons.close_rounded, size: 10, color: color.withOpacity(0.7)),
+              child: Icon(Icons.close_rounded, size: 10, color: color.withValues(alpha: 0.7)),
             ),
           ],
         ],

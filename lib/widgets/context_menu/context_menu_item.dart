@@ -70,7 +70,7 @@ class _ContextMenuItemState extends State<ContextMenuItem> {
               color: _hovered && !widget.isDestructive
                   ? colors.sidebarActive // uses rgba(0,122,255,0.08) logic
                   : _hovered && widget.isDestructive
-                      ? AppColors.red.withOpacity(0.1) // red hover
+                      ? AppColors.red.withValues(alpha: 0.1) // red hover
                       : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),

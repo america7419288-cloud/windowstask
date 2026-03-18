@@ -19,6 +19,7 @@ void main() async {
   // ── 1. Init Hive FIRST ───────────────────────────────────────────────────
   await Hive.initFlutter();
 
+  // TypeIds 0–5 are reserved. Next available: 6
   // Guard adapter registration (hot-reload safe)
   if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(TaskStatusAdapter());
   if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(PriorityAdapter());

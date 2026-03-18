@@ -65,19 +65,19 @@ class _MacOSTextFieldState extends State<MacOSTextField> {
       duration: AppConstants.animFast,
       decoration: BoxDecoration(
         color: _focused
-            ? (colors.isDark ? Colors.white.withOpacity(0.08) : Colors.white)
+            ? (colors.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(AppConstants.radiusInput),
         border: Border.all(
           color: _focused
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
               : Colors.transparent,
           width: 1,
         ),
         boxShadow: _focused
             ? [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                   blurRadius: 6,
                   offset: const Offset(0, 0),
                 ),

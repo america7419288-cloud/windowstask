@@ -34,7 +34,7 @@ class FocusTimerOverlay extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppConstants.radiusModal),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
+                    color: Colors.black.withValues(alpha: 0.25),
                     blurRadius: 30,
                   ),
                 ],
@@ -86,8 +86,8 @@ class FocusTimerOverlay extends StatelessWidget {
                       value: focus.progress,
                       minHeight: 3,
                       backgroundColor: colors.isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.black.withOpacity(0.08),
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.08),
                       valueColor: const AlwaysStoppedAnimation(AppColors.red),
                     ),
                   ),
@@ -160,7 +160,7 @@ class _TimerBtn extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 18, color: color),

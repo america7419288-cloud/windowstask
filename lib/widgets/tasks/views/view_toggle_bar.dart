@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../models/app_settings.dart';
 import '../../../providers/settings_provider.dart';
+import '../../../providers/navigation_provider.dart';
 import '../../../theme/app_theme.dart';
 
 class ViewToggleBar extends StatelessWidget {
@@ -16,12 +17,11 @@ class ViewToggleBar extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: colors.isDark
-            ? Colors.white.withOpacity(0.06)
-            : Colors.black.withOpacity(0.05),
+        color: colors.surfaceElevated,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.border, width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -29,8 +29,12 @@ class ViewToggleBar extends StatelessWidget {
           final isActive = layout == current;
           return Tooltip(
             message: _label(layout),
+            waitDuration: const Duration(milliseconds: 500),
             child: GestureDetector(
-              onTap: () => settings.setViewLayout(layout),
+              onTap: () {
+                context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
+                settings.setViewLayout(layout);
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 170),
                 curve: Curves.easeOutCubic,
@@ -40,13 +44,19 @@ class ViewToggleBar extends StatelessWidget {
                   color: isActive ? accent : Colors.transparent,
                   borderRadius: BorderRadius.circular(7),
                   boxShadow: isActive
-                      ? [BoxShadow(color: accent.withOpacity(0.25), blurRadius: 4)]
+                      ? [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 1),
+                          )
+                        ]
                       : [],
                 ),
                 child: Icon(
                   isActive ? _iconFilled(layout) : _iconOutline(layout),
                   size: 15,
-                  color: isActive ? Colors.white : colors.textSecondary,
+                  color: isActive ? Colors.white : colors.textTertiary,
                 ),
               ),
             ),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../shared/pressable_scale.dart';
 
@@ -21,7 +22,6 @@ class GroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -29,10 +29,10 @@ class GroupHeader extends StatelessWidget {
         scaleDown: 0.98,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 8),
+          padding: const EdgeInsets.fromLTRB(18, 22, 18, 8),
           child: Row(
             children: [
-              // Animated chevron (0 = right, 1 = down)
+              // Animated chevron
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: isCollapsed ? 0 : 1.0),
                 duration: const Duration(milliseconds: 200),
@@ -42,36 +42,50 @@ class GroupHeader extends StatelessWidget {
                     angle: value * (math.pi / 2),
                     child: Icon(
                       Icons.chevron_right_rounded,
-                      size: 18,
+                      size: 16,
                       color: colors.textTertiary,
                     ),
                   );
                 },
               ),
               const SizedBox(width: 6),
-              // Uppercase Label
+              // Label
               Text(
                 label.toUpperCase(),
-                style: AppTypography.body.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+                style: AppTypography.micro.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
                   color: colors.textTertiary,
                 ),
               ),
-              const Spacer(),
-              // Count Badge
+              const SizedBox(width: 8),
+              // Thin divider line
+              Expanded(
+                child: Container(
+                  height: 0.5,
+                  color: colors.isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.08),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Count badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: accent.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: colors.isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$count',
-                  style: AppTypography.caption.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w600,
+                  style: AppTypography.micro.copyWith(
+                    color: colors.isDark
+                        ? colors.textSecondary
+                        : AppColors.primary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -82,3 +96,4 @@ class GroupHeader extends StatelessWidget {
     );
   }
 }
+

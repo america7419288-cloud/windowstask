@@ -66,8 +66,8 @@ class CompletionChart extends StatelessWidget {
                   show: true,
                   toY: (maxVal + 1).toDouble(),
                   color: colors.isDark
-                      ? Colors.white.withOpacity(0.04)
-                      : Colors.black.withOpacity(0.04),
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.04),
                 ),
               ),
             ],

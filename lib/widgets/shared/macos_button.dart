@@ -45,13 +45,13 @@ class _MacOSButtonState extends State<MacOSButton> {
         fg = Colors.white;
         break;
       case MacOSButtonStyle.secondary:
-        bg = colors.isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06);
+        bg = colors.isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06);
         fg = colors.textPrimary;
         break;
       case MacOSButtonStyle.ghost:
         bg = Colors.transparent;
         fg = accent;
-        border = Border.all(color: accent.withOpacity(0.5));
+        border = Border.all(color: accent.withValues(alpha: 0.5));
         break;
       case MacOSButtonStyle.danger:
         bg = const Color(0xFFFF3B30);
@@ -59,7 +59,7 @@ class _MacOSButtonState extends State<MacOSButton> {
         break;
     }
 
-    if (_pressed) bg = bg.withOpacity(0.8);
+    if (_pressed) bg = bg.withValues(alpha: 0.8);
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -148,8 +148,8 @@ class _MacOSIconButtonState extends State<MacOSIconButton> {
           decoration: BoxDecoration(
             color: _hovered
                 ? (colors.isDark
-                    ? Colors.white.withOpacity(0.08)
-                    : Colors.black.withOpacity(0.05))
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.05))
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),

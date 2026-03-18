@@ -143,7 +143,7 @@ class SettingsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get accentColorOptions => [
     {'hex': '007AFF', 'color': AppColors.blue, 'name': 'Blue'},
     {'hex': 'AF52DE', 'color': AppColors.purple, 'name': 'Purple'},
-    {'hex': 'FF2D55', 'color': AppColors.pinkRed, 'name': 'Pink'},
+    {'hex': 'FF2D55', 'color': AppColors.pink, 'name': 'Pink'},
     {'hex': 'FF3B30', 'color': AppColors.red, 'name': 'Red'},
     {'hex': 'FF9500', 'color': AppColors.orange, 'name': 'Orange'},
     {'hex': 'FFCC00', 'color': const Color(0xFFFFCC00), 'name': 'Yellow'},

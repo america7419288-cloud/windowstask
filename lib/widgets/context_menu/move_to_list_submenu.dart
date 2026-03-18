@@ -46,7 +46,7 @@ class MoveToListSubmenu extends StatelessWidget {
           Container(
             height: 1,
             margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-            color: colors.isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
+            color: colors.isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06),
           ),
           ...activeLists.map((list) {
             return _SubmenuItem(
@@ -78,20 +78,20 @@ class MoveToListSubmenu extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: colors.isDark 
-            ? const Color(0xFF242426).withOpacity(0.94)
-            : const Color(0xFFF8F8FC).withOpacity(0.92),
+            ? const Color(0xFF242426).withValues(alpha: 0.94)
+            : const Color(0xFFF8F8FC).withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: colors.isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.08), 
+            color: colors.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.08), 
             width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: colors.isDark ? Colors.black.withOpacity(0.40) : Colors.black.withOpacity(0.12),
+            color: colors.isDark ? Colors.black.withValues(alpha: 0.40) : Colors.black.withValues(alpha: 0.12),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: colors.isDark ? Colors.black.withOpacity(0.20) : Colors.black.withOpacity(0.04),
+            color: colors.isDark ? Colors.black.withValues(alpha: 0.20) : Colors.black.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),

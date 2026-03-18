@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/app_settings.dart';
 import '../utils/constants.dart';
 
 class NavigationProvider extends ChangeNotifier {
@@ -8,6 +9,7 @@ class NavigationProvider extends ChangeNotifier {
   bool _isSearchOpen = false;
   String _searchQuery = '';
   bool _isDetailPanelOpen = false;
+  bool _isQuickAddOpen = false;
 
   String get selectedNavItem => _selectedNavItem;
   String? get selectedListId => _selectedListId;
@@ -15,12 +17,19 @@ class NavigationProvider extends ChangeNotifier {
   bool get isSearchOpen => _isSearchOpen;
   String get searchQuery => _searchQuery;
   bool get isDetailPanelOpen => _isDetailPanelOpen;
+  bool get isQuickAddOpen => _isQuickAddOpen;
 
   void selectNav(String item) {
     _selectedNavItem = item;
     _selectedListId = null;
     _selectedTaskId = null;
     _isDetailPanelOpen = false;
+
+    // Force list view for sections that don't benefit from other layouts
+    if (item == 'trash' || item == 'completed') {
+      _sectionLayouts[item] = TaskViewLayout.list;
+    }
+
     notifyListeners();
   }
 
@@ -66,6 +75,16 @@ class NavigationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void openQuickAdd() {
+    _isQuickAddOpen = true;
+    notifyListeners();
+  }
+
+  void closeQuickAdd() {
+    _isQuickAddOpen = false;
+    notifyListeners();
+  }
+
   String get pageTitle {
     switch (_selectedNavItem) {
       case AppConstants.navToday:
@@ -91,5 +110,21 @@ class NavigationProvider extends ChangeNotifier {
       default:
         return _selectedNavItem;
     }
+  }
+
+  // Per-section layout memory
+  // Key: navItem string (e.g. 'today', 'upcoming', 'list_<id>')
+  // Value: the layout chosen for that section
+  final Map<String, TaskViewLayout> _sectionLayouts = {};
+
+  // Returns the layout for the current nav section.
+  // Falls back to TaskViewLayout.list if section has no saved layout.
+  TaskViewLayout layoutForCurrentSection(TaskViewLayout globalDefault) {
+    return _sectionLayouts[_selectedNavItem] ?? globalDefault;
+  }
+
+  void setLayoutForCurrentSection(TaskViewLayout layout) {
+    _sectionLayouts[_selectedNavItem] = layout;
+    notifyListeners();
   }
 }

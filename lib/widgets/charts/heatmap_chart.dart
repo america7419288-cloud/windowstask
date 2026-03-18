@@ -35,8 +35,6 @@ class HeatmapChart extends StatelessWidget {
                   children: week.map((e) {
                     final intensity = maxVal > 0 ? e.value / maxVal : 0.0;
                     final date = e.key;
-                    final parts = date.split('-');
-                    final day = int.tryParse(parts.last) ?? 0;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Tooltip(
@@ -46,8 +44,8 @@ class HeatmapChart extends StatelessWidget {
                           height: 12,
                           decoration: BoxDecoration(
                             color: intensity == 0
-                                ? (colors.isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06))
-                                : accent.withOpacity(0.15 + (intensity * 0.85)),
+                                ? (colors.isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06))
+                                : accent.withValues(alpha: 0.15 + (intensity * 0.85)),
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -67,7 +65,7 @@ class HeatmapChart extends StatelessWidget {
               width: 10, height: 10,
               margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
-                color: accent.withOpacity(o),
+                color: accent.withValues(alpha: o),
                 borderRadius: BorderRadius.circular(2),
               ),
             )).toList()),

@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/colors.dart';
-import '../../theme/springs.dart';
 
 class ConfettiParticle {
   final double angle;
@@ -62,7 +61,7 @@ class _ConfettiAnimationWidgetState extends State<_ConfettiAnimationWidget> with
     final random = math.Random();
     final colors = [
       AppColors.blue, AppColors.indigo, AppColors.purple,
-      AppColors.green, AppColors.orange, AppColors.pinkRed, AppColors.teal
+      AppColors.green, AppColors.orange, AppColors.pink, AppColors.teal
     ];
 
     _particles = List.generate(6, (index) {
@@ -133,7 +132,7 @@ class _ConfettiPainter extends CustomPainter {
       canvas.rotate(particle.rotationSpin * progress);
 
       final paint = Paint()
-        ..color = particle.color.withOpacity(opacity)
+        ..color = particle.color.withValues(alpha: opacity)
         ..style = PaintingStyle.fill;
 
       canvas.drawRect(

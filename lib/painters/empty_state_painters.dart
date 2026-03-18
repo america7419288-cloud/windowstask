@@ -11,7 +11,7 @@ class TodayEmptyPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final paint = Paint()
-      ..color = AppColors.orange.withOpacity(0.15)
+      ..color = AppColors.orange.withValues(alpha: 0.15)
       ..style = PaintingStyle.fill;
 
     // A large soft circle (sun)
@@ -19,7 +19,7 @@ class TodayEmptyPainter extends CustomPainter {
 
     // Radiating lines rotating slowly based on animationValue
     final linePaint = Paint()
-      ..color = AppColors.orange.withOpacity(0.4)
+      ..color = AppColors.orange.withValues(alpha: 0.4)
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
@@ -50,13 +50,13 @@ class UpcomingEmptyPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final dotPaint = Paint()
-      ..color = AppColors.textTertiaryLight.withOpacity(0.2)
+      ..color = AppColors.textTertiaryLight.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
     
     // Pulse animation logic for a single blue highlighted dot
     final pulseScale = 1.0 + math.sin(animationValue * math.pi * 2) * 0.15;
     final bluePaint = Paint()
-      ..color = AppColors.blue.withOpacity(0.6)
+      ..color = AppColors.blue.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     final gridSize = size.width * 0.5;
@@ -109,13 +109,13 @@ class AllTasksEmptyPainter extends CustomPainter {
       
       // Shadow
       canvas.drawRRect(rrect.shift(const Offset(0, 4)), Paint()
-        ..color = Colors.black.withOpacity(0.04)
+        ..color = Colors.black.withValues(alpha: 0.04)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
       
       // Fill
-      canvas.drawRRect(rrect, Paint()..color = color.withOpacity(0.15)..style = PaintingStyle.fill);
+      canvas.drawRRect(rrect, Paint()..color = color.withValues(alpha: 0.15)..style = PaintingStyle.fill);
       // Stroke
-      canvas.drawRRect(rrect, Paint()..color = color.withOpacity(0.4)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      canvas.drawRRect(rrect, Paint()..color = color.withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1.5);
       canvas.restore();
     }
 
@@ -145,7 +145,7 @@ class SearchEmptyPainter extends CustomPainter {
     canvas.rotate(angle);
 
     final linePaint = Paint()
-      ..color = AppColors.textTertiaryLight.withOpacity(0.3)
+      ..color = AppColors.textTertiaryLight.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
@@ -180,12 +180,12 @@ class CompletedEmptyPainter extends CustomPainter {
 
     // Soft green circle background
     canvas.drawCircle(center, outlineRadius, Paint()
-      ..color = AppColors.green.withOpacity(0.1)
+      ..color = AppColors.green.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill);
 
     // Rounded stroke green outline
     canvas.drawCircle(center, outlineRadius, Paint()
-      ..color = AppColors.green.withOpacity(0.3)
+      ..color = AppColors.green.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0);
 
@@ -205,7 +205,7 @@ class CompletedEmptyPainter extends CustomPainter {
       final drawPath = metrics.extractPath(0, metrics.length * admissionProgress.clamp(0.0, 1.0));
 
       canvas.drawPath(drawPath, Paint()
-        ..color = AppColors.green.withOpacity(0.8)
+        ..color = AppColors.green.withValues(alpha: 0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round

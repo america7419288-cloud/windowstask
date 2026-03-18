@@ -37,10 +37,10 @@ class _TrafficLightButtonsState extends State<TrafficLightButtons> {
         width: 12,
         height: 12,
         decoration: BoxDecoration(
-          color: _hovered ? color : color.withOpacity(0.6),
+          color: _hovered ? color : color.withValues(alpha: 0.6),
           shape: BoxShape.circle,
           border: Border.all(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),

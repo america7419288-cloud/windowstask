@@ -1,10 +1,11 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../utils/constants.dart';
 import '../widgets/sidebar/sidebar.dart';
@@ -28,7 +29,7 @@ class HomeScreen extends StatelessWidget {
       child: AppShortcuts(
         child: Consumer<NavigationProvider>(
           builder: (context, nav, _) {
-            // Build main content area based on nav selection
+            final colors = context.appColors;
             Widget mainContent;
             switch (nav.selectedNavItem) {
               case AppConstants.navSettings:
@@ -41,7 +42,6 @@ class HomeScreen extends StatelessWidget {
                 mainContent = const MultiLayoutTaskView();
             }
 
-            // Detail panel only when a task is selected
             final showDetail = nav.isDetailPanelOpen && nav.selectedTaskId != null;
             Widget? detailPanel;
             if (showDetail) {
@@ -51,48 +51,44 @@ class HomeScreen extends StatelessWidget {
               }
             }
 
-            return Stack(
-              children: [
-                ResponsiveLayout(
-                  sidebar: Column(
-                    children: [
-                      // Custom TitleBar traffic lights area for desktop
-                      const WindowDragArea(child: _TitleBarArea()),
-                      Expanded(child: const Sidebar()),
-                    ],
-                  ),
-                  content: Column(
-                    children: [
-                      WindowDragArea(child: _ContentHeader()),
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0, 0.03),
-                                  end: Offset.zero,
-                                ).animate(CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutCubic,
-                                )),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: mainContent,
+            return Container(
+              color: colors.background,
+              child: Stack(
+                children: [
+                  ResponsiveLayout(
+                    sidebar: const Sidebar(),
+                    content: Column(
+                      children: [
+                        WindowDragArea(child: _ContentHeader()),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 0.015),
+                                    end: Offset.zero,
+                                  ).animate(CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeOutCubic,
+                                  )),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: mainContent,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    detailPanel: detailPanel,
+                    showDetailPanel: showDetail,
                   ),
-                  detailPanel: detailPanel,
-                  showDetailPanel: showDetail,
-                ),
-                // Floating focus timer
-                const FocusTimerOverlay(),
-              ],
+                  const FocusTimerOverlay(),
+                ],
+              ),
             );
           },
         ),
@@ -102,94 +98,91 @@ class HomeScreen extends StatelessWidget {
 }
 
 
-class _TitleBarArea extends StatelessWidget {
-  const _TitleBarArea();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      height: AppConstants.titlebarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: colors.divider, width: 0.5)),
-      ),
-      child: const Align(
-        alignment: Alignment.centerLeft,
-        child: TrafficLightButtons(),
-      ),
-    );
-  }
-}
-
 class _ContentHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
     final nav = context.watch<NavigationProvider>();
 
     return Container(
       height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       decoration: BoxDecoration(
-        color: colors.isDark
-            ? colors.background.withOpacity(0.9)
-            : colors.background.withOpacity(0.85),
-        border: Border(bottom: BorderSide(color: colors.divider)),
-      ),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                if (!nav.isSearchOpen)
-                  Text(nav.pageTitle,
-                      style: AppTypography.headline
-                          .copyWith(color: colors.textPrimary)),
-                if (nav.isSearchOpen) Expanded(child: _SearchBar()),
-                if (!nav.isSearchOpen) const Spacer(),
-                if (!nav.isSearchOpen)
-                  _HeaderBtn(
-                    icon: Icons.search_rounded,
-                    onTap: () => nav.openSearch(),
-                    tooltip: 'Search  Ctrl+F',
-                  ),
-                const SizedBox(width: 8),
-                if (!nav.isSearchOpen &&
-                    nav.selectedNavItem != AppConstants.navSettings &&
-                    nav.selectedNavItem != AppConstants.navInsights &&
-                    nav.selectedNavItem != AppConstants.navTrash)
-                  _AddTaskButton(),
-              ],
-            ),
-          ),
+        color: colors.background,
+        border: Border(
+          bottom: BorderSide(color: colors.divider, width: 0.75),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          if (!nav.isSearchOpen)
+            Text(
+              nav.pageTitle,
+              style: AppTypography.headline.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colors.textPrimary,
+                fontSize: 18,
+                letterSpacing: -0.5,
+              ),
+            ),
+          if (nav.isSearchOpen) Expanded(child: _SearchBar()),
+          if (!nav.isSearchOpen) const Spacer(),
+          if (!nav.isSearchOpen)
+            _HeaderIconBtn(
+              icon: PhosphorIcons.magnifyingGlass(),
+              onTap: () => nav.openSearch(),
+              tooltip: 'Search  Ctrl+F',
+            ),
+          const SizedBox(width: 6),
+          if (!nav.isSearchOpen &&
+              nav.selectedNavItem != AppConstants.navSettings &&
+              nav.selectedNavItem != AppConstants.navInsights &&
+              nav.selectedNavItem != AppConstants.navTrash)
+            _NewTaskButton(),
+          const SizedBox(width: 8),
+          const _WindowCaptionButtons(),
+        ],
       ),
     );
   }
 }
 
-class _AddTaskButton extends StatelessWidget {
+class _NewTaskButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     return GestureDetector(
-      onTap: () {}, // QuickAddBar handles its own focus
+      onTap: () => context.read<NavigationProvider>().openQuickAdd(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
         decoration: BoxDecoration(
-          color: accent,
-          borderRadius: BorderRadius.circular(AppConstants.radiusButton),
+          gradient: AppColors.gradientPrimary,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            const Icon(Icons.add, size: 14, color: Colors.white),
-            const SizedBox(width: 4),
-            Text('Add Task',
-                style: AppTypography.body
-                    .copyWith(color: Colors.white, fontWeight: FontWeight.w500)),
+            const Icon(Icons.add_rounded, size: 14, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              'New Task',
+              style: AppTypography.caption.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),
@@ -221,16 +214,9 @@ class _SearchBarState extends State<_SearchBar> {
           child: Container(
             height: 32,
             decoration: BoxDecoration(
-              color: colors.isDark
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.white,
+              color: colors.surfaceElevated,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withOpacity(0.3),
-              ),
+              border: Border.all(color: colors.border, width: 0.5),
             ),
             child: TextField(
               controller: _ctrl,
@@ -238,15 +224,12 @@ class _SearchBarState extends State<_SearchBar> {
               style: AppTypography.body.copyWith(color: colors.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Search tasks...',
-                hintStyle: AppTypography.body
-                    .copyWith(color: colors.textSecondary),
+                hintStyle: AppTypography.body.copyWith(color: colors.textSecondary),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                prefixIcon: Icon(Icons.search_rounded,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                prefixIcon: Icon(PhosphorIcons.magnifyingGlass(),
                     size: 16, color: colors.textSecondary),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 36),
+                prefixIconConstraints: const BoxConstraints(minWidth: 36),
               ),
               onChanged: (q) => nav.updateSearchQuery(q),
             ),
@@ -258,18 +241,18 @@ class _SearchBarState extends State<_SearchBar> {
             nav.closeSearch();
             _ctrl.clear();
           },
-          child: Text('Cancel',
-              style: AppTypography.body.copyWith(
-                  color: Theme.of(context).colorScheme.primary)),
+          child: Text(
+            'Cancel',
+            style: AppTypography.body.copyWith(color: AppColors.primary),
+          ),
         ),
       ],
     );
   }
 }
 
-class _HeaderBtn extends StatelessWidget {
-  const _HeaderBtn(
-      {required this.icon, required this.onTap, this.tooltip});
+class _HeaderIconBtn extends StatelessWidget {
+  const _HeaderIconBtn({required this.icon, required this.onTap, this.tooltip});
   final IconData icon;
   final VoidCallback onTap;
   final String? tooltip;
@@ -282,11 +265,99 @@ class _HeaderBtn extends StatelessWidget {
       child: Container(
         width: 30,
         height: 30,
-        decoration:
-            BoxDecoration(borderRadius: BorderRadius.circular(6)),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
         child: Icon(icon, size: 16, color: colors.textSecondary),
       ),
     );
     return tooltip != null ? Tooltip(message: tooltip!, child: w) : w;
   }
 }
+
+class _WindowCaptionButtons extends StatelessWidget {
+  const _WindowCaptionButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _CaptionBtn(
+          icon: Icons.minimize_rounded,
+          onTap: () => handleWindowAction('minimize'),
+          hoverColor: colors.isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
+          iconColor: colors.textSecondary,
+        ),
+        _CaptionBtn(
+          icon: Icons.crop_square_rounded,
+          onTap: () => handleWindowAction('maximize'),
+          hoverColor: colors.isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
+          iconColor: colors.textSecondary,
+        ),
+        _CaptionBtn(
+          icon: Icons.close_rounded,
+          onTap: () => handleWindowAction('close'),
+          hoverColor: const Color(0xFFE81123),
+          hoverIconColor: Colors.white,
+          iconColor: colors.textSecondary,
+        ),
+      ],
+    );
+  }
+}
+
+class _CaptionBtn extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color hoverColor;
+  final Color iconColor;
+  final Color? hoverIconColor;
+
+  const _CaptionBtn({
+    required this.icon,
+    required this.onTap,
+    required this.hoverColor,
+    required this.iconColor,
+    this.hoverIconColor,
+  });
+
+  @override
+  State<_CaptionBtn> createState() => _CaptionBtnState();
+}
+
+class _CaptionBtnState extends State<_CaptionBtn> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 46,
+          height: 32,
+          decoration: BoxDecoration(
+            color: _hovered ? widget.hoverColor : Colors.transparent,
+          ),
+          child: Icon(
+            widget.icon,
+            size: 16,
+            color: _hovered && widget.hoverIconColor != null
+                ? widget.hoverIconColor
+                : widget.iconColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+

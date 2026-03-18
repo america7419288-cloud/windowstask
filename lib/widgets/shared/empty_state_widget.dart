@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 
 class EmptyStateConfig {
@@ -119,7 +120,22 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
             // But since flutter architecture makes passing animation to immutable config tricky, 
             // we will let the CustomPaint redraw on this AnimatedBuilder tick.
 
-            return Column(
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+              decoration: BoxDecoration(
+                color: colors.isDark
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: colors.isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.05),
+                  width: 0.75,
+                ),
+              ),
+              child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Illustration
@@ -128,8 +144,8 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
                   child: Opacity(
                     opacity: _illusFade.value,
                     child: SizedBox(
-                      width: 160,
-                      height: 160,
+                      width: 180,
+                      height: 180,
                       child: CustomPaint(
                         painter: widget.config.painterBuilder(_idleController.value),
                       ),
@@ -146,14 +162,16 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
                     child: Text(
                       widget.config.headline,
                       style: AppTypography.title2.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.4,
                         color: colors.textPrimary,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Subline
                 Transform.translate(
@@ -163,10 +181,12 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
                     child: Text(
                       widget.config.subline,
                       style: AppTypography.body.copyWith(
+                        fontSize: 14,
                         color: colors.textTertiary,
+                        height: 1.5,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 2,
+                      maxLines: 3,
                     ),
                   ),
                 ),
@@ -179,7 +199,8 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
                     child: _buildCta(context),
                   ),
                 ],
-              ],
+                ],
+            ),
             );
           },
         ),
@@ -194,21 +215,28 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with TickerProvider
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: accent,
-          borderRadius: BorderRadius.circular(8),
+          gradient: AppColors.gradientPrimary,
+          borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: accent.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.30),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Text(
-          widget.config.ctaLabel!,
-          style: AppTypography.bodySemibold.copyWith(
-            color: Colors.white,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.config.ctaLabel!,
+              style: AppTypography.bodySemibold.copyWith(
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
+          ],
         ),
       ),
     );

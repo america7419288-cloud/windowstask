@@ -5,6 +5,10 @@ import '../../../providers/navigation_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
+import '../shared/task_interaction_wrapper.dart';
+import '../../context_menu/context_menu_controller.dart';
+import '../../../providers/task_provider.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class CalendarLayout extends StatefulWidget {
   final List<Task> allTasks;
@@ -45,34 +49,42 @@ class _CalendarLayoutState extends State<CalendarLayout> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left_rounded),
-                onPressed: () {
-                  _pageController.previousPage(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                  );
-                },
+              _CalNavBtn(
+                icon: PhosphorIcons.caretLeft(),
+                onTap: () => _pageController.previousPage(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                ),
               ),
               Expanded(
-                child: Text(
-                  _monthTitle(_currentMonth),
+                child: RichText(
                   textAlign: TextAlign.center,
-                  style: AppTypography.headline.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textPrimary,
+                  text: TextSpan(
+                    text: '${_monthNameFull(_currentMonth)} ',
+                    style: AppTypography.headline.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '${_currentMonth.year}',
+                        style: AppTypography.headline.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
-                onPressed: () {
-                  _pageController.nextPage(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                  );
-                },
+              _CalNavBtn(
+                icon: PhosphorIcons.caretRight(),
+                onTap: () => _pageController.nextPage(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                ),
               ),
             ],
           ),
@@ -82,19 +94,21 @@ class _CalendarLayoutState extends State<CalendarLayout> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                .map((d) => Expanded(
-                      child: Center(
-                        child: Text(
-                          d,
-                          style: AppTypography.caption.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: colors.textTertiary,
-                          ),
+                .asMap().entries.map((entry) {
+                  final isWeekend = entry.key >= 5;
+                  return Expanded(
+                    child: Center(
+                      child: Text(
+                        entry.value,
+                        style: AppTypography.caption.copyWith(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isWeekend ? colors.textQuaternary : colors.textTertiary,
                         ),
                       ),
-                    ))
-                .toList(),
+                    ),
+                  );
+                }).toList(),
           ),
         ),
         const SizedBox(height: 4),
@@ -177,7 +191,7 @@ class _CalendarLayoutState extends State<CalendarLayout> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        childAspectRatio: 0.85,
+        childAspectRatio: 0.8,
       ),
       itemCount: rows * 7,
       itemBuilder: (context, idx) {
@@ -218,12 +232,12 @@ class _CalendarLayoutState extends State<CalendarLayout> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _monthTitle(DateTime d) {
+  String _monthNameFull(DateTime d) {
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    return '${months[d.month - 1]} ${d.year}';
+    return months[d.month - 1];
   }
 
   String _monthName(int m) {
@@ -232,6 +246,30 @@ class _CalendarLayoutState extends State<CalendarLayout> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[m - 1];
+  }
+}
+
+class _CalNavBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CalNavBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: colors.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 16, color: colors.textSecondary),
+      ),
+    );
   }
 }
 
@@ -255,33 +293,50 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(1),
+      margin: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
-        color: isToday ? accent.withOpacity(0.08) : null,
-        borderRadius: BorderRadius.circular(6),
+        color: isToday ? accent.withValues(alpha: 0.08) : (isSelected ? colors.surface : Colors.transparent),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isSelected ? accent : colors.border.withOpacity(0.5),
-          width: isSelected ? 1.5 : 0.5,
+          color: isSelected ? accent : (isToday ? accent.withValues(alpha: 0.3) : colors.border.withValues(alpha: 0.4)),
+          width: isSelected || isToday ? 1.5 : 0.5,
         ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       padding: const EdgeInsets.all(4),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Day number top-right
+          // Day number
           Align(
-            alignment: Alignment.topRight,
-            child: Text(
-              '$day',
-              style: AppTypography.caption.copyWith(
-                fontSize: 11,
-                fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                color: isToday ? accent : colors.textPrimary,
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: isToday ? accent : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$day',
+                style: AppTypography.caption.copyWith(
+                  fontSize: 10,
+                  fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                  color: isToday ? Colors.white : colors.textPrimary,
+                ),
               ),
             ),
           ),
-          // Task dots
-          ...tasks.take(3).map((t) => _TaskDot(task: t, colors: colors)),
+          const SizedBox(height: 4),
+          // Task pills
+          ...tasks.take(3).map((t) => _TaskPill(task: t, colors: colors, accent: accent)),
           // Overflow
           if (tasks.length > 3)
             Text(
@@ -297,28 +352,42 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-class _TaskDot extends StatelessWidget {
+class _TaskPill extends StatelessWidget {
   final Task task;
   final AppColorsExtension colors;
+  final Color accent;
 
-  const _TaskDot({required this.task, required this.colors});
+  const _TaskPill({required this.task, required this.colors, required this.accent});
 
   @override
   Widget build(BuildContext context) {
     final priorityColor = _priorityColor(task.priority);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+    final isCompleted = task.isCompleted;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: isCompleted
+            ? colors.textTertiary.withValues(alpha: 0.1)
+            : priorityColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isCompleted ? Colors.transparent : priorityColor.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
       child: Row(
         children: [
           Container(
-            width: 5,
-            height: 5,
-            margin: const EdgeInsets.only(right: 3),
+            width: 4,
+            height: 4,
             decoration: BoxDecoration(
-              color: priorityColor,
+              color: isCompleted ? colors.textTertiary : priorityColor,
               shape: BoxShape.circle,
             ),
           ),
+          const SizedBox(width: 4),
           Expanded(
             child: Text(
               task.title,
@@ -326,7 +395,9 @@ class _TaskDot extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 9,
-                color: colors.textSecondary,
+                fontWeight: isCompleted ? FontWeight.w400 : FontWeight.w500,
+                color: isCompleted ? colors.textSecondary : colors.textPrimary,
+                decoration: isCompleted ? TextDecoration.lineThrough : null,
               ),
             ),
           ),
@@ -341,7 +412,7 @@ class _TaskDot extends StatelessWidget {
       case Priority.low:     return AppColors.green;
       case Priority.medium:  return AppColors.orange;
       case Priority.high:    return AppColors.red;
-      case Priority.urgent:  return AppColors.pinkRed;
+      case Priority.urgent:  return AppColors.pink;
     }
   }
 }
@@ -355,32 +426,73 @@ class _DayTaskRow extends StatelessWidget {
     final colors = context.appColors;
     final nav = context.read<NavigationProvider>();
 
-    return GestureDetector(
-      onTap: () => nav.selectTask(task.id),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: _priorityColor(task.priority),
-                shape: BoxShape.circle,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                task.title,
-                style: AppTypography.body.copyWith(
-                  fontSize: 13,
-                  color: colors.textPrimary,
-                  decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+    return TaskInteractionWrapper(
+      task: task,
+      actionsPosition: HoverActionsPosition.bottomBar,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => nav.selectTask(task.id),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.border, width: 0.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
                 ),
-              ),
+              ],
             ),
-          ],
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => context.read<TaskProvider>().toggleComplete(task.id),
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: task.isCompleted ? AppColors.green : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: task.isCompleted
+                          ? null
+                          : Border.all(color: colors.textSecondary, width: 1.5),
+                    ),
+                    child: task.isCompleted
+                        ? const Icon(Icons.check, size: 10, color: Colors.white)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textPrimary,
+                      decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: _priorityColor(task.priority),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -392,7 +504,7 @@ class _DayTaskRow extends StatelessWidget {
       case Priority.low:     return AppColors.green;
       case Priority.medium:  return AppColors.orange;
       case Priority.high:    return AppColors.red;
-      case Priority.urgent:  return AppColors.pinkRed;
+      case Priority.urgent:  return AppColors.pink;
     }
   }
 }

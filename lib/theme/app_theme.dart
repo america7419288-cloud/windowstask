@@ -18,7 +18,7 @@ class AppTheme {
         primary: accentColor,
         error: AppColors.red,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.light().textTheme).apply(
         bodyColor: AppColors.textPrimaryLight,
         displayColor: AppColors.textPrimaryLight,
       ),
@@ -37,12 +37,24 @@ class AppTheme {
         focusedBorder: InputBorder.none,
         enabledBorder: InputBorder.none,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        hintStyle: GoogleFonts.inter(
+        hintStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           color: AppColors.textSecondaryLight,
+          letterSpacing: -0.1,
         ),
       ),
-      extensions: const [AppColorsExtension.light()],
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.hovered)) {
+            return AppColors.textTertiaryLight.withValues(alpha: 0.5);
+          }
+          return Colors.transparent;
+        }),
+        thickness: WidgetStateProperty.all(6),
+        radius: const Radius.circular(10),
+        interactive: true,
+      ),
+      extensions: [AppColorsExtension.light(accentColor)],
     );
   }
 
@@ -59,7 +71,7 @@ class AppTheme {
         primary: accentColor,
         error: AppColors.red,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.dark().textTheme).apply(
         bodyColor: AppColors.textPrimaryDark,
         displayColor: AppColors.textPrimaryDark,
       ),
@@ -78,12 +90,24 @@ class AppTheme {
         focusedBorder: InputBorder.none,
         enabledBorder: InputBorder.none,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        hintStyle: GoogleFonts.inter(
+        hintStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           color: AppColors.textSecondaryDark,
+          letterSpacing: -0.1,
         ),
       ),
-      extensions: const [AppColorsExtension.dark()],
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.hovered)) {
+            return AppColors.textTertiaryDark.withValues(alpha: 0.5);
+          }
+          return Colors.transparent;
+        }),
+        thickness: WidgetStateProperty.all(6),
+        radius: const Radius.circular(10),
+        interactive: true,
+      ),
+      extensions: [AppColorsExtension.dark(accentColor)],
     );
   }
 }
@@ -91,6 +115,7 @@ class AppTheme {
 @immutable
 class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   const AppColorsExtension({
+    required this.accent,
     required this.background,
     required this.surface,
     required this.surfaceElevated,
@@ -105,34 +130,37 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     required this.isDark,
   });
 
-  const AppColorsExtension.light()
-      : background = AppColors.canvasLight,
+  AppColorsExtension.light(Color accentColor)
+      : accent = accentColor,
+        background = AppColors.canvasLight,
         surface = AppColors.surfaceLight,
         surfaceElevated = AppColors.surfaceElevatedLight,
         sidebar = AppColors.sidebarLight,
-        sidebarActive = const Color(0x1A007AFF), // rgba(0,122,255,0.10)
+        sidebarActive = accentColor.withValues(alpha: 0.08),
         textPrimary = AppColors.textPrimaryLight,
         textSecondary = AppColors.textSecondaryLight,
         textTertiary = AppColors.textTertiaryLight,
         textQuaternary = AppColors.textQuaternaryLight,
-        border = const Color(0x0F000000), // rgba(0,0,0,0.06)
+        border = AppColors.dividerLight,
         divider = AppColors.dividerLight,
         isDark = false;
 
-  const AppColorsExtension.dark()
-      : background = AppColors.canvasDark,
+  AppColorsExtension.dark(Color accentColor)
+      : accent = accentColor,
+        background = AppColors.canvasDark,
         surface = AppColors.surfaceDark,
         surfaceElevated = AppColors.surfaceElevatedDark,
         sidebar = AppColors.sidebarDark,
-        sidebarActive = const Color(0x2E007AFF), // rgba(0,122,255,0.18)
+        sidebarActive = accentColor.withValues(alpha: 0.15),
         textPrimary = AppColors.textPrimaryDark,
         textSecondary = AppColors.textSecondaryDark,
         textTertiary = AppColors.textTertiaryDark,
         textQuaternary = AppColors.textQuaternaryDark,
-        border = const Color(0x19FFFFFF), // rgba(255,255,255,0.1)
+        border = AppColors.dividerDark,
         divider = AppColors.dividerDark,
         isDark = true;
 
+  final Color accent;
   final Color background;
   final Color surface;
   final Color surfaceElevated;
@@ -148,6 +176,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
 
   @override
   AppColorsExtension copyWith({
+    Color? accent,
     Color? background,
     Color? surface,
     Color? surfaceElevated,
@@ -162,6 +191,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     bool? isDark,
   }) {
     return AppColorsExtension(
+      accent: accent ?? this.accent,
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surfaceElevated: surfaceElevated ?? this.surfaceElevated,
@@ -181,6 +211,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   AppColorsExtension lerp(AppColorsExtension? other, double t) {
     if (other is! AppColorsExtension) return this;
     return AppColorsExtension(
+      accent: Color.lerp(accent, other.accent, t)!,
       background: Color.lerp(background, other.background, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
       surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,

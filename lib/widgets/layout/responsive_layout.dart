@@ -169,7 +169,7 @@ class _ModalDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {}, // Consume tap to prevent closing the modal detail sheet when clicking inside it
       child: Container(
         color: Colors.black45,
         child: Align(

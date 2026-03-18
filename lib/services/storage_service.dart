@@ -5,6 +5,7 @@ import '../models/task.dart';
 import '../models/task_list.dart';
 import '../models/tag.dart';
 import '../models/app_settings.dart';
+import 'export_service.dart';
 import '../utils/constants.dart';
 
 class StorageService {
@@ -81,15 +82,17 @@ class StorageService {
 
   // ─── Export / Import ──────────────────────────────────────────────────────
 
-  Map<String, dynamic> exportAll() {
-    return {
-      'tasks': getAllTasks().map((t) => t.toJson()).toList(),
-      'lists': getAllLists().map((l) => l.toJson()).toList(),
-      'tags': getAllTags().map((t) => t.toJson()).toList(),
-      'settings': getSettings().toJson(),
-      'exportedAt': DateTime.now().toIso8601String(),
+  Future<void> exportAll() async {
+    final data = <String, dynamic>{
+      'tasks': _tasksBox.values.map((t) => t.toJson()).toList(),
+      'lists': _listsBox.values.map((l) => l.toJson()).toList(),
+      'tags': _tagsBox.values.map((t) => t.toJson()).toList(),
+      'settings': getSettings().toJson(), // Retained settings export
+      'export_date': DateTime.now().toIso8601String(),
       'version': '1.0.0',
     };
+    
+    await ExportService.exportToFile(data);
   }
 
   Future<void> importAll(Map<String, dynamic> data) async {

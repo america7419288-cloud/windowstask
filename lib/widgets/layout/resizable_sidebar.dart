@@ -57,7 +57,7 @@ class _ResizableSidebarState extends State<ResizableSidebar> {
               duration: const Duration(milliseconds: 150),
               width: handleWidth,
               color: _showHandle
-                  ? accent.withOpacity(0.4)
+                  ? accent.withValues(alpha: 0.4)
                   : Colors.transparent,
             ),
           ),

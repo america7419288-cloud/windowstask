@@ -10,6 +10,7 @@ Future<void> setupWindow() async {
     center: true,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
+    backgroundColor: Colors.transparent,
   );
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {

@@ -4,6 +4,7 @@ import '../../models/app_settings.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/wallpaper_presets.dart';
 import '../../painters/wallpaper_pattern_painter.dart';
+import '../../theme/colors.dart';
 
 class AppWallpaper extends StatelessWidget {
   final Widget child;
@@ -14,26 +15,33 @@ class AppWallpaper extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
     final wallType = settings.settings.wallpaperType;
 
+    // No wallpaper — render child directly, zero overhead
     if (wallType == WallpaperType.none) {
       return child;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final opacity = settings.settings.wallpaperOpacity.clamp(0.05, 0.40);
+
     return Stack(
       children: [
-        // Layer 1: base background
+        // Layer 1: The wallpaper itself at full size
         Positioned.fill(
-          child: Container(color: Theme.of(context).colorScheme.surface),
+          child: _buildWallpaper(context, settings),
         ),
 
-        // Layer 2: wallpaper at low opacity
+        // Layer 2: Semi-opaque surface overlay so content remains readable.
+        // This is the KEY layer — it sits between the wallpaper and the
+        // content, muting the wallpaper to a subtle background effect.
         Positioned.fill(
-          child: Opacity(
-            opacity: settings.settings.wallpaperOpacity.clamp(0.05, 0.40),
-            child: _buildWallpaper(context, settings),
+          child: Container(
+            color: isDark
+                ? AppColors.canvasDark.withValues(alpha: 1.0 - opacity)
+                : AppColors.canvasLight.withValues(alpha: 1.0 - opacity),
           ),
         ),
 
-        // Layer 3: app content on top
+        // Layer 3: All app content — fully visible on top
         Positioned.fill(
           child: child,
         ),

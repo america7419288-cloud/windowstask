@@ -11,8 +11,8 @@ class ContextMenuDivider extends StatelessWidget {
       height: 1,
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       color: colors.isDark 
-          ? Colors.white.withOpacity(0.06) 
-          : Colors.black.withOpacity(0.06),
+          ? Colors.white.withValues(alpha: 0.06) 
+          : Colors.black.withValues(alpha: 0.06),
     );
   }
 }

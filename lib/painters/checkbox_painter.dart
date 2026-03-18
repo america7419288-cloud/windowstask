@@ -5,8 +5,15 @@ import '../../theme/colors.dart';
 class CheckboxPainter extends CustomPainter {
   final double progress;
   final bool isHovered;
+  final Color accentColor;
+  final bool isDark;
 
-  CheckboxPainter({required this.progress, required this.isHovered});
+  CheckboxPainter({
+    required this.progress,
+    required this.isHovered,
+    required this.accentColor,
+    required this.isDark,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -14,12 +21,15 @@ class CheckboxPainter extends CustomPainter {
     final radius = size.width / 2;
 
     // The baseline stroke color
-    final baseStrokeColor = AppColors.textTertiaryLight.withOpacity(0.5);
-    // Interpolate towards green when hovered or when animating fill
+    final baseStrokeColor = isDark 
+        ? Colors.white.withValues(alpha: 0.25)
+        : Colors.black.withValues(alpha: 0.25);
+    
+    // Interpolate towards accent when hovered or when animating fill
     final strokeColor = Color.lerp(
       baseStrokeColor,
-      AppColors.green,
-      math.max(isHovered ? 1.0 : 0.0, progress * 2), // Green kicks in early in progress
+      accentColor,
+      math.max(isHovered ? 1.0 : 0.0, progress * 2),
     )!;
 
     final borderPaint = Paint()
@@ -29,14 +39,14 @@ class CheckboxPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius - 0.75, borderPaint);
 
-    // Green fill sweep (step 1: from 0.0 -> 0.5)
+    // Accent fill sweep
     if (progress > 0) {
       final fillPaint = Paint()
         ..style = PaintingStyle.fill
-        ..color = AppColors.green;
+        ..color = accentColor;
 
       final sweepProgress = (progress * 2).clamp(0.0, 1.0);
-      final startAngle = -math.pi / 2; // Start from top
+      final startAngle = -math.pi / 2;
       final sweepAngle = math.pi * 2 * sweepProgress;
 
       canvas.drawArc(
@@ -48,12 +58,11 @@ class CheckboxPainter extends CustomPainter {
       );
     }
 
-    // Checkmark draw (step 2: from 0.5 -> 1.0)
+    // Checkmark draw
     if (progress > 0.5) {
       final tickProgress = ((progress - 0.5) * 2).clamp(0.0, 1.0);
 
       final checkPath = Path();
-      // Precise tick coordinates for a satisfying checkmark within the circle
       final p1 = Offset(size.width * 0.28, size.height * 0.52);
       final p2 = Offset(size.width * 0.45, size.height * 0.68);
       final p3 = Offset(size.width * 0.72, size.height * 0.35);
@@ -78,6 +87,9 @@ class CheckboxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CheckboxPainter oldDelegate) {
-    return progress != oldDelegate.progress || isHovered != oldDelegate.isHovered;
+    return progress != oldDelegate.progress || 
+           isHovered != oldDelegate.isHovered ||
+           accentColor != oldDelegate.accentColor ||
+           isDark != oldDelegate.isDark;
   }
 }

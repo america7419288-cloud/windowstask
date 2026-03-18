@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/tasks/task_list_view.dart';
 import '../../widgets/tasks/quick_add_bar.dart';
 import '../../utils/constants.dart';
+import 'today_header.dart';
 import 'views/view_toggle_bar.dart';
 import 'views/grid_view_layout.dart';
 import 'views/compact_layout.dart';
@@ -21,8 +22,10 @@ class MultiLayoutTaskView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layout = context.watch<SettingsProvider>().currentLayout;
+    final globalDefault = context.watch<SettingsProvider>().currentLayout;
     final nav = context.watch<NavigationProvider>();
+    // Use per-section layout, falling back to the global default from settings
+    final layout = nav.layoutForCurrentSection(globalDefault);
     final tasks = context.watch<TaskProvider>();
     final navItem = nav.selectedNavItem;
     final query = nav.searchQuery;
@@ -33,8 +36,17 @@ class MultiLayoutTaskView extends StatelessWidget {
     final bool showControls = navItem != AppConstants.navTrash &&
         navItem != AppConstants.navCompleted;
 
+    final bool showHeader = navItem != AppConstants.navTrash &&
+        navItem != AppConstants.navCompleted &&
+        layout != TaskViewLayout.list;
+
     return Column(
       children: [
+        if (showHeader)
+          TodayHeader(
+            taskCount: taskList.length,
+            completedCount: taskList.where((t) => t.isCompleted).length,
+          ),
         _LayoutHeader(showQuickAdd: showControls && layout != TaskViewLayout.list),
         Expanded(
           child: AnimatedSwitcher(

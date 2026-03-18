@@ -1,5 +1,5 @@
-name: windowstask
-description: "Taski - A production-grade Daily Task Manager for Windows"
+name: taski
+description: "A beautiful daily task manager for Windows and Web."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -29,6 +29,7 @@ dependencies:
   file_picker: ^8.0.3
   shared_preferences: ^2.3.2
   fuzzy: ^0.5.1
+  package_info_plus: ^6.0.0
 
 dev_dependencies:
   flutter_test:

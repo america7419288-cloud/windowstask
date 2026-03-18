@@ -4,13 +4,13 @@ import '../../models/task.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/list_provider.dart';
+import '../../providers/tag_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../../utils/date_utils.dart';
-import '../shared/custom_checkbox.dart';
+import 'shared/custom_checkbox.dart';
 import '../shared/pressable_scale.dart';
-import '../shared/animated_strikethrough.dart';
 import '../../painters/confetti_painter.dart';
 import '../context_menu/context_menu_controller.dart';
 
@@ -32,70 +32,100 @@ class TaskCard extends StatefulWidget {
 
 class _TaskCardState extends State<TaskCard> {
   bool _hovered = false;
+  bool _justCompleted = false;
+  bool _completionFlash = false;
 
-  void _showUndoSnackbar(BuildContext context) {
-    final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
-    
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text('Task deleted', style: AppTypography.body.copyWith(color: Colors.white)),
-          ],
-        ),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: accent, // Matching macOS blue
-          onPressed: () {
-            context.read<TaskProvider>().restoreTask(widget.task.id);
-          },
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        backgroundColor: const Color(0xFF2C2C2E), // Dark pill
-        duration: const Duration(seconds: 4),
-        width: 320,
-      ),
-    );
+  void _handleComplete() {
+    final wasCompleted = widget.task.isCompleted;
+    context.read<TaskProvider>().toggleComplete(widget.task.id);
+    if (!wasCompleted) {
+      setState(() {
+        _justCompleted = true;
+        _completionFlash = true;
+      });
+      final box = context.findRenderObject() as RenderBox?;
+      if (box != null) {
+        final pos = box.localToGlobal(const Offset(30, 20));
+        ConfettiOverlay.show(context, pos);
+      }
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) setState(() => _completionFlash = false);
+      });
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _justCompleted = false);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accentColor = Theme.of(context).colorScheme.primary;
-    final t = widget.task; // Moved up
+    final t = widget.task;
     final isOverdue = t.isOverdue && !t.isCompleted;
-
-    // Derived colors
-    final priorityColor = _getPriorityColor(t.priority);
     final isDark = colors.isDark;
+    final isCompleted = t.isCompleted;
 
-    // Background gradient / solid color based on state
-    Gradient? bgGradient;
-    Color? bgColor;
+    // Background colors
+    final normalBg = isDark ? const Color(0xFF2A2725) : Colors.white;
+    final completedBg = isDark
+        ? const Color(0xFF242220).withValues(alpha: 0.5)
+        : const Color(0xFFF8F7F5);
+    final cardBg = _completionFlash
+        ? AppColors.priorityLow.withValues(alpha: 0.08)
+        : (isCompleted ? completedBg : normalBg);
 
-    if (widget.isSelected) {
-      bgColor = colors.sidebarActive;
-    } else if (t.isCompleted) {
-      bgColor = isDark ? const Color(0xFF1E1E20) : const Color(0xFFF9F9FB);
-    } else {
-      bgGradient = isDark ? AppColors.cardGradientDark() : AppColors.cardGradientLight();
-    }
+    // Border
+    final borderColor = widget.isSelected
+        ? AppColors.primary.withValues(alpha: 0.45)
+        : _hovered
+            ? (isDark
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.10))
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.07)
+                : Colors.black.withValues(alpha: 0.07));
+    final borderWidth = widget.isSelected ? 1.5 : 0.75;
 
-    // Border configuration
-    Color borderColor = colors.border;
-    if (widget.isSelected) {
-      borderColor = accentColor.withOpacity(0.5);
-    } else if (_hovered) {
-      borderColor = colors.textTertiary.withOpacity(0.2);
-    }
+    // Shadows
+    final shadows = isCompleted
+        ? <BoxShadow>[]
+        : isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: _hovered ? 20 : 12,
+                  offset: Offset(0, _hovered ? 6 : 3),
+                ),
+              ]
+            : _hovered
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.09),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                      spreadRadius: -1,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.055),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                      spreadRadius: -1,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.025),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ];
 
-    // Outer Container wrapping the PressableScale
-    return MouseRegion(
+    final card = MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
@@ -103,7 +133,7 @@ class _TaskCardState extends State<TaskCard> {
         onSecondaryTapUp: (details) {
           CustomContextMenuController.show(
             context: context,
-            position: details.globalPosition, // Exact cursor coords
+            position: details.globalPosition,
             task: t,
             taskProvider: context.read<TaskProvider>(),
             listProvider: context.read<ListProvider>(),
@@ -120,264 +150,298 @@ class _TaskCardState extends State<TaskCard> {
             }
           },
           child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: bgGradient == null ? bgColor : null,
-            gradient: bgGradient,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor, width: 0.5),
-            boxShadow: t.isCompleted ? [] : [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                blurRadius: _hovered ? 12 : 8,
-                offset: const Offset(0, 1),
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? AppColors.primary.withValues(alpha: 0.025)
+                  : cardBg,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: borderColor, width: borderWidth),
+              boxShadow: shadows,
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _PriorityBar(priority: t.priority),
+                  Expanded(child: _buildContent(context, t, colors, isOverdue, isCompleted)),
+                ],
               ),
-              if (!_hovered && !isDark)
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 2,
-                  offset: const Offset(0, 0),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return AnimatedScale(
+      scale: _justCompleted ? 1.03 : 1.0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        duration: Duration(milliseconds: _justCompleted ? 0 : 300),
+        opacity: isCompleted && !_justCompleted ? 0.65 : 1.0,
+        child: card,
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, Task t, AppColorsExtension colors, bool isOverdue, bool isCompleted) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: checkbox + title + icons
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CustomCheckbox(
+                value: isCompleted,
+                onChanged: (_) => _handleComplete(),
+                activeColor: Theme.of(context).colorScheme.primary,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: isCompleted
+                    ? Text(
+                        t.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.body.copyWith(
+                          color: colors.textTertiary,
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: colors.textTertiary,
+                        ),
+                      )
+                    : Text(
+                        t.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySemibold.copyWith(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                          color: isOverdue
+                              ? AppColors.priorityHigh
+                              : colors.textPrimary,
+                        ),
+                      ),
+              ),
+              if (t.isFlagged)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Icon(Icons.bookmark_rounded,
+                      size: 14, color: AppColors.priorityMedium),
+                ),
+              if (t.subtasks.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _MiniSubtaskBadge(task: t),
                 ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(13.5),
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 300),
-              opacity: t.isCompleted ? 0.55 : 1.0,
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // -- Priority Left Border --
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 4,
-                      color: t.isCompleted ? AppColors.green : priorityColor,
-                    ),
-
-                    // -- Main Content --
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Top Row: Checkbox, Title, Icons
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 1, right: 12),
-                                  child: CustomCheckbox(
-                                    value: t.isCompleted,
-                                    onChanged: (val) {
-                                      context.read<TaskProvider>().toggleComplete(t.id);
-                                      if (val) {
-                                        final box = context.findRenderObject() as RenderBox?;
-                                        if (box != null) {
-                                          final pos = box.localToGlobal(const Offset(30, 24)); // approx checkbox pos
-                                          ConfettiOverlay.show(context, pos);
-                                        }
-                                      }
-                                    },
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      AnimatedStrikethrough(
-                                        text: t.title,
-                                        isStruck: t.isCompleted,
-                                        strikeColor: colors.textSecondary,
-                                        textStyle: AppTypography.body.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                          color: isOverdue ? AppColors.red : colors.textPrimary,
-                                        ),
-                                      ),
-                                      if (t.description != null && t.description!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          t.description!.split('\n').first,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: AppTypography.caption.copyWith(color: colors.textTertiary),
-                                        ),
-                                      ]
-                                    ],
-                                  ),
-                                ),
-                                if (t.isFlagged)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Icon(Icons.flag_rounded, size: 16, color: AppColors.orange),
-                                  ),
-                              ],
-                            ),
-
-                            // Bottom Row: Metadata (Date, Subtasks, Tags)
-                            if (_hasMetadata(t)) ...[
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 34), // align under text
-                                child: Wrap(
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: _buildMetadata(t, colors, isOverdue),
-                                ),
-                              ),
-                            ],
-
-                            // Progress Bar for Subtasks
-                            if (t.subtasks.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 34),
-                                child: _SubtaskProgressBar(task: t),
-                              ),
-                            ]
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+          // Description
+          if (t.description.isNotEmpty && !isCompleted) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 34),
+              child: Text(
+                t.description.split('\n').first,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.callout.copyWith(
+                  color: colors.textTertiary,
+                  fontSize: 12,
                 ),
               ),
             ),
-          ),
-        ),
-      ),
-    ));
-  }
-
-  bool _hasMetadata(Task t) => t.dueDate != null || t.subtasks.isNotEmpty || t.tags.isNotEmpty;
-
-  List<Widget> _buildMetadata(Task t, AppColorsExtension colors, bool isOverdue) {
-    final list = <Widget>[];
-
-    // Due Date
-    if (t.dueDate != null) {
-      final text = AppDateUtils.formatDueDate(t.dueDate!, t.dueHour, t.dueMinute);
-      list.add(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: isOverdue ? AppColors.red.withOpacity(0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            text,
-            style: AppTypography.caption.copyWith(
-              color: isOverdue ? AppColors.red : colors.textTertiary,
-              fontWeight: isOverdue ? FontWeight.w600 : FontWeight.normal,
+          ],
+          // Bottom row: metadata chips
+          if (_hasMetadata(t) && !isCompleted) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 34),
+              child: Wrap(
+                spacing: 5,
+                runSpacing: 4,
+                children: [
+                  if (t.dueDate != null)
+                    _MetaChip(
+                      icon: isOverdue
+                          ? Icons.warning_amber_rounded
+                          : Icons.schedule_rounded,
+                      label: AppDateUtils.formatDueDate(t.dueDate!, t.dueHour, t.dueMinute),
+                      color: isOverdue
+                          ? AppColors.priorityHigh
+                          : colors.textTertiary,
+                      isAlert: isOverdue,
+                    ),
+                  ...t.tags.take(2).map((tagId) {
+                    final tag = context.read<TagProvider>().getById(tagId);
+                    if (tag == null) return const SizedBox.shrink();
+                    return _TagPill(tagName: tag.name);
+                  }),
+                  if (t.tags.length > 2)
+                    _MetaChip(
+                      label: '+${t.tags.length - 2}',
+                      color: colors.textQuaternary,
+                    ),
+                ],
+              ),
             ),
-          ),
-        ),
-      );
-    }
-
-    // Subtask count
-    if (t.subtasks.isNotEmpty) {
-      if (list.isNotEmpty) list.add(_dotFormatter(colors));
-      final completed = t.subtasks.where((s) => s.isCompleted).length;
-      list.add(
-        Text(
-          '$completed/${t.subtasks.length} subtasks',
-          style: AppTypography.caption.copyWith(color: colors.textTertiary),
-        ),
-      );
-    }
-
-    // Tags
-    if (t.tags.isNotEmpty) {
-      if (list.isNotEmpty) list.add(_dotFormatter(colors));
-      // Show up to 2 tags
-      final displayTags = t.tags.take(2).toList();
-      for (int i = 0; i < displayTags.length; i++) {
-        list.add(
-          Text(
-            '#${displayTags[i]}',
-            style: AppTypography.caption.copyWith(color: AppColors.indigo),
-          ),
-        );
-        if (i < displayTags.length - 1) list.add(const SizedBox(width: 4));
-      }
-      if (t.tags.length > 2) {
-        list.add(
-          Text(
-            '+${t.tags.length - 2}',
-            style: AppTypography.caption.copyWith(color: colors.textTertiary),
-          ),
-        );
-      }
-    }
-
-    return list;
+          ],
+        ],
+      ),
+    );
   }
 
-  Widget _dotFormatter(AppColorsExtension colors) {
-    return Text('·', style: AppTypography.caption.copyWith(color: colors.textTertiary));
-  }
-
-  Color _getPriorityColor(Priority p) {
-    switch (p) {
-      case Priority.none:
-        return Colors.transparent;
-      case Priority.low:
-        return AppColors.green;
-      case Priority.medium:
-        return AppColors.orange;
-      case Priority.high:
-        return AppColors.red;
-      case Priority.urgent:
-        return AppColors.pinkRed;
-    }
-  }
+  bool _hasMetadata(Task t) =>
+      t.dueDate != null || t.tags.isNotEmpty;
 }
 
-class _SubtaskProgressBar extends StatelessWidget {
-  final Task task;
-  const _SubtaskProgressBar({required this.task});
+class _PriorityBar extends StatelessWidget {
+  final Priority priority;
+  const _PriorityBar({required this.priority});
+
+  Color get _color {
+    switch (priority) {
+      case Priority.none:   return Colors.transparent;
+      case Priority.low:    return AppColors.priorityLow;
+      case Priority.medium: return AppColors.priorityMedium;
+      case Priority.high:   return AppColors.priorityHigh;
+      case Priority.urgent: return AppColors.priorityUrgent;
+    }
+  }
+
+  List<BoxShadow> get _glow {
+    switch (priority) {
+      case Priority.none:
+        return [];
+      case Priority.low:
+        return [BoxShadow(color: AppColors.priorityLow.withValues(alpha: 0.35), blurRadius: 6)];
+      case Priority.medium:
+        return [BoxShadow(color: AppColors.priorityMedium.withValues(alpha: 0.35), blurRadius: 6)];
+      case Priority.high:
+        return [BoxShadow(color: AppColors.priorityHigh.withValues(alpha: 0.40), blurRadius: 8)];
+      case Priority.urgent:
+        return [BoxShadow(color: AppColors.priorityUrgent.withValues(alpha: 0.55), blurRadius: 10, spreadRadius: 1)];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    if (priority == Priority.none) return const SizedBox(width: 5);
+    return Container(
+      width: 5,
+      decoration: BoxDecoration(
+        color: _color,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(13),
+          bottomLeft: Radius.circular(13),
+        ),
+        boxShadow: _glow,
+      ),
+    );
+  }
+}
+
+class _MiniSubtaskBadge extends StatelessWidget {
+  final Task task;
+  const _MiniSubtaskBadge({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final done = task.subtasks.where((s) => s.isCompleted).length;
     final total = task.subtasks.length;
-    final completed = task.subtasks.where((s) => s.isCompleted).length;
-    final progress = total == 0 ? 0.0 : completed / total;
+    final progress = done / total;
+    final color = progress == 1.0
+        ? AppColors.priorityLow
+        : progress > 0.5
+            ? AppColors.priorityMedium
+            : context.appColors.textTertiary;
 
     return Container(
-      height: 4,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: colors.isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(2),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: progress),
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return Container(
-                  width: constraints.maxWidth * value,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    gradient: const LinearGradient(
-                      colors: [AppColors.teal, AppColors.blue],
-                    ),
-                  ),
-                );
-              },
+      child: Text(
+        '$done/$total',
+        style: AppTypography.micro.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  final bool isAlert;
+
+  const _MetaChip({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.isAlert = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isAlert ? color.withValues(alpha: 0.10) : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        border: isAlert
+            ? Border.all(color: color.withValues(alpha: 0.3), width: 0.5)
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: color),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            label,
+            style: AppTypography.micro.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
             ),
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TagPill extends StatelessWidget {
+  final String tagName;
+  const _TagPill({required this.tagName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '#$tagName',
+        style: AppTypography.micro.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

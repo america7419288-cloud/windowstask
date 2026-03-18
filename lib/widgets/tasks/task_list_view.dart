@@ -11,7 +11,8 @@ import '../shared/empty_state_widget.dart';
 import '../../painters/empty_state_painters.dart';
 import 'task_card.dart';
 import 'quick_add_bar.dart';
-import 'group_header.dart'; // newly added
+import 'group_header.dart';
+import 'today_header.dart';
 
 class TaskListView extends StatelessWidget {
   const TaskListView({super.key});
@@ -47,8 +48,13 @@ class TaskListView extends StatelessWidget {
         } else if (navItem == AppConstants.navCompleted) {
           content = _FlatList(tasks: taskList, header: const SizedBox.shrink());
         } else {
+          final todayCompleted = taskList.where((t) => t.isCompleted).length;
           content = Column(
             children: [
+              TodayHeader(
+                taskCount: taskList.length,
+                completedCount: todayCompleted,
+              ),
               const QuickAddBar(),
               Expanded(child: _GroupedList(tasks: taskList)),
             ],
@@ -148,7 +154,7 @@ class _SmoothScrollWrapperState extends State<_SmoothScrollWrapper> {
         behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, overscroll: false),
         child: RawScrollbar(
           controller: _scrollController,
-          thumbColor: colors.textTertiary.withOpacity(_isHoveringScrollbar ? 0.6 : 0.3),
+          thumbColor: colors.textTertiary.withValues(alpha: _isHoveringScrollbar ? 0.6 : 0.3),
           radius: const Radius.circular(4),
           thickness: 6,
           crossAxisMargin: 2,
@@ -158,35 +164,37 @@ class _SmoothScrollWrapperState extends State<_SmoothScrollWrapper> {
             key: _containerKey,
             child: MouseRegion(
               onHover: (e) {
-                final box = _containerKey.currentContext?.findRenderObject() as RenderBox?;
+                final box = _containerKey.currentContext
+                    ?.findRenderObject() as RenderBox?;
                 final width = box?.size.width ?? 0;
-                if (e.localPosition.dx > width - 20) {
-                  if (!_isHoveringScrollbar) setState(() => _isHoveringScrollbar = true);
-              } else {
-                if (_isHoveringScrollbar) setState(() => _isHoveringScrollbar = false);
-              }
-            },
-            onExit: (_) {
-              if (_isHoveringScrollbar) setState(() => _isHoveringScrollbar = false);
-            },
-            child: ShaderMask(
-              shaderCallback: (Rect rect) {
-                return LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black,
-                    Colors.black,
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 0.05, 0.95, 1.0], // Fade top and bottom 5%
-                ).createShader(rect);
+                final isNearScrollbar = e.localPosition.dx > width - 20;
+                if (isNearScrollbar != _isHoveringScrollbar) {
+                  setState(() => _isHoveringScrollbar = isNearScrollbar);
+                }
               },
-              blendMode: BlendMode.dstIn,
-              child: widget.child,
+              onExit: (_) {
+                if (_isHoveringScrollbar) {
+                  setState(() => _isHoveringScrollbar = false);
+                }
+              },
+              child: ShaderMask(
+                shaderCallback: (Rect rect) {
+                  return const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black,
+                      Colors.black,
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, 0.05, 0.95, 1.0],
+                  ).createShader(rect);
+                },
+                blendMode: BlendMode.dstIn,
+                child: widget.child,
+              ),
             ),
-          ),
         ),
       ),
       ),
@@ -264,7 +272,7 @@ class _ReorderableTaskCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Icon(Icons.drag_handle_rounded, size: 16,
-                color: colors.textTertiary.withOpacity(0.4)),
+                color: colors.textTertiary.withValues(alpha: 0.4)),
           ),
         ),
       ],
@@ -354,9 +362,9 @@ class _TrashActions extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFF3B30).withOpacity(0.08),
+        color: const Color(0xFFFF3B30).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFFFF3B30).withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [

@@ -91,7 +91,7 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
         borderRadius: BorderRadius.circular(AppConstants.radiusModal),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 30,
           ),
         ],
@@ -216,7 +216,7 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppConstants.radiusChip),
         ),
         child: Text(

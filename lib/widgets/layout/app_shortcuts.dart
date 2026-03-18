@@ -41,13 +41,7 @@ class AppShortcuts extends StatelessWidget {
           }
         },
 
-        // Space — toggle complete on selected task
-        const SingleActivator(LogicalKeyboardKey.space): () {
-          final nav = context.read<NavigationProvider>();
-          if (nav.selectedTaskId != null) {
-            context.read<TaskProvider>().toggleComplete(nav.selectedTaskId!);
-          }
-        },
+
       },
       child: Focus(
         autofocus: true,

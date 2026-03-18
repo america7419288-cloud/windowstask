@@ -4,6 +4,7 @@ import '../../providers/task_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../../utils/constants.dart';
 
@@ -24,7 +25,22 @@ class _QuickAddBarState extends State<QuickAddBar> {
     super.initState();
     _focusNode.addListener(() {
       setState(() => _focused = _focusNode.hasFocus);
+      if (!_focusNode.hasFocus) {
+        context.read<NavigationProvider>().closeQuickAdd();
+      }
     });
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nav = context.read<NavigationProvider>();
+    if (nav.isQuickAddOpen && !_focusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -37,75 +53,117 @@ class _QuickAddBarState extends State<QuickAddBar> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
+    final isDark = colors.isDark;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
       decoration: BoxDecoration(
-        color: _focused
-            ? (colors.isDark ? const Color(0xFF3A3A3C) : Colors.white)
-            : (colors.isDark ? const Color(0xFF2C2C2E) : Colors.white.withOpacity(0.6)),
-        borderRadius: BorderRadius.circular(AppConstants.radiusCard),
+        color: isDark ? const Color(0xFF2E2B28) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _focused ? accent.withOpacity(0.4) : colors.border,
-          width: _focused ? 1.5 : 1,
+          color: _focused
+              ? AppColors.primary.withValues(alpha: 0.4)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.08)),
+          width: _focused ? 1.5 : 0.75,
         ),
         boxShadow: _focused
             ? [
                 BoxShadow(
-                  color: accent.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.12),
                   blurRadius: 12,
-                  offset: const Offset(0, 2),
+                  offset: const Offset(0, 3),
                 ),
               ]
-            : null,
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
       ),
       child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+          // Plus icon
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.all(8),
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              gradient: _focused ? AppColors.gradientPrimary : null,
+              color: _focused
+                  ? null
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : AppColors.primary.withValues(alpha: 0.08)),
+              borderRadius: BorderRadius.circular(7),
+            ),
             child: Icon(
-              Icons.add_circle_outline_rounded,
-              size: 18,
-              color: _focused ? accent : colors.textSecondary,
+              Icons.add_rounded,
+              size: 16,
+              color: _focused ? Colors.white : AppColors.primary,
             ),
           ),
           Expanded(
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: 'Add a task... (press Enter to save)',
-                hintStyle: AppTypography.body.copyWith(color: colors.textSecondary),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              style: AppTypography.body.copyWith(
+                color: colors.textPrimary,
+                fontSize: 14,
               ),
-              style: AppTypography.body.copyWith(color: colors.textPrimary),
+              decoration: InputDecoration(
+                hintText: _focused
+                    ? 'Task title... press Enter to save'
+                    : 'Add a task',
+                hintStyle: AppTypography.body.copyWith(
+                  color: colors.textTertiary,
+                  fontSize: 14,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 11),
+              ),
               onSubmitted: _submit,
             ),
           ),
-          if (_focused && _controller.text.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: GestureDetector(
-                onTap: () => _submit(_controller.text),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Add',
-                    style: AppTypography.caption.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+          // Save button
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            child: _focused && _controller.text.isNotEmpty
+                ? Padding(
+                    key: const ValueKey('add_btn'),
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => _submit(_controller.text),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.gradientPrimary,
+                          borderRadius: BorderRadius.circular(7),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          'Add',
+                          style: AppTypography.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ),
+                  )
+                : const SizedBox(key: ValueKey('empty'), width: 8),
+          ),
         ],
       ),
     );
@@ -155,3 +213,4 @@ class _QuickAddBarState extends State<QuickAddBar> {
     setState(() {});
   }
 }
+

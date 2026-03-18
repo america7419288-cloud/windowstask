@@ -42,6 +42,17 @@ class _ListTileItemState extends State<ListTileItem> {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
 
+    // Selected: solid accent bg. Hover: subtle tint.
+    final bgColor = widget.isSelected
+        ? accent
+        : _hovered
+            ? (colors.isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04))
+            : Colors.transparent;
+
+    final fgColor = widget.isSelected ? Colors.white : colors.textPrimary;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -50,17 +61,21 @@ class _ListTileItemState extends State<ListTileItem> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: AppConstants.animFast,
+          curve: Curves.easeOutCubic,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: widget.isSelected
-                ? accent.withOpacity(0.12)
-                : _hovered
-                    ? (colors.isDark
-                        ? Colors.white.withOpacity(0.06)
-                        : Colors.black.withOpacity(0.04))
-                    : Colors.transparent,
+            color: bgColor,
             borderRadius: BorderRadius.circular(8),
+            boxShadow: widget.isSelected
+                ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
           ),
           child: Row(
             children: [
@@ -70,7 +85,7 @@ class _ListTileItemState extends State<ListTileItem> {
                 child: Text(
                   widget.list.name,
                   style: AppTypography.body.copyWith(
-                    color: widget.isSelected ? accent : colors.textPrimary,
+                    color: fgColor,
                     fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -79,7 +94,11 @@ class _ListTileItemState extends State<ListTileItem> {
               if (widget.taskCount > 0)
                 Text(
                   '${widget.taskCount}',
-                  style: AppTypography.caption.copyWith(color: colors.textSecondary),
+                  style: AppTypography.caption.copyWith(
+                    color: widget.isSelected
+                        ? Colors.white.withValues(alpha: 0.8)
+                        : colors.textSecondary,
+                  ),
                 ),
               if (_hovered && widget.onEdit != null)
                 Padding(
@@ -87,7 +106,8 @@ class _ListTileItemState extends State<ListTileItem> {
                   child: GestureDetector(
                     onTap: widget.onEdit,
                     child: Icon(Icons.more_horiz,
-                        size: 14, color: colors.textSecondary),
+                        size: 14,
+                        color: widget.isSelected ? Colors.white.withValues(alpha: 0.7) : colors.textSecondary),
                   ),
                 ),
             ],
