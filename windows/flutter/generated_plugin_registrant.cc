@@ -8,6 +8,7 @@
 
 #include <bitsdojo_window_windows/bitsdojo_window_plugin.h>
 #include <screen_retriever/screen_retriever_plugin.h>
+#include <win_toast/win_toast_plugin.h>
 #include <window_manager/window_manager_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
@@ -15,6 +16,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("BitsdojoWindowPlugin"));
   ScreenRetrieverPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverPlugin"));
+  WinToastPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("WinToastPlugin"));
   WindowManagerPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("WindowManagerPlugin"));
 }

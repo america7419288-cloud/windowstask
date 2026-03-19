@@ -11,6 +11,12 @@ class NavigationProvider extends ChangeNotifier {
   bool _isDetailPanelOpen = false;
   bool _isQuickAddOpen = false;
 
+  final Set<String> _selectedTaskIds = {};
+  bool _isSelectionMode = false;
+
+  bool _isPlanningMode = false;
+  final List<String> _mitTaskIds = [];
+
   String get selectedNavItem => _selectedNavItem;
   String? get selectedListId => _selectedListId;
   String? get selectedTaskId => _selectedTaskId;
@@ -18,6 +24,15 @@ class NavigationProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   bool get isDetailPanelOpen => _isDetailPanelOpen;
   bool get isQuickAddOpen => _isQuickAddOpen;
+
+  bool get isSelectionMode => _isSelectionMode;
+  Set<String> get selectedTaskIds => Set.unmodifiable(_selectedTaskIds);
+  int get selectedCount => _selectedTaskIds.length;
+  bool isTaskSelected(String id) => _selectedTaskIds.contains(id);
+
+  bool get isPlanningMode => _isPlanningMode;
+  List<String> get mitTaskIds => List.unmodifiable(_mitTaskIds);
+  bool isMIT(String taskId) => _mitTaskIds.contains(taskId);
 
   void selectNav(String item) {
     _selectedNavItem = item;
@@ -82,6 +97,54 @@ class NavigationProvider extends ChangeNotifier {
 
   void closeQuickAdd() {
     _isQuickAddOpen = false;
+    notifyListeners();
+  }
+
+  void enterSelectionMode(String firstId) {
+    _isSelectionMode = true;
+    _selectedTaskIds.add(firstId);
+    notifyListeners();
+  }
+
+  void toggleTaskSelection(String id) {
+    if (_selectedTaskIds.contains(id)) {
+      _selectedTaskIds.remove(id);
+      if (_selectedTaskIds.isEmpty) {
+        _isSelectionMode = false;
+      }
+    } else {
+      _selectedTaskIds.add(id);
+    }
+    notifyListeners();
+  }
+
+  void selectAllTasks(List<String> ids) {
+    _selectedTaskIds.addAll(ids);
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    _selectedTaskIds.clear();
+    _isSelectionMode = false;
+    notifyListeners();
+  }
+
+  void enterPlanningMode() {
+    _isPlanningMode = true;
+    notifyListeners();
+  }
+
+  void exitPlanningMode() {
+    _isPlanningMode = false;
+    notifyListeners();
+  }
+
+  void toggleMIT(String taskId) {
+    if (_mitTaskIds.contains(taskId)) {
+      _mitTaskIds.remove(taskId);
+    } else if (_mitTaskIds.length < 5) {
+      _mitTaskIds.add(taskId);
+    }
     notifyListeners();
   }
 

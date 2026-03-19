@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
+import '../models/recurrence.dart';
+import 'dart:convert';
 import '../models/app_settings.dart';
 import '../services/storage_service.dart';
 import '../services/search_service.dart';
 import '../utils/date_utils.dart';
 import '../utils/constants.dart';
 import 'celebration_provider.dart';
+import '../services/reminder_service.dart';
 
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
@@ -20,6 +23,7 @@ class TaskProvider extends ChangeNotifier {
 
   void init() {
     _tasks = StorageService.instance.getAllTasks();
+    ReminderService.instance.updateTasks(_tasks);
   }
 
   // ─── Counts ───────────────────────────────────────────────────────────────
@@ -146,6 +150,7 @@ class TaskProvider extends ChangeNotifier {
     String? listId,
     List<String>? tags,
     bool isFlagged = false,
+    String? recurrenceJson,
   }) async {
     final now = DateTime.now();
     final task = Task(
@@ -159,24 +164,53 @@ class TaskProvider extends ChangeNotifier {
       listId: listId,
       tags: tags ?? [],
       isFlagged: isFlagged,
+      recurrenceJson: recurrenceJson,
       createdAt: now,
       updatedAt: now,
       sortOrder: _tasks.length,
     );
     _tasks.add(task);
     await StorageService.instance.saveTask(task);
+    ReminderService.instance.updateTasks(_tasks);
     notifyListeners();
     return task;
   }
 
   Future<void> updateTask(Task task) async {
-    final updated = task.copyWith(updatedAt: DateTime.now());
-    final idx = _tasks.indexWhere((t) => t.id == task.id);
-    if (idx != -1) {
-      _tasks[idx] = updated;
-      await StorageService.instance.saveTask(updated);
-      notifyListeners();
-    }
+    _updateTask(task.id, (t) => t.copyWith(
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      dueHour: task.dueHour,
+      dueMinute: task.dueMinute,
+      listId: task.listId,
+      tags: task.tags,
+      subtasks: task.subtasks,
+      isFlagged: task.isFlagged,
+      recurrenceJson: task.recurrenceJson,
+      recurringParentId: task.recurringParentId,
+      occurrenceIndex: task.occurrenceIndex,
+      estimatedMinutes: task.estimatedMinutes,
+      pomodoroCount: task.pomodoroCount,
+      attachments: task.attachments,
+      isDeleted: task.isDeleted,
+      deletedAt: task.deletedAt,
+      sortOrder: task.sortOrder,
+      stickerId: task.stickerId,
+      hasReminder: task.hasReminder,
+      reminderMinutesBefore: task.reminderMinutesBefore,
+    ));
+  }
+
+  void _updateTask(String id, Task Function(Task) transform) {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    _tasks[idx] = transform(_tasks[idx]).copyWith(updatedAt: DateTime.now());
+    StorageService.instance.saveTask(_tasks[idx]);
+    ReminderService.instance.updateTasks(_tasks);
+    notifyListeners();
   }
 
   Future<void> toggleComplete(String id, {CelebrationProvider? celebration}) async {
@@ -193,6 +227,12 @@ class TaskProvider extends ChangeNotifier {
     );
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
+
+    // Spawn next recurring instance
+    if (!wasCompleted && updated.isCompleted && updated.isRecurring && updated.dueDate != null) {
+      await _spawnNextOccurrence(updated);
+    }
+
     notifyListeners();
 
     if (!wasCompleted && celebration != null) {
@@ -202,6 +242,27 @@ class TaskProvider extends ChangeNotifier {
         celebration.triggerCelebration();
       }
     }
+  }
+
+  Future<void> updateTaskCompletion(String id, bool completed) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final now = DateTime.now();
+    final updated = _tasks[idx].copyWith(
+      status: completed ? TaskStatus.done : TaskStatus.todo,
+      completedAt: completed ? now : null,
+      clearCompletedAt: !completed,
+      updatedAt: now,
+    );
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+
+    // Spawn next recurring instance
+    if (completed && updated.isRecurring && updated.dueDate != null) {
+      await _spawnNextOccurrence(updated);
+    }
+
+    notifyListeners();
   }
 
   Future<void> toggleFlag(String id) async {
@@ -220,6 +281,38 @@ class TaskProvider extends ChangeNotifier {
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
     notifyListeners();
+  }
+
+  // --- Bulk Actions ---
+
+  Future<void> bulkComplete(List<String> ids) async {
+    for (final id in ids) {
+      await toggleComplete(id);
+    }
+  }
+
+  Future<void> bulkDelete(List<String> ids) async {
+    for (final id in ids) {
+      await moveToTrash(id);
+    }
+  }
+
+  Future<void> bulkSetPriority(List<String> ids, Priority priority) async {
+    for (final id in ids) {
+      await updatePriority(id, priority);
+    }
+  }
+
+  Future<void> bulkMoveToList(List<String> ids, String? listId) async {
+    for (final id in ids) {
+      await moveToList(id, listId);
+    }
+  }
+
+  Future<void> bulkFlag(List<String> ids) async {
+    for (final id in ids) {
+      await toggleFlag(id);
+    }
   }
 
   Future<void> updateDueDate(String id, DateTime date) async {
@@ -261,16 +354,28 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<void> setSticker(String taskId, String? stickerId) async {
-    final idx = _tasks.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
-    final updated = _tasks[idx].copyWith(
+    _updateTask(taskId, (t) => t.copyWith(
       stickerId: stickerId,
       clearSticker: stickerId == null || stickerId.isEmpty,
-      updatedAt: DateTime.now(),
-    );
-    _tasks[idx] = updated;
-    await StorageService.instance.saveTask(updated);
-    notifyListeners();
+    ));
+  }
+
+  Future<void> updateDueTime(String id, int hour, int minute) async {
+    _updateTask(id, (t) => t.copyWith(dueHour: hour, dueMinute: minute));
+  }
+
+  Future<void> clearDueTime(String id) async {
+    _updateTask(id, (t) => t.copyWith(
+      clearDueTime: true,
+      hasReminder: false,
+    ));
+  }
+
+  Future<void> setReminder(String id, bool enabled, int minutesBefore) async {
+    _updateTask(id, (t) => t.copyWith(
+      hasReminder: enabled,
+      reminderMinutesBefore: minutesBefore,
+    ));
   }
 
   Future<void> restoreTask(String id) async => restoreFromTrash(id);
@@ -464,6 +569,51 @@ class TaskProvider extends ChangeNotifier {
       check = check.subtract(const Duration(days: 1));
     }
     return streak;
+  }
+
+  Future<void> _spawnNextOccurrence(Task completed) async {
+    final rule = completed.recurrence;
+    if (rule == null) return;
+
+    // Check end conditions
+    if (rule.endDate != null && DateTime.now().isAfter(rule.endDate!)) {
+      return;
+    }
+    if (rule.maxOccurrences != null && completed.occurrenceIndex >= rule.maxOccurrences!) {
+      return;
+    }
+
+    final nextDueDate = rule.nextDate(completed.dueDate!);
+
+    final nextTask = Task(
+      id: _uuid.v4(),
+      title: completed.title,
+      description: completed.description,
+      listId: completed.listId,
+      priority: completed.priority,
+      tags: List.from(completed.tags),
+      dueDate: nextDueDate,
+      dueHour: completed.dueHour,
+      dueMinute: completed.dueMinute,
+      hasReminder: completed.hasReminder,
+      reminderMinutesBefore: completed.reminderMinutesBefore,
+      recurrenceJson: completed.recurrenceJson,
+      recurringParentId: completed.recurringParentId ?? completed.id,
+      occurrenceIndex: completed.occurrenceIndex + 1,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    _tasks.add(nextTask);
+    await StorageService.instance.saveTask(nextTask);
+    ReminderService.instance.updateTasks(_tasks);
+    notifyListeners();
+  }
+
+  Future<void> setRecurrence(String id, RecurrenceRule? rule) async {
+    _updateTask(id, (t) => t.copyWith(
+      recurrenceJson: rule != null ? jsonEncode(rule.toJson()) : null,
+    ));
   }
 }
 

@@ -8,11 +8,10 @@ import '../../theme/typography.dart';
 import '../../utils/constants.dart';
 import '../../utils/date_utils.dart';
 import '../shared/empty_state_widget.dart';
-import '../../painters/empty_state_painters.dart';
+import '../../data/app_stickers.dart';
 import 'task_card.dart';
 import 'quick_add_bar.dart';
 import 'group_header.dart';
-import 'today_header.dart';
 
 class TaskListView extends StatelessWidget {
   const TaskListView({super.key});
@@ -31,7 +30,7 @@ class TaskListView extends StatelessWidget {
             children: [
               if (navItem != AppConstants.navTrash &&
                   navItem != AppConstants.navCompleted)
-                const QuickAddBar(),
+                QuickAddBar(),
               Expanded(child: _emptyStateForNav(context, navItem)),
             ],
           );
@@ -48,16 +47,17 @@ class TaskListView extends StatelessWidget {
         } else if (navItem == AppConstants.navCompleted) {
           content = _FlatList(tasks: taskList, header: const SizedBox.shrink());
         } else {
-          final todayCompleted = taskList.where((t) => t.isCompleted).length;
           content = Column(
             children: [
-              const QuickAddBar(),
+              QuickAddBar(),
+              if (navItem == AppConstants.navToday && nav.mitTaskIds.isNotEmpty)
+                _MITSection(mitIds: nav.mitTaskIds),
               Expanded(child: _GroupedList(tasks: taskList)),
             ],
           );
         }
 
-        return _SmoothScrollWrapper(child: content);
+        return content;
       },
     );
   }
@@ -67,26 +67,25 @@ class TaskListView extends StatelessWidget {
       case AppConstants.navToday:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            painterBuilder: (v) => TodayEmptyPainter(v),
+            sticker: AppStickers.todayEmpty,
             headline: 'Nothing due today',
             subline: 'Enjoy the breathing room — or get ahead on tomorrow.',
             ctaLabel: 'Add a task',
-            onCta: () {},
+            onCta: () => context.read<NavigationProvider>().openQuickAdd(),
           ),
         );
       case AppConstants.navUpcoming:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            painterBuilder: (v) => UpcomingEmptyPainter(v),
+            sticker: AppStickers.upcomingEmpty,
             headline: 'Clear skies ahead',
             subline: 'No tasks scheduled for the coming week.',
-            ctaLabel: 'Plan ahead',
           ),
         );
       case AppConstants.navCompleted:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            painterBuilder: (_) => CompletedEmptyPainter(1.0),
+            sticker: AppStickers.completedEmpty,
             headline: 'Nothing completed yet',
             subline: 'Finish a task and it\'ll show up here.',
           ),
@@ -94,7 +93,7 @@ class TaskListView extends StatelessWidget {
       case AppConstants.navTrash:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            painterBuilder: (v) => SearchEmptyPainter(v),
+            sticker: AppStickers.trashEmpty,
             headline: 'Trash is empty',
             subline: 'Deleted tasks will appear here.',
           ),
@@ -102,16 +101,17 @@ class TaskListView extends StatelessWidget {
       case AppConstants.navAll:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            painterBuilder: (v) => AllTasksEmptyPainter(v),
+            sticker: AppStickers.allTasksEmpty,
             headline: 'Your space, your tasks',
             subline: 'Start by adding your first task. It only takes a second.',
             ctaLabel: 'Create your first task',
+            onCta: () => context.read<NavigationProvider>().openQuickAdd(),
           ),
         );
       default:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            painterBuilder: (v) => SearchEmptyPainter(v),
+            sticker: AppStickers.allTasksEmpty,
             headline: 'No tasks here',
             subline: 'Try different keywords or clear your filters.',
           ),
@@ -295,7 +295,7 @@ class _GroupedListState extends State<_GroupedList> {
 
     return ListView(
       padding: const EdgeInsets.only(top: 4, bottom: 40),
-      children: groups.entries.expand((entry) {
+      children: groups.entries.expand<Widget>((entry) {
         final label = entry.key;
         final group = entry.value;
         final isCollapsed = _collapsed[label] ?? false;
@@ -315,7 +315,7 @@ class _GroupedListState extends State<_GroupedList> {
             firstChild: const SizedBox(width: double.infinity),
             secondChild: Column(
               mainAxisSize: MainAxisSize.min,
-              children: group.map((task) => TaskCard(
+              children: group.map<Widget>((task) => TaskCard(
                 key: ValueKey(task.id),
                 task: task,
                 isSelected: nav.selectedTaskId == task.id,
@@ -379,6 +379,59 @@ class _TrashActions extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+class _MITSection extends StatelessWidget {
+  final List<String> mitIds;
+  const _MITSection({required this.mitIds});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final tasks = context.watch<TaskProvider>();
+    final mitTasks = mitIds
+        .map((id) => tasks.getById(id))
+        .whereType<Task>()
+        .where((t) => !t.isCompleted)
+        .toList();
+
+    if (mitTasks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // MIT header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Row(children: [
+            const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFD60A)),
+            const SizedBox(width: 6),
+            Text('TOP PRIORITIES',
+              style: AppTypography.micro.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: const Color(0xFFFFD60A),
+              )),
+            const SizedBox(width: 12),
+            Expanded(child: Container(
+              height: 0.5,
+              color: const Color(0xFFFFD60A).withValues(alpha: 0.3),
+            )),
+          ]),
+        ),
+        // MIT task cards
+        ...mitTasks.map((t) => TaskCard(
+          key: ValueKey('mit_${t.id}'),
+          task: t,
+          isSelected: false,
+        )),
+        const SizedBox(height: 8),
+        Divider(height: 1, color: colors.divider),
+      ],
     );
   }
 }

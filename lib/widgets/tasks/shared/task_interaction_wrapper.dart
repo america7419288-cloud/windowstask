@@ -41,9 +41,19 @@ class _TaskInteractionWrapperState extends State<TaskInteractionWrapper> {
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        // Left click → open detail panel
+        // Left click → open detail panel or toggle selection
         onTap: () {
-          context.read<NavigationProvider>().selectTask(widget.task.id);
+          final nav = context.read<NavigationProvider>();
+          if (nav.isSelectionMode) {
+            nav.toggleTaskSelection(widget.task.id);
+          } else {
+            nav.selectTask(widget.task.id);
+          }
+          CustomContextMenuController.hide();
+        },
+        // Long press → enter selection mode
+        onLongPress: () {
+          context.read<NavigationProvider>().enterSelectionMode(widget.task.id);
           CustomContextMenuController.hide();
         },
         // Right click → context menu
@@ -59,8 +69,8 @@ class _TaskInteractionWrapperState extends State<TaskInteractionWrapper> {
         child: Stack(
           children: [
             widget.child,
-            // Hover action buttons
-            if (_hovered && widget.showHoverActions)
+            // Hover action buttons — hide during selection mode
+            if (_hovered && widget.showHoverActions && !context.watch<NavigationProvider>().isSelectionMode)
               widget.actionsPosition == HoverActionsPosition.topRight
                   ? Positioned(
                       top: 8,

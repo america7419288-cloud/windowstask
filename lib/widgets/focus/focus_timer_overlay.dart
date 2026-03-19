@@ -1,44 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../providers/focus_provider.dart';
+import '../../providers/task_provider.dart';
+import '../../providers/celebration_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/typography.dart';
 import '../../theme/colors.dart';
 import '../../utils/constants.dart';
 
-/// WARNING: This overlay returns a Positioned as its root widget.
-/// It MUST be a direct child of a Stack in the application layout.
 class FocusTimerOverlay extends StatelessWidget {
   const FocusTimerOverlay({super.key});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+
     return Consumer<FocusProvider>(
       builder: (context, focus, _) {
         if (!focus.isActive && focus.state == FocusState.idle) {
           return const SizedBox.shrink();
         }
 
+        final isBreak = focus.isBreakMode;
+        final statusColor = isBreak ? AppColors.green : AppColors.red;
+
         return Positioned(
-          bottom: 20,
-          right: 20,
+          bottom: 24,
+          right: 24,
           child: Material(
             elevation: 0,
             color: Colors.transparent,
-            child: Container(
-              width: 200,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 240,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: colors.isDark ? const Color(0xFF2C2C2E) : Colors.white,
-                borderRadius: BorderRadius.circular(AppConstants.radiusModal),
+                color: colors.isDark 
+                    ? const Color(0xFF1C1C1E).withValues(alpha: 0.95) 
+                    : Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 30,
+                    color: statusColor.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 32,
+                    offset: const Offset(0, 8),
                   ),
                 ],
-                border: Border.all(color: colors.divider),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.3),
+                  width: 1,
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -46,102 +64,183 @@ class FocusTimerOverlay extends StatelessWidget {
                   // Header
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, size: 14, color: AppColors.red),
-                      const SizedBox(width: 6),
+                      Icon(
+                        isBreak ? PhosphorIcons.coffee() : PhosphorIcons.timer(),
+                        size: 16,
+                        color: statusColor,
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Focus Mode',
+                          isBreak ? 'Break Time' : 'Focus Session',
                           style: AppTypography.caption.copyWith(
-                            color: AppColors.red,
-                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => context.read<FocusProvider>().stopFocus(),
-                        child: Icon(Icons.close, size: 14, color: colors.textSecondary),
+                        onTap: () => focus.stopFocus(),
+                        child: Icon(PhosphorIcons.x(), size: 14, color: colors.textQuaternary),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // Task title
-                  if (focus.activeTaskTitle != null)
-                    Text(
-                      focus.activeTaskTitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.caption.copyWith(color: colors.textSecondary),
-                    ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+
                   // Timer
                   Text(
                     focus.timeDisplay,
-                    style: AppTypography.title1.copyWith(color: colors.textPrimary),
-                  ),
-                  const SizedBox(height: 8),
-                  // Progress
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: focus.progress,
-                      minHeight: 3,
-                      backgroundColor: colors.isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.black.withValues(alpha: 0.08),
-                      valueColor: const AlwaysStoppedAnimation(AppColors.red),
+                    style: AppTypography.headline.copyWith(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  // Progress
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: focus.progress,
+                      minHeight: 4,
+                      backgroundColor: colors.isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.05),
+                      valueColor: AlwaysStoppedAnimation(statusColor),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Session Goals checklist
+                  if (!isBreak && focus.sessionTaskIds.isNotEmpty) ...[
+                    _SectionTitle(title: 'GOALS', color: colors.textQuaternary),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: focus.sessionTaskIds.map((taskId) {
+                            return _GoalItem(taskId: taskId);
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Controls
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (focus.state == FocusState.running)
+                      if (focus.state == FocusState.running || focus.state == FocusState.onBreak)
                         _TimerBtn(
-                          icon: Icons.pause_rounded,
+                          icon: PhosphorIcons.pause(PhosphorIconsStyle.fill),
                           onTap: () => focus.pauseFocus(),
                           color: AppColors.orange,
                         )
                       else if (focus.state == FocusState.paused)
                         _TimerBtn(
-                          icon: Icons.play_arrow_rounded,
+                          icon: PhosphorIcons.play(PhosphorIconsStyle.fill),
                           onTap: () => focus.resumeFocus(),
                           color: AppColors.green,
                         ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       _TimerBtn(
-                        icon: Icons.stop_rounded,
+                        icon: PhosphorIcons.stop(PhosphorIconsStyle.fill),
                         onTap: () => focus.stopFocus(),
                         color: AppColors.red,
                       ),
                     ],
                   ),
-                  if (focus.completedSessions > 0) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        focus.completedSessions.clamp(0, 8),
-                        (i) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _GoalItem extends StatelessWidget {
+  final String taskId;
+  const _GoalItem({required this.taskId});
+
+  @override
+  Widget build(BuildContext context) {
+    final taskProvider = context.watch<TaskProvider>();
+    final task = taskProvider.getById(taskId);
+    if (task == null) return const SizedBox.shrink();
+
+    final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () => taskProvider.toggleComplete(
+          taskId,
+          celebration: context.read<CelebrationProvider>(),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: task.isCompleted ? accent.withValues(alpha: 0.08) : colors.surfaceElevated,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: task.isCompleted ? accent.withValues(alpha: 0.2) : colors.border,
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                task.isCompleted ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill) : PhosphorIcons.circle(),
+                size: 14,
+                color: task.isCompleted ? accent : colors.textTertiary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  task.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 11,
+                    color: task.isCompleted ? colors.textPrimary : colors.textSecondary,
+                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final Color color;
+  const _SectionTitle({required this.title, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: AppTypography.caption.copyWith(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.0,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -157,11 +256,12 @@ class _TimerBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 36,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
         ),
         child: Icon(icon, size: 18, color: color),
       ),

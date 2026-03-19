@@ -24,54 +24,28 @@ class CompletionChart extends StatelessWidget {
 
     return SizedBox(
       height: 120,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
+      child: LineChart(
+        LineChartData(
+          lineTouchData: const LineTouchData(enabled: false),
+          gridData: const FlGridData(show: false),
+          titlesData: const FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          minY: 0,
           maxY: (maxVal + 1).toDouble(),
-          barTouchData: BarTouchData(enabled: false),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (val, meta) {
-                  final idx = val.toInt();
-                  if (idx < 0 || idx >= entries.length) return const SizedBox.shrink();
-                  final parts = entries[idx].key.split('-');
-                  final day = parts.last;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(day, style: AppTypography.caption.copyWith(
-                      color: colors.textSecondary, fontSize: 9,
-                    )),
-                  );
-                },
+          lineBarsData: [
+            LineChartBarData(
+              spots: List.generate(entries.length, (i) => FlSpot(i.toDouble(), entries[i].value.toDouble())),
+              isCurved: true,
+              color: accent,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: accent.withValues(alpha: 0.05),
               ),
             ),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          borderData: FlBorderData(show: false),
-          gridData: const FlGridData(show: false),
-          barGroups: List.generate(entries.length, (i) => BarChartGroupData(
-            x: i,
-            barRods: [
-              BarChartRodData(
-                toY: entries[i].value.toDouble(),
-                color: accent,
-                width: 12,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                backDrawRodData: BackgroundBarChartRodData(
-                  show: true,
-                  toY: (maxVal + 1).toDouble(),
-                  color: colors.isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : Colors.black.withValues(alpha: 0.04),
-                ),
-              ),
-            ],
-          )),
+          ],
         ),
       ),
     );

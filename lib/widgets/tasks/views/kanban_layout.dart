@@ -9,10 +9,14 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
 import '../../../utils/date_utils.dart';
-import '../shared/task_interaction_wrapper.dart';
-import '../../context_menu/context_menu_controller.dart';
-import '../shared/sticker_badge.dart';
+import '../shared/card_helpers.dart';
+import '../../shared/sticker_widget.dart';
+import '../../shared/deco_sticker.dart';
+import '../../../data/app_stickers.dart';
+import '../../../data/sticker_packs.dart';
+import '../../../data/app_stickers.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../../models/sticker.dart';
 
 enum KanbanColumn { todo, inProgress, done }
 
@@ -103,226 +107,153 @@ class _KanbanColumnWidgetState extends State<_KanbanColumnWidget> {
     }
   }
 
-  Color get _statusColor {
+  Color get _columnColor {
     switch (widget.column) {
-      case KanbanColumn.todo:       return AppColors.blue;
-      case KanbanColumn.inProgress: return AppColors.orange;
-      case KanbanColumn.done:       return AppColors.green;
+      case KanbanColumn.todo:       return const Color(0xFF6366F1);
+      case KanbanColumn.inProgress: return const Color(0xFFF59E0B);
+      case KanbanColumn.done:       return const Color(0xFF22C55E);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
-    final isDark = colors.isDark;
+    final columnColor = _columnColor;
 
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (_) {
-        setState(() => _isDragOver = true);
-        return true;
-      },
-      onLeave: (_) => setState(() => _isDragOver = false),
-      onAcceptWithDetails: (details) {
-        setState(() => _isDragOver = false);
-        final taskId = details.data;
-        final tp = context.read<TaskProvider>();
-        switch (widget.column) {
-          case KanbanColumn.todo:
-            tp.updateTaskStatus(taskId, TaskStatus.todo);
-            break;
-          case KanbanColumn.inProgress:
-            tp.updateTaskStatus(taskId, TaskStatus.inProgress);
-            break;
-          case KanbanColumn.done:
-            tp.toggleComplete(
-              taskId,
-              celebration: context.read<CelebrationProvider>(),
-            );
-            break;
-        }
-      },
-      builder: (context, candidateData, rejectedData) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 280,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height - 120,
-          ),
-          decoration: BoxDecoration(
-            color: _isDragOver
-                ? accent.withValues(alpha: 0.06)
-                : (isDark ? Colors.white.withValues(alpha: 0.025) : Colors.black.withValues(alpha: 0.018)),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: _isDragOver ? accent.withValues(alpha: 0.4) : colors.border,
-              width: _isDragOver ? 1.5 : 0.5,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── Column Header ──
-              _buildHeader(colors),
-              // ── Cards ──
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  child: Column(
-                    children: widget.tasks
-                        .map((t) => _KanbanCard(task: t))
-                        .toList(),
-                  ),
-                ),
-              ),
-              // ── Add task ──
-              _buildAddTaskArea(colors, accent),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader(AppColorsExtension colors) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-      child: Row(
+    return Container(
+      width: 300,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: columnColor.withValues(alpha: colors.isDark ? 0.06 : 0.04),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
         children: [
-          // Status pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: _statusColor,
-                    shape: BoxShape.circle,
+          _buildHeader(colors),
+          Expanded(
+            child: widget.tasks.isEmpty && !_isAdding
+                ? _buildEmptyState(colors)
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    itemCount: widget.tasks.length,
+                    itemBuilder: (context, index) => _KanbanCard(task: widget.tasks[index]),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _title,
-                  style: AppTypography.caption.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _statusColor,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
           ),
-          const Spacer(),
-          // Count badge
-          Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: colors.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : Colors.black.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '${widget.tasks.length}',
-                style: AppTypography.caption.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-          ),
+          _buildAddTaskArea(colors),
         ],
       ),
     );
   }
 
-  Widget _buildAddTaskArea(AppColorsExtension colors, Color accent) {
+  Widget _buildHeader(AppColorsExtension colors) {
+    final color = _columnColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(_title.toUpperCase(),
+            style: AppTypography.micro.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.0,
+              color: color,
+            )),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text('${widget.tasks.length}',
+              style: AppTypography.micro.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              )),
+          ),
+          const Spacer(),
+          Icon(Icons.more_horiz, size: 16, color: colors.textTertiary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AppColorsExtension colors) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          DecoSticker(
+            sticker: AppStickers.allTasksEmpty,
+            size: 56,
+            animate: true,
+          ),
+          const SizedBox(height: 10),
+          Text('No tasks',
+            style: AppTypography.caption.copyWith(
+              color: colors.textTertiary,
+              fontWeight: FontWeight.w500,
+            )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddTaskArea(AppColorsExtension colors) {
     if (_isAdding) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        padding: const EdgeInsets.all(10),
         child: Container(
-          height: 38,
           decoration: BoxDecoration(
-            color: colors.isDark ? const Color(0xFF1E1E20) : Colors.white,
+            color: CardDesign.background(context),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: accent, width: 1.5),
+            border: Border.all(color: _columnColor, width: 1.5),
           ),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: Icon(PhosphorIcons.plus(), size: 14, color: accent),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _addController,
-                  autofocus: true,
-                  style: AppTypography.body.copyWith(fontSize: 13, color: colors.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'Task title...',
-                    hintStyle: AppTypography.body.copyWith(fontSize: 13, color: colors.textTertiary),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                    isDense: true,
-                  ),
-                  onSubmitted: (value) => _submitNewTask(context, value),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() => _isAdding = false),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(Icons.close, size: 14, color: colors.textSecondary),
-                ),
-              ),
-            ],
+          child: TextField(
+            controller: _addController,
+            autofocus: true,
+            style: AppTypography.body.copyWith(fontSize: 14),
+            decoration: const InputDecoration(
+              hintText: 'Add task...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            onSubmitted: (value) => _submitNewTask(context, value),
           ),
         ),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-      child: GestureDetector(
-        onTap: () => setState(() {
-          _isAdding = true;
-          _addController.clear();
-        }),
+      padding: const EdgeInsets.all(10),
+      child: InkWell(
+        onTap: () => setState(() => _isAdding = true),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: 32,
+          height: 36,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: colors.isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.black.withValues(alpha: 0.06),
-              width: 1,
-            ),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.border),
           ),
           child: Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(PhosphorIcons.plus(), size: 12, color: colors.textTertiary),
-                const SizedBox(width: 4),
-                Text(
-                  'Add task',
+                Icon(Icons.add_rounded, size: 16, color: colors.textSecondary),
+                const SizedBox(width: 6),
+                Text('Add task',
                   style: AppTypography.caption.copyWith(
-                    color: colors.textTertiary,
-                    fontSize: 12,
-                  ),
-                ),
+                    fontWeight: FontWeight.w600,
+                    color: colors.textSecondary,
+                  )),
               ],
             ),
           ),
@@ -345,16 +276,20 @@ class _KanbanCard extends StatefulWidget {
 class _KanbanCardState extends State<_KanbanCard> {
   bool _dragging = false;
 
+  Color _columnColor(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.todo:       return const Color(0xFF6366F1);
+      case TaskStatus.inProgress: return const Color(0xFFF59E0B);
+      case TaskStatus.done:       return const Color(0xFF22C55E);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
     final t = widget.task;
-    final isDark = colors.isDark;
-    final isOverdue = t.isOverdue && !t.isCompleted;
-    final priorityColor = _priorityColor(t.priority);
-    final completedCount = t.subtasks.where((s) => s.isCompleted).length;
-    final totalSubtasks = t.subtasks.length;
+    final nav = context.watch<NavigationProvider>();
+    final isSelected = nav.selectedTaskId == t.id || nav.isTaskSelected(t.id);
 
     return LongPressDraggable<String>(
       data: t.id,
@@ -366,232 +301,198 @@ class _KanbanCardState extends State<_KanbanCard> {
           opacity: 0.85,
           child: SizedBox(
             width: 256,
-            child: _cardBody(context, t, colors, accent, isDark, isOverdue,
-                priorityColor, completedCount, totalSubtasks),
+            child: _buildCardContent(context, colors, isSelected),
           ),
         ),
       ),
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 150),
         opacity: _dragging ? 0.3 : 1.0,
-        child: _cardBody(context, t, colors, accent, isDark, isOverdue,
-            priorityColor, completedCount, totalSubtasks),
+        child: GestureDetector(
+          onTap: () {
+            if (nav.isSelectionMode) {
+              nav.toggleTaskSelection(t.id);
+            } else {
+              nav.selectTask(t.id);
+            }
+          },
+          onLongPress: () => nav.enterSelectionMode(t.id),
+          child: _buildCardContent(context, colors, isSelected),
+        ),
       ),
     );
   }
 
-  Widget _cardBody(
-    BuildContext context,
-    Task t,
-    AppColorsExtension colors,
-    Color accent,
-    bool isDark,
-    bool isOverdue,
-    Color priorityColor,
-    int completedCount,
-    int totalSubtasks,
-  ) {
-    return TaskInteractionWrapper(
-      task: t,
-      actionsPosition: HoverActionsPosition.topRight,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: t.isCompleted
-              ? (isDark ? const Color(0xFF1A1A1C) : const Color(0xFFF9F9FB))
-              : colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.border, width: 0.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _buildCardContent(BuildContext context, AppColorsExtension colors, bool isSelected) {
+    final t = widget.task;
+    final accent = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: CardDesign.background(context),
+        borderRadius: BorderRadius.circular(CardDesign.radius),
+        border: Border.all(
+          color: isSelected ? accent : colors.border,
+          width: isSelected ? 1.5 : 0.75,
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(13.5),
-              child: Opacity(
-                opacity: t.isCompleted ? 0.45 : 1.0,
-            child: IntrinsicHeight(
+        boxShadow: CardDesign.shadow(context),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(CardDesign.radius - 0.75), // account for border width
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // STATUS BORDER
+              Container(
+                width: 3,
+                color: _columnColor(t.status),
+              ),
+              // CONTENT
+              Expanded(
+                child: Column(
+                  children: [
+            // TOP ROW — sticker + title
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Priority bar
-                  if (t.priority != Priority.none)
-                    Container(width: 3, color: priorityColor),
-
-                  // Content
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Title
-                          Text(
-                            t.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.bodySemibold.copyWith(
-                              fontSize: 13,
-                              color: isOverdue ? AppColors.red : colors.textPrimary,
-                              decoration: t.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                              decorationColor: colors.textTertiary,
-                            ),
-                          ),
-
-                          // Description
-                          if (t.description != null && t.description!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              t.description!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption.copyWith(
-                                fontSize: 11,
-                                color: colors.textTertiary,
-                              ),
-                            ),
-                          ],
-
-                          // Subtask progress
-                          if (totalSubtasks > 0) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: completedCount / totalSubtasks,
-                                      minHeight: 4,
-                                      backgroundColor: colors.divider,
-                                      valueColor: AlwaysStoppedAnimation<Color>(accent),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '$completedCount/$totalSubtasks',
-                                  style: AppTypography.caption.copyWith(
-                                    fontSize: 10,
-                                    color: colors.textTertiary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-
-                          // Footer: date + tag
-                          if (t.dueDate != null || t.tags.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                if (t.dueDate != null)
-                                  Flexible(
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          PhosphorIcons.calendarBlank(),
-                                          size: 10,
-                                          color: isOverdue
-                                              ? AppColors.red
-                                              : colors.textTertiary,
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Flexible(
-                                          child: Text(
-                                            AppDateUtils.formatDueDate(
-                                                t.dueDate!, t.dueHour, t.dueMinute),
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTypography.caption.copyWith(
-                                              fontSize: 11,
-                                              color: isOverdue
-                                                  ? AppColors.red
-                                                  : colors.textTertiary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                const Spacer(),
-                                if (t.tags.isNotEmpty)
-                                  Flexible(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 5, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.indigo.withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        '#${context.read<TagProvider>().getById(t.tags.first)?.name ?? 'Tag'}',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTypography.caption.copyWith(
-                                          fontSize: 10,
-                                          color: AppColors.indigo,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-
-                          // Flag indicator
-                          if (t.isFlagged) ...[
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  PhosphorIcons.flag(PhosphorIconsStyle.fill),
-                                  size: 11,
-                                  color: AppColors.orange,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Flagged',
-                                  style: AppTypography.caption.copyWith(
-                                    fontSize: 10,
-                                    color: AppColors.orange,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
+                  // Sticker — prominent, left-aligned
+                  if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: StickerWidget(
+                        sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.todayMorning,
+                        size: 48,
+                        animate: true,
                       ),
                     ),
+
+                  // Title + priority
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodySemibold.copyWith(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                            color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
+                            decoration: t.isCompleted ? TextDecoration.lineThrough : null,
+                          )),
+                        const SizedBox(height: 5),
+                        // Priority badge
+                        if (t.priority != Priority.none)
+                          PriorityBadgeInline(priority: t.priority),
+                      ],
+                    ),
                   ),
+
+                  // Flag
+                  if (t.isFlagged)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(Icons.bookmark_rounded, size: 13, color: AppColors.orange),
+                    ),
                 ],
               ),
             ),
+
+            // SUBTASKS SECTION
+            if (t.subtasks.isNotEmpty) ...[
+              const DashedDivider(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+                child: Column(children: [
+                  ...t.subtasks.take(2).map((sub) => InlineSubtaskRow(sub: sub, taskId: t.id)),
+                  if (t.subtasks.length > 2)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 18),
+                        child: Text(
+                          '+${t.subtasks.length - 2} more',
+                          style: AppTypography.micro.copyWith(
+                            fontSize: 10,
+                            color: accent.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w600,
+                          )),
+                      ),
+                    ),
+                ]),
+              ),
+            ],
+
+            // NOTE PREVIEW
+            if (t.description.isNotEmpty) ...[
+              const DashedDivider(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+                child: Row(children: [
+                  Icon(Icons.notes_rounded, size: 11, color: colors.textTertiary),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      t.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                        fontSize: 11,
+                        color: colors.textTertiary,
+                        height: 1.4,
+                      )),
+                  ),
+                ]),
+              ),
+            ],
+
+            // FOOTER
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 7, 12, 10),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: colors.divider, width: 0.5)),
+              ),
+              child: Row(children: [
+                // Tags
+                ...t.tags.take(2).map((tagId) {
+                  final tag = context.read<TagProvider>().getById(tagId);
+                  if (tag == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: CardTagPill(tagName: tag.name),
+                  );
+                }),
+                if (t.tags.length > 2)
+                   CardTagPill(tagName: '+${t.tags.length - 2}'),
+                const Spacer(),
+                // Due date
+                if (t.dueDate != null)
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.schedule_rounded,
+                        size: 10,
+                        color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary),
+                    const SizedBox(width: 3),
+                    Text(
+                      AppDateUtils.formatShortDate(t.dueDate!),
+                      style: AppTypography.micro.copyWith(
+                        fontSize: 10,
+                        color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary,
+                      )),
+                  ]),
+              ]),
+            ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-
-    ]),));
-  }
-
-  Color _priorityColor(Priority p) {
-    switch (p) {
-      case Priority.none:   return Colors.transparent;
-      case Priority.low:    return AppColors.green;
-      case Priority.medium: return AppColors.orange;
-      case Priority.high:   return AppColors.red;
-      case Priority.urgent: return AppColors.pink;
-    }
+      ),
+    );
   }
 }

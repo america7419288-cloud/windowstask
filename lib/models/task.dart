@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'subtask.dart';
+import 'recurrence.dart';
 
 part 'task.g.dart';
 
@@ -69,10 +71,19 @@ class Task extends HiveObject {
   bool isFlagged;
 
   @HiveField(13)
-  bool isRecurring;
+  bool isRecurringPlaceholder = false; // kept for compatibility
 
   @HiveField(14)
-  String? recurrenceRule;
+  String? recurrenceRulePlaceholder; // kept for compatibility
+
+  @HiveField(26)
+  String? recurrenceJson;
+
+  @HiveField(27)
+  String? recurringParentId;
+
+  @HiveField(28)
+  int occurrenceIndex;
 
   @HiveField(15)
   int? estimatedMinutes;
@@ -101,6 +112,12 @@ class Task extends HiveObject {
   @HiveField(23)
   String? stickerId;
 
+  @HiveField(24)
+  bool hasReminder;
+
+  @HiveField(25)
+  int reminderMinutesBefore;
+
   Task({
     required this.id,
     required this.title,
@@ -115,8 +132,8 @@ class Task extends HiveObject {
     List<String>? tags,
     List<Subtask>? subtasks,
     this.isFlagged = false,
-    this.isRecurring = false,
-    this.recurrenceRule,
+    this.isRecurringPlaceholder = false,
+    this.recurrenceRulePlaceholder,
     this.estimatedMinutes,
     this.pomodoroCount = 0,
     List<String>? attachments,
@@ -126,11 +143,22 @@ class Task extends HiveObject {
     this.deletedAt,
     this.sortOrder = 0,
     this.stickerId,
+    this.hasReminder = false,
+    this.reminderMinutesBefore = 0,
+    this.recurrenceJson,
+    this.recurringParentId,
+    this.occurrenceIndex = 0,
   })  : tags = tags ?? [],
         subtasks = subtasks ?? [],
         attachments = attachments ?? [];
 
   bool get isCompleted => status == TaskStatus.done;
+
+  RecurrenceRule? get recurrence => recurrenceJson != null
+      ? RecurrenceRule.fromJson(jsonDecode(recurrenceJson!))
+      : null;
+
+  bool get isRecurring => recurrenceJson != null;
 
   bool get isOverdue {
     if (dueDate == null) return false;
@@ -165,8 +193,9 @@ class Task extends HiveObject {
     List<String>? tags,
     List<Subtask>? subtasks,
     bool? isFlagged,
-    bool? isRecurring,
-    String? recurrenceRule,
+    String? recurrenceJson,
+    String? recurringParentId,
+    int? occurrenceIndex,
     int? estimatedMinutes,
     int? pomodoroCount,
     List<String>? attachments,
@@ -181,6 +210,10 @@ class Task extends HiveObject {
     bool clearListId = false,
     bool clearCompletedAt = false,
     bool clearSticker = false,
+    bool? hasReminder,
+    int? reminderMinutesBefore,
+    bool? isRecurringPlaceholder,
+    String? recurrenceRulePlaceholder,
   }) {
     return Task(
       id: id ?? this.id,
@@ -196,8 +229,9 @@ class Task extends HiveObject {
       tags: tags ?? List.from(this.tags),
       subtasks: subtasks ?? List.from(this.subtasks),
       isFlagged: isFlagged ?? this.isFlagged,
-      isRecurring: isRecurring ?? this.isRecurring,
-      recurrenceRule: recurrenceRule ?? this.recurrenceRule,
+      recurrenceJson: recurrenceJson ?? this.recurrenceJson,
+      recurringParentId: recurringParentId ?? this.recurringParentId,
+      occurrenceIndex: occurrenceIndex ?? this.occurrenceIndex,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
       pomodoroCount: pomodoroCount ?? this.pomodoroCount,
       attachments: attachments ?? List.from(this.attachments),
@@ -207,6 +241,10 @@ class Task extends HiveObject {
       deletedAt: isDeleted == true ? (deletedAt ?? this.deletedAt) : null,
       sortOrder: sortOrder ?? this.sortOrder,
       stickerId: clearSticker ? null : (stickerId ?? this.stickerId),
+      hasReminder: hasReminder ?? this.hasReminder,
+      reminderMinutesBefore: reminderMinutesBefore ?? this.reminderMinutesBefore,
+      isRecurringPlaceholder: isRecurringPlaceholder ?? this.isRecurringPlaceholder,
+      recurrenceRulePlaceholder: recurrenceRulePlaceholder ?? this.recurrenceRulePlaceholder,
     );
   }
 
@@ -224,8 +262,9 @@ class Task extends HiveObject {
         'tags': tags,
         'subtasks': subtasks.map((s) => s.toJson()).toList(),
         'isFlagged': isFlagged,
-        'isRecurring': isRecurring,
-        'recurrenceRule': recurrenceRule,
+        'recurrenceJson': recurrenceJson,
+        'recurringParentId': recurringParentId,
+        'occurrenceIndex': occurrenceIndex,
         'estimatedMinutes': estimatedMinutes,
         'pomodoroCount': pomodoroCount,
         'attachments': attachments,
@@ -235,6 +274,8 @@ class Task extends HiveObject {
         'deletedAt': deletedAt?.toIso8601String(),
         'sortOrder': sortOrder,
         'stickerId': stickerId,
+        'hasReminder': hasReminder,
+        'reminderMinutesBefore': reminderMinutesBefore,
       };
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -258,8 +299,9 @@ class Task extends HiveObject {
                 .toList() ??
             [],
         isFlagged: json['isFlagged'] as bool? ?? false,
-        isRecurring: json['isRecurring'] as bool? ?? false,
-        recurrenceRule: json['recurrenceRule'] as String?,
+        recurrenceJson: json['recurrenceJson'] as String?,
+        recurringParentId: json['recurringParentId'] as String?,
+        occurrenceIndex: json['occurrenceIndex'] as int? ?? 0,
         estimatedMinutes: json['estimatedMinutes'] as int?,
         pomodoroCount: json['pomodoroCount'] as int? ?? 0,
         attachments: List<String>.from(json['attachments'] as List? ?? []),
@@ -275,5 +317,7 @@ class Task extends HiveObject {
             : null,
         sortOrder: json['sortOrder'] as int? ?? 0,
         stickerId: json['stickerId'] as String?,
+        hasReminder: json['hasReminder'] as bool? ?? false,
+        reminderMinutesBefore: json['reminderMinutesBefore'] as int? ?? 0,
       );
 }

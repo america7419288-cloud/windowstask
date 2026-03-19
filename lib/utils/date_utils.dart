@@ -4,8 +4,11 @@ class AppDateUtils {
   AppDateUtils._();
 
   static bool isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year && date.month == now.month && date.day == now.day;
+    return isSameDay(date, DateTime.now());
+  }
+
+  static bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   static bool isTomorrow(DateTime date) {
@@ -53,8 +56,8 @@ class AppDateUtils {
 
   static String formatDateTime(DateTime date, {int? hour, int? minute}) {
     final dateStr = formatDate(date);
-    if (hour != null && minute != null) {
-      return '$dateStr at ${formatTime(hour, minute)}';
+    if (hour != null) {
+      return '$dateStr at ${formatTime(hour, minute ?? 0)}';
     }
     return dateStr;
   }

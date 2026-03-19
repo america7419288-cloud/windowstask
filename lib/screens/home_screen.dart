@@ -22,8 +22,52 @@ import '../widgets/layout/content_wallpaper.dart';
 import 'settings_screen.dart';
 import 'insights_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../services/reminder_service.dart';
+import '../widgets/tasks/bulk_action_bar.dart';
+import '../widgets/focus/break_screen.dart';
+import '../screens/planning_screen.dart';
+import '../services/storage_service.dart';
+import '../utils/date_utils.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ReminderService.instance.init(context);
+      _checkDailyPlanning();
+    });
+  }
+
+  void _checkDailyPlanning() async {
+    final storage = StorageService.instance;
+    final lastPlanning = storage.getLastPlanningDate();
+    final now = DateTime.now();
+    
+    // Auto-trigger if first launch of the day and before noon
+    if (lastPlanning == null || !AppDateUtils.isToday(lastPlanning)) {
+      if (now.hour < 12) {
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          context.read<NavigationProvider>().enterPlanningMode();
+          storage.saveLastPlanningDate(now);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    ReminderService.instance.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +134,12 @@ class HomeScreen extends StatelessWidget {
                     showDetailPanel: showDetail,
                   ),
                   const FocusTimerOverlay(),
+                  const BreakScreen(),
+                  const BulkActionBar(),
                   if (context.watch<CelebrationProvider>().isCelebrating)
                     const TaskCompletedOverlay(),
+                  if (nav.isPlanningMode)
+                    const PlanningScreen(),
                 ],
               ),
             ); // Container return

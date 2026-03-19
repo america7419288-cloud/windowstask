@@ -26,50 +26,70 @@ class HeatmapChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            for (final week in weeks)
-              Padding(
-                padding: const EdgeInsets.only(right: 2),
-                child: Column(
-                  children: week.map((e) {
-                    final intensity = maxVal > 0 ? e.value / maxVal : 0.0;
-                    final date = e.key;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Tooltip(
-                        message: '${e.value} tasks on $date',
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: intensity == 0
-                                ? (colors.isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06))
-                                : accent.withValues(alpha: 0.15 + (intensity * 0.85)),
-                            borderRadius: BorderRadius.circular(3),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final week in weeks)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Column(
+                    children: week.map((e) {
+                      final val = e.value;
+                      final date = e.key;
+                      
+                      Color color;
+                      if (val == 0) color = const Color(0xFFF3F4F6);
+                      else if (val <= 2) color = const Color(0xFFF5E6FF);
+                      else if (val <= 5) color = const Color(0xFFE9CCFF);
+                      else if (val <= 10) color = const Color(0xFFD9A3FF);
+                      else color = const Color(0xFFC475FF);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Tooltip(
+                          message: '$val tasks on $date',
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 16),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text('Less', style: AppTypography.caption.copyWith(color: colors.textSecondary)),
-            Row(children: [0.12, 0.35, 0.58, 0.8, 1.0].map((o) => Container(
-              width: 10, height: 10,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: o),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            )).toList()),
-            Text('More', style: AppTypography.caption.copyWith(color: colors.textSecondary)),
+            Text('Less', style: AppTypography.metadata.copyWith(color: colors.textSecondary.withValues(alpha: 0.55))),
+            const SizedBox(width: 8),
+            Row(
+              children: [
+                const Color(0xFFF3F4F6),
+                const Color(0xFFF5E6FF),
+                const Color(0xFFE9CCFF),
+                const Color(0xFFD9A3FF),
+                const Color(0xFFC475FF),
+              ].map((c) => Container(
+                width: 10,
+                height: 10,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: c,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              )).toList(),
+            ),
+            const SizedBox(width: 8),
+            Text('More', style: AppTypography.metadata.copyWith(color: colors.textSecondary.withValues(alpha: 0.55))),
           ],
         ),
       ],

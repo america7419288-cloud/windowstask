@@ -9,20 +9,21 @@ class TgsLoader {
   static final Map<String, Uint8List> _cache = {};
 
   // Load a .tgs asset and return decompressed Lottie JSON bytes
-  static Future<Uint8List> load(String assetPath) async {
+  static Future<Uint8List?> load(String assetPath) async {
     if (_cache.containsKey(assetPath)) {
-      return _cache[assetPath]!;
+      return _cache[assetPath];
     }
-
-    final byteData = await rootBundle.load(assetPath);
-    final compressed = byteData.buffer.asUint8List();
-
-    // Decompress gzip
-    final decompressed = GZipCodec().decode(compressed);
-    final result = Uint8List.fromList(decompressed);
-
-    _cache[assetPath] = result;
-    return result;
+    try {
+      final byteData = await rootBundle.load(assetPath);
+      final compressed = byteData.buffer.asUint8List();
+      final decompressed = GZipCodec().decode(compressed);
+      final result = Uint8List.fromList(decompressed);
+      _cache[assetPath] = result;
+      return result;
+    } catch (_) {
+      // Asset not found — return null, widget shows emoji fallback
+      return null;
+    }
   }
 
   // Clear cache if needed (e.g. low memory)

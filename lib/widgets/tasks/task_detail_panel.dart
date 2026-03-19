@@ -1,9 +1,13 @@
-import 'dart:async';
 import 'dart:ui';
+import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/task.dart';
+import '../shared/custom_switch.dart';
 import '../../models/app_settings.dart';
+import '../shared/recurrence_picker.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/navigation_provider.dart';
@@ -23,7 +27,9 @@ import 'shared/custom_checkbox.dart';
 import '../shared/pressable_scale.dart';
 import '../../data/sticker_packs.dart';
 import '../../models/sticker.dart';
+import '../../data/app_stickers.dart';
 import '../shared/sticker_widget.dart';
+import '../shared/deco_sticker.dart';
 import '../shared/sticker_picker.dart';
 import 'subtask_item.dart';
 
@@ -86,10 +92,34 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
     });
   }
 
+  Future<void> _pickTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: _task.dueHour ?? 9,
+        minute: _task.dueMinute ?? 0,
+      ),
+    );
+    if (picked != null) {
+      context.read<TaskProvider>().updateDueTime(_task.id, picked.hour, picked.minute);
+    }
+  }
+
+  Future<void> _pickRecurrence(BuildContext context) async {
+    final result = await RecurrencePicker.show(
+      context,
+      initial: _task.recurrence,
+    );
+    if (mounted) {
+      context.read<TaskProvider>().setRecurrence(_task.id, result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final nav = context.read<NavigationProvider>();
+    final accent = Theme.of(context).colorScheme.primary;
 
     return Container(
       width: AppConstants.detailPanelWidth,
@@ -109,17 +139,6 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                 onDelete: () {
                   context.read<TaskProvider>().moveToTrash(_task.id);
                   nav.closeDetailPanel();
-                },
-                onDuplicate: () {
-                  context.read<TaskProvider>().duplicateTask(_task.id);
-                  nav.closeDetailPanel();
-                },
-                onStartFocus: () {
-                  context.read<FocusProvider>().startFocus(
-                    taskId: _task.id,
-                    taskTitle: _task.title,
-                    durationMinutes: context.read<SettingsProvider>().focusDuration,
-                  );
                 },
               ),
               Expanded(
@@ -154,9 +173,8 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                           children: [
                             // Complete toggle
                             _PropertyRow(
-                              icon: Icons.check_circle_outline_rounded,
                               label: _task.isCompleted ? 'Completed' : 'Mark complete',
-                              trailing: Switch(
+                              trailing: CustomSwitch(
                                 value: _task.isCompleted,
                                 onChanged: (v) {
                                   context.read<TaskProvider>().toggleComplete(
@@ -164,9 +182,7 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                                     celebration: context.read<CelebrationProvider>(),
                                   );
                                 },
-                                activeColor: Theme.of(context).colorScheme.primary,
                               ),
-                              isFirst: true,
                             ),
                             _thinDivider(colors),
                             // Priority
@@ -184,17 +200,88 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                               context.read<TaskProvider>().updateTask(updated);
                             }),
                             _thinDivider(colors),
+                            // Due time
+                            if (_task.dueDate != null) ...[
+                              _PropertyRow(
+                                label: 'Time',
+                                trailing: GestureDetector(
+                                  onTap: () => _pickTime(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: _task.dueHour != null
+                                          ? accent.withValues(alpha: 0.08)
+                                          : colors.surfaceElevated,
+                                      borderRadius: BorderRadius.circular(7),
+                                      border: Border.all(color: colors.border, width: 0.75),
+                                    ),
+                                    child: Text(
+                                      _task.dueHour != null
+                                          ? '${_task.dueHour.toString().padLeft(2, '0')}:${(_task.dueMinute ?? 0).toString().padLeft(2, '0')}'
+                                          : 'Set time',
+                                      style: AppTypography.caption.copyWith(
+                                        color: _task.dueHour != null ? accent : colors.textTertiary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              _thinDivider(colors),
+                            ],
+                            // Reminder
+                            if (_task.dueDate != null && _task.dueHour != null) ...[
+                              _PropertyRow(
+                                label: 'Reminder',
+                                trailing: _ReminderPicker(task: _task),
+                              ),
+                              _thinDivider(colors),
+                            ],
+                            // Repeat
+                            if (_task.dueDate != null) ...[
+                              _PropertyRow(
+                                label: 'Repeat',
+                                trailing: GestureDetector(
+                                  onTap: () => _pickRecurrence(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: _task.isRecurring
+                                          ? accent.withValues(alpha: 0.08)
+                                          : colors.surfaceElevated,
+                                      borderRadius: BorderRadius.circular(7),
+                                      border: Border.all(color: colors.border, width: 0.75),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_task.isRecurring) ...[
+                                          Icon(Icons.repeat_rounded, size: 12, color: accent),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Text(
+                                          _task.recurrence?.displayLabel ?? 'Never',
+                                          style: AppTypography.caption.copyWith(
+                                            color: _task.isRecurring ? accent : colors.textTertiary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              _thinDivider(colors),
+                            ],
                             // Flag
                             _PropertyRow(
-                              icon: Icons.flag_outlined,
                               label: 'Flagged',
-                              trailing: Switch(
+                              trailing: CustomSwitch(
                                 value: _task.isFlagged,
                                 onChanged: (v) {
                                   final updated = _task.copyWith(isFlagged: v);
                                   context.read<TaskProvider>().updateTask(updated);
                                 },
-                                activeColor: AppColors.orange,
                               ),
                             ),
                             _thinDivider(colors),
@@ -224,12 +311,15 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: colors.border, width: 0.5),
                         ),
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
                         child: TextField(
                           controller: _descController,
                           maxLines: null,
-                          minLines: 3,
-                          style: AppTypography.body.copyWith(color: colors.textPrimary),
+                          minLines: 6,
+                          style: AppTypography.body.copyWith(
+                            color: colors.textPrimary,
+                            height: 1.5,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Add notes...',
                             hintStyle: AppTypography.body.copyWith(color: colors.textTertiary),
@@ -274,34 +364,58 @@ class _PanelHeader extends StatelessWidget {
     required this.task,
     required this.onClose,
     required this.onDelete,
-    required this.onDuplicate,
-    required this.onStartFocus,
   });
 
   final Task task;
   final VoidCallback onClose;
   final VoidCallback onDelete;
-  final VoidCallback onDuplicate;
-  final VoidCallback onStartFocus;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final sticker = task.stickerId != null 
+        ? StickerRegistry.findById(task.stickerId!) 
+        : null;
+
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: colors.divider)),
+      height: 120,
+      decoration: const BoxDecoration(
+        gradient: AppColors.gradientPrimary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          _IconBtn(icon: Icons.close, onTap: onClose, tooltip: 'Close'),
-          const Spacer(),
-          _IconBtn(icon: Icons.timer_outlined, onTap: onStartFocus, tooltip: 'Start Focus'),
-          const SizedBox(width: 4),
-          _IconBtn(icon: Icons.copy_outlined, onTap: onDuplicate, tooltip: 'Duplicate'),
-          const SizedBox(width: 4),
-          _IconBtn(icon: Icons.delete_outline, onTap: onDelete, tooltip: 'Delete', danger: true),
+          // Close button
+          Positioned(
+            top: 8,
+            left: 8,
+            child: _IconBtn(
+              icon: Icons.close,
+              onTap: onClose,
+              color: Colors.white,
+            ),
+          ),
+          // Delete button
+          Positioned(
+            top: 8,
+            right: 8,
+            child: _IconBtn(
+              icon: Icons.delete_outline,
+              onTap: onDelete,
+              color: Colors.white,
+            ),
+          ),
+          // Sticker
+          Center(
+            child: DecoSticker(
+              sticker: sticker ?? AppStickers.detailDefault,
+              size: 80,
+              animate: true,
+            ),
+          ),
         ],
       ),
     );
@@ -309,11 +423,11 @@ class _PanelHeader extends StatelessWidget {
 }
 
 class _IconBtn extends StatelessWidget {
-  const _IconBtn({required this.icon, required this.onTap, this.tooltip, this.danger = false});
+  const _IconBtn({required this.icon, required this.onTap, this.tooltip, this.color});
   final IconData icon;
   final VoidCallback onTap;
   final String? tooltip;
-  final bool danger;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -321,13 +435,16 @@ class _IconBtn extends StatelessWidget {
     Widget w = GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Icon(
           icon,
-          size: 16,
-          color: danger ? AppColors.red : colors.textSecondary,
+          size: 18,
+          color: color ?? colors.textSecondary,
         ),
       ),
     );
@@ -339,40 +456,35 @@ class _IconBtn extends StatelessWidget {
 
 class _PropertyRow extends StatelessWidget {
   const _PropertyRow({
-    required this.icon,
     required this.label,
     required this.trailing,
     this.onTap,
-    this.isFirst = false,
-    this.isLast = false,
   });
 
-  final IconData icon;
   final String label;
   final Widget trailing;
   final VoidCallback? onTap;
-  final bool isFirst;
-  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.vertical(
-        top: isFirst ? const Radius.circular(14) : Radius.zero,
-        bottom: isLast ? const Radius.circular(14) : Radius.zero,
-      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: colors.textTertiary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(label, style: AppTypography.body.copyWith(color: colors.textPrimary)),
+            SizedBox(
+              width: 100,
+              child: Text(
+                label.toUpperCase(),
+                style: AppTypography.sectionHeader.copyWith(
+                  fontSize: 10,
+                  color: colors.textSecondary.withValues(alpha: 0.45),
+                ),
+              ),
             ),
-            trailing,
+            Expanded(child: trailing),
           ],
         ),
       ),
@@ -389,29 +501,61 @@ class _PriorityRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
-        children: [
-          Icon(Icons.flag_outlined, size: 16, color: colors.textTertiary),
-          const SizedBox(width: 10),
-          Text('Priority', style: AppTypography.body.copyWith(color: colors.textPrimary)),
-          const Spacer(),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<Priority>(
-              value: task.priority,
-              isDense: true,
-              items: Priority.values.map((p) => DropdownMenuItem(
-                value: p,
-                child: PriorityBadge(priority: p, showLabel: true),
-              )).toList(),
-              onChanged: (p) => p != null ? onChanged(p) : null,
-            ),
-          ),
-        ],
+    return _PropertyRow(
+      label: 'Priority',
+      trailing: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: Priority.values.where((p) => p != Priority.none).map((p) {
+            final isSelected = task.priority == p;
+            final color = _priorityColor(p);
+            return GestureDetector(
+              onTap: () => onChanged(p),
+              child: Container(
+                margin: const EdgeInsets.only(left: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      p.name.toUpperCase(),
+                      style: AppTypography.metadata.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? color : context.appColors.textSecondary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
+  }
+
+  Color _priorityColor(Priority p) {
+    switch (p) {
+      case Priority.high: return AppColors.danger;
+      case Priority.medium: return AppColors.warning;
+      case Priority.low: return AppColors.success;
+      default: return AppColors.textMuted;
+    }
   }
 }
 
@@ -427,51 +571,37 @@ class _DueDateRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
-        children: [
-          Icon(Icons.calendar_today_outlined, size: 16, color: colors.textTertiary),
-          const SizedBox(width: 10),
-          Text('Due Date', style: AppTypography.body.copyWith(color: colors.textPrimary)),
-          const Spacer(),
-          if (task.dueDate != null)
+    return _PropertyRow(
+      label: 'Due Date',
+      trailing: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (task.dueDate != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(PhosphorIcons.x(), size: 14, color: colors.textSecondary.withValues(alpha: 0.4)),
+                ),
+              ),
             GestureDetector(
-              onTap: onClear,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Icon(Icons.close, size: 14, color: colors.textTertiary),
-              ),
-            ),
-          GestureDetector(
-            onTap: () async {
-              final date = await DatePickerPopover.show(context, initialDate: task.dueDate);
-              if (date != null) onChanged(date);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: task.dueDate != null
-                    ? (task.isOverdue
-                        ? AppColors.red.withValues(alpha: 0.1)
-                        : accent.withValues(alpha: 0.1))
-                    : colors.isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(20),
-              ),
+              onTap: () async {
+                final date = await DatePickerPopover.show(context, initialDate: task.dueDate);
+                if (date != null) onChanged(date);
+              },
               child: Text(
-                task.dueDate != null ? AppDateUtils.formatShortDate(task.dueDate!) : 'Set date',
-                style: AppTypography.caption.copyWith(
-                  color: task.dueDate != null
-                      ? (task.isOverdue ? AppColors.red : accent)
-                      : colors.textTertiary,
-                  fontWeight: FontWeight.w500,
+                task.dueDate != null ? AppDateUtils.formatDueDate(task.dueDate!, task.dueHour, task.dueMinute) : 'Set date',
+                style: AppTypography.metadata.copyWith(
+                  color: task.dueDate != null ? (task.isOverdue ? AppColors.danger : accent) : colors.textSecondary.withValues(alpha: 0.4),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -488,40 +618,43 @@ class _ListRow extends StatelessWidget {
     final colors = context.appColors;
     final lists = context.read<ListProvider>();
     final taskProv = context.read<TaskProvider>();
+    final currentList = task.listId != null ? lists.getById(task.listId!) : null;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
-        children: [
-          Icon(Icons.folder_outlined, size: 16, color: colors.textTertiary),
-          const SizedBox(width: 10),
-          Text('List', style: AppTypography.body.copyWith(color: colors.textPrimary)),
-          const Spacer(),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: task.listId,
-              isDense: true,
-              hint: Text('None', style: AppTypography.body.copyWith(color: colors.textTertiary)),
-              items: [
-                DropdownMenuItem<String?>(value: null, child: Text('None', style: AppTypography.body)),
-                ...lists.activeLists.map((l) => DropdownMenuItem(
-                  value: l.id,
-                  child: Row(
-                    children: [
-                      Text(l.emoji),
-                      const SizedBox(width: 6),
-                      Text(l.name, style: AppTypography.body),
-                    ],
-                  ),
-                )),
-              ],
-              onChanged: (id) {
-                final updated = task.copyWith(listId: id, clearListId: id == null);
-                taskProv.updateTask(updated);
-              },
+    return _PropertyRow(
+      label: 'List',
+      trailing: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                value: task.listId,
+                isDense: true,
+                icon: Icon(PhosphorIcons.caretDown(), size: 14, color: colors.textSecondary.withValues(alpha: 0.4)),
+                items: [
+                  DropdownMenuItem<String?>(value: null, child: Text('NONE', style: AppTypography.metadata.copyWith(fontSize: 10, fontWeight: FontWeight.w700))),
+                  ...lists.activeLists.map((l) => DropdownMenuItem(
+                    value: l.id,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(l.emoji, style: const TextStyle(fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Text(l.name.toUpperCase(), style: AppTypography.metadata.copyWith(fontSize: 10, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  )),
+                ],
+                onChanged: (id) {
+                  final updated = task.copyWith(listId: id, clearListId: id == null);
+                  taskProv.updateTask(updated);
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -551,78 +684,67 @@ class _TagsRowState extends State<_TagsRow> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
     final tagProv = context.read<TagProvider>();
     final taskProv = context.read<TaskProvider>();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return _PropertyRow(
+      label: 'Tags',
+      trailing: Wrap(
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        runSpacing: 4,
         children: [
-          Row(
-            children: [
-              Icon(Icons.label_outline, size: 16, color: colors.textTertiary),
-              const SizedBox(width: 10),
-              Text('Tags', style: AppTypography.body.copyWith(color: colors.textPrimary)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _adding = !_adding),
-                child: Icon(Icons.add, size: 16, color: accent),
+          ...widget.task.tags.map((tagId) {
+            final tag = tagProv.getById(tagId);
+            if (tag == null) return const SizedBox.shrink();
+            return GestureDetector(
+              onTap: () {
+                final tags = widget.task.tags.where((t) => t != tagId).toList();
+                taskProv.updateTask(widget.task.copyWith(tags: tags));
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colors.textSecondary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '#${tag.name}',
+                  style: AppTypography.metadata.copyWith(fontSize: 10, color: colors.textSecondary),
+                ),
               ),
-            ],
-          ),
-          if (widget.task.tags.isNotEmpty || _adding) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                ...widget.task.tags.map((tagId) {
-                  final tag = tagProv.getById(tagId);
-                  if (tag == null) return const SizedBox.shrink();
-                  return TagChip(
-                    label: tag.name,
-                    colorHex: tag.colorHex,
-                    onDelete: () {
-                      final tags = widget.task.tags.where((t) => t != tagId).toList();
-                      taskProv.updateTask(widget.task.copyWith(tags: tags));
-                    },
-                  );
-                }),
-                if (_adding)
-                  SizedBox(
-                    width: 120,
-                    child: TextField(
-                      controller: _tagController,
-                      autofocus: true,
-                      style: AppTypography.caption,
-                      decoration: InputDecoration(
-                        hintText: 'Tag name...',
-                        hintStyle: AppTypography.caption.copyWith(color: colors.textTertiary),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(color: colors.border),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      ),
-                      onSubmitted: (val) async {
-                        final name = val.trim();
-                        if (name.isNotEmpty) {
-                          final tag = await tagProv.createTag(name: name);
-                          final tags = [...widget.task.tags, tag.id];
-                          taskProv.updateTask(widget.task.copyWith(tags: tags));
-                        }
-                        setState(() {
-                          _adding = false;
-                          _tagController.clear();
-                        });
-                      },
-                    ),
-                  ),
-              ],
+            );
+          }),
+          if (_adding)
+            SizedBox(
+              width: 80,
+              child: TextField(
+                controller: _tagController,
+                autofocus: true,
+                style: AppTypography.metadata.copyWith(fontSize: 11),
+                decoration: const InputDecoration(
+                  hintText: 'Tag...',
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+                onSubmitted: (val) async {
+                  final name = val.trim();
+                  if (name.isNotEmpty) {
+                    final tag = await tagProv.createTag(name: name);
+                    final tags = [...widget.task.tags, tag.id];
+                    taskProv.updateTask(widget.task.copyWith(tags: tags));
+                  }
+                  setState(() => _adding = false);
+                  _tagController.clear();
+                },
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: () => setState(() => _adding = true),
+              child: Icon(PhosphorIcons.plus(), size: 14, color: colors.textSecondary.withValues(alpha: 0.4)),
             ),
-          ],
         ],
       ),
     );
@@ -845,5 +967,59 @@ class _StickerRow extends StatelessWidget {
     // Empty string means remove
     final newId = result.isEmpty ? null : result;
     context.read<TaskProvider>().setSticker(task.id, newId);
+  }
+}
+// ─── Reminder Picker ──────────────────────────────────────────────────
+
+class _ReminderPicker extends StatelessWidget {
+  const _ReminderPicker({required this.task});
+  final Task task;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+
+    final options = {
+      0: 'At time of event',
+      5: '5 minutes before',
+      10: '10 minutes before',
+      15: '15 minutes before',
+      30: '30 minutes before',
+      60: '1 hour before',
+    };
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (task.hasReminder)
+          GestureDetector(
+            onTap: () => context.read<TaskProvider>().setReminder(task.id, false, 0),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(Icons.notifications_off_outlined, size: 14, color: colors.textTertiary),
+            ),
+          ),
+        DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: task.hasReminder ? task.reminderMinutesBefore : null,
+            hint: Text('None', style: AppTypography.metadata.copyWith(color: colors.textTertiary)),
+            isDense: true,
+            icon: Icon(Icons.arrow_drop_down, size: 16, color: colors.textTertiary),
+            items: options.entries.map((e) {
+              return DropdownMenuItem<int>(
+                value: e.key,
+                child: Text(e.value, style: AppTypography.metadata.copyWith(fontSize: 11)),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                context.read<TaskProvider>().setReminder(task.id, true, val);
+              }
+            },
+          ),
+        ),
+      ],
+    );
   }
 }

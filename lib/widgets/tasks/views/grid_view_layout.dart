@@ -10,10 +10,11 @@ import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
 import '../../../utils/date_utils.dart';
 import '../../shared/empty_state_widget.dart';
-import '../../../painters/empty_state_painters.dart';
-import '../../../painters/grid_cover_painter.dart';
-import '../shared/task_interaction_wrapper.dart';
-import '../shared/sticker_badge.dart';
+import '../shared/card_helpers.dart';
+import '../../shared/sticker_widget.dart';
+import '../../shared/deco_sticker.dart';
+import '../../../data/app_stickers.dart';
+import '../../../data/sticker_packs.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class GridViewLayout extends StatelessWidget {
@@ -25,7 +26,7 @@ class GridViewLayout extends StatelessWidget {
     if (tasks.isEmpty) {
       return EmptyStateWidget(
         config: EmptyStateConfig(
-          painterBuilder: (v) => SearchEmptyPainter(v),
+          sticker: AppStickers.allTasksEmpty,
           headline: 'No tasks',
           subline: 'Tasks will appear here once added.',
         ),
@@ -35,10 +36,10 @@ class GridViewLayout extends StatelessWidget {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 220,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: 0.82,
+        maxCrossAxisExtent: 240,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.72,
       ),
       itemCount: tasks.length,
       itemBuilder: (context, index) => _GridTaskCard(task: tasks[index]),
@@ -62,65 +63,45 @@ class _GridTaskCardState extends State<_GridTaskCard> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
     final t = widget.task;
-    final isDark = colors.isDark;
-    final isSelected = context.watch<NavigationProvider>().selectedTaskId == t.id;
+    final nav = context.watch<NavigationProvider>();
+    final isSelected = nav.selectedTaskId == t.id || nav.isTaskSelected(t.id);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: TaskInteractionWrapper(
-        task: t,
-        actionsPosition: HoverActionsPosition.topRight,
-        child: AnimatedContainer(
+      child: GestureDetector(
+        onTap: () {
+          if (nav.isSelectionMode) {
+            nav.toggleTaskSelection(t.id);
+          } else {
+            nav.selectTask(t.id);
+          }
+        },
+        onLongPress: () => nav.enterSelectionMode(t.id),
+        child: AnimatedScale(
+          scale: _hovered ? 1.02 : 1.0,
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: t.isCompleted
-                ? (isDark ? const Color(0xFF1A1A1C) : const Color(0xFFF9F9FB))
-                : colors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? accent : colors.border,
-              width: isSelected ? 1.5 : 0.5,
+          child: Container(
+            decoration: BoxDecoration(
+              color: CardDesign.background(context),
+              borderRadius: BorderRadius.circular(CardDesign.radius),
+              border: isSelected 
+                  ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                  : CardDesign.border(context),
+              boxShadow: CardDesign.shadow(context),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                blurRadius: _hovered ? 16 : 8,
-                offset: Offset(0, _hovered ? 4 : 2),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(CardDesign.radius - 1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _GridCover(task: t),
+                  Expanded(child: _GridContent(task: t)),
+                  _GridFooter(task: t),
+                ],
               ),
-            ],
-          ),
-          child: AnimatedScale(
-            scale: _hovered ? 1.02 : 1.0,
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(13.5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // COVER — 40%
-                      Expanded(flex: 4, child: _CardCover(task: t)),
-                      // BODY — 45%
-                      Expanded(flex: 4, child: _CardBody(task: t)),
-                      // FOOTER
-                      _CardFooter(task: t),
-                    ],
-                  ),
-                ),
-                if (t.stickerId != null && t.stickerId!.isNotEmpty)
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: StickerBadge(stickerId: t.stickerId!),
-                  ),
-              ],
             ),
           ),
         ),
@@ -129,79 +110,104 @@ class _GridTaskCardState extends State<_GridTaskCard> {
   }
 }
 
-// ─── Cover ───────────────────────────────────────────────────────────
-
-class _CardCover extends StatelessWidget {
+class _GridCover extends StatelessWidget {
   final Task task;
-  const _CardCover({required this.task});
+  const _GridCover({required this.task});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.appColors.isDark;
-    final priorityColor = _priorityBaseColor(task.priority);
-    final isCompleted = task.isCompleted;
+    final t = task;
+    final colors = context.appColors;
+    final isDark = colors.isDark;
+    final priorityColor = getPriorityColor(t.priority);
 
-    final listEmoji = task.listId != null
-        ? context.read<ListProvider>().getById(task.listId!)?.emoji
-        : null;
-
-    final gradient = _getPriorityGradient(task.priority, isDark);
-
-    return Opacity(
-      opacity: isCompleted ? 0.5 : 1.0,
+    return Container(
+      height: 110,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            priorityColor.withValues(alpha: isDark ? 0.25 : 0.15),
+            priorityColor.withValues(alpha: isDark ? 0.08 : 0.04),
+          ],
+        ),
+      ),
       child: Stack(
-        fit: StackFit.expand,
         children: [
-          // 1. Base Gradient
-          Container(decoration: BoxDecoration(gradient: gradient)),
-          // 2. Geometric art
-          if (!isCompleted || task.priority != Priority.none)
-            CustomPaint(
-              painter: GridCoverPainter(
-                taskId: task.id,
-                baseColor: priorityColor,
-              ),
-            ),
-          // 3. Emoji overlay
-          if (listEmoji != null)
-            Center(
-              child: Text(
-                listEmoji,
-                style: const TextStyle(
-                  fontSize: 32,
-                  shadows: [
-                    Shadow(color: Colors.black12, offset: Offset(0, 3), blurRadius: 10),
-                  ],
-                ),
-              ),
-            ),
-          // 4. Priority dot (top-left)
-          if (task.priority != Priority.none)
-            Positioned(
-              top: 8,
-              left: 8,
+          // Centered sticker — HERO element
+          Center(
+            child: t.stickerId != null && t.stickerId!.isNotEmpty
+                ? StickerWidget(
+                    sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.todayMorning,
+                    size: 72,
+                    animate: true,
+                  )
+                : Opacity(
+                    opacity: 0.3,
+                    child: Text(
+                      _priorityEmoji(t.priority),
+                      style: const TextStyle(fontSize: 40),
+                    ),
+                  ),
+          ),
+
+          // Completion overlay
+          if (t.isCompleted)
+            Positioned.fill(
               child: Container(
-                width: 6,
-                height: 6,
                 decoration: BoxDecoration(
-                  color: priorityColor.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
+                  color: AppColors.green.withValues(alpha: 0.15),
+                ),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_rounded, size: 12, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text('Done',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          )),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          // 5. Completion overlay
-          if (isCompleted)
-            Positioned(
-              bottom: 6,
-              right: 6,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: const BoxDecoration(
-                  color: AppColors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, size: 14, color: Colors.white),
+
+          // Priority dot — top right
+          Positioned(
+            top: 10, right: 10,
+            child: Container(
+              width: 8, height: 8,
+              decoration: BoxDecoration(
+                color: priorityColor,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(
+                  color: priorityColor.withValues(alpha: 0.5),
+                  blurRadius: 4,
+                )],
+              ),
+            ),
+          ),
+
+          // Flag indicator — top left
+          if (t.isFlagged)
+            const Positioned(
+              top: 8, left: 8,
+              child: Icon(
+                Icons.bookmark_rounded,
+                size: 14,
+                color: AppColors.orange,
               ),
             ),
         ],
@@ -209,103 +215,77 @@ class _CardCover extends StatelessWidget {
     );
   }
 
-  LinearGradient _getPriorityGradient(Priority p, bool isDark) {
-    final double oStart = isDark ? 0.35 : 0.5;
-    final double oEnd = isDark ? 0.12 : 0.25;
-
+  String _priorityEmoji(Priority p) {
     switch (p) {
-      case Priority.low:
-        return LinearGradient(colors: [
-          const Color(0xFF34C759).withValues(alpha: oStart),
-          const Color(0xFF30D158).withValues(alpha: oEnd),
-        ]);
-      case Priority.medium:
-        return LinearGradient(colors: [
-          const Color(0xFFFF9500).withValues(alpha: oStart),
-          const Color(0xFFFFCC00).withValues(alpha: oEnd),
-        ]);
-      case Priority.high:
-        return LinearGradient(colors: [
-          const Color(0xFFFF3B30).withValues(alpha: oStart),
-          const Color(0xFFFF6B6B).withValues(alpha: oEnd),
-        ]);
-      case Priority.urgent:
-        return LinearGradient(colors: [
-          const Color(0xFFFF2D55).withValues(alpha: oStart + 0.1),
-          const Color(0xFFAF52DE).withValues(alpha: oEnd + 0.1),
-        ]);
-      case Priority.none:
-        if (isDark) {
-          return LinearGradient(colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.02),
-          ]);
-        }
-        return const LinearGradient(colors: [
-          Color(0xFFE8E8ED),
-          Color(0xFFF2F2F7),
-        ]);
-    }
-  }
-
-  Color _priorityBaseColor(Priority p) {
-    switch (p) {
-      case Priority.low:    return AppColors.green;
-      case Priority.medium: return AppColors.orange;
-      case Priority.high:   return AppColors.red;
-      case Priority.urgent: return AppColors.pink;
-      case Priority.none:   return Colors.grey;
+      case Priority.urgent: return '🔥';
+      case Priority.high:   return '⚡';
+      case Priority.medium: return '📌';
+      case Priority.low:    return '🌿';
+      default:              return '📋';
     }
   }
 }
 
-// ─── Body ────────────────────────────────────────────────────────────
-
-class _CardBody extends StatelessWidget {
+class _GridContent extends StatelessWidget {
   final Task task;
-  const _CardBody({required this.task});
+  const _GridContent({required this.task});
 
   @override
   Widget build(BuildContext context) {
+    final t = task;
     final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
-          Flexible(
-            child: Text(
-              task.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodySemibold.copyWith(
-                fontSize: 13,
-                color: task.isCompleted
-                    ? colors.textSecondary
-                    : colors.textPrimary,
-                decoration:
-                    task.isCompleted ? TextDecoration.lineThrough : null,
-                decorationColor: colors.textTertiary,
-              ),
-            ),
-          ),
-          // Description
-          if (task.description.isNotEmpty) ...[
+          Text(t.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodySemibold.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+              height: 1.3,
+              color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
+              decoration: t.isCompleted ? TextDecoration.lineThrough : null,
+            )),
+
+          // Note preview
+          if (t.description.isNotEmpty) ...[
             const SizedBox(height: 3),
-            Flexible(
-              child: Text(
-                task.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.caption.copyWith(
-                  fontSize: 11,
-                  color: colors.textTertiary,
-                  height: 1.4,
-                ),
+            Text(t.description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption.copyWith(
+                fontSize: 11,
+                color: colors.textTertiary,
+                height: 1.4,
+              )),
+          ],
+
+          // Dashed divider if subtasks
+          if (t.subtasks.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const DashedDivider(),
+            const SizedBox(height: 6),
+            // First 2 subtasks
+            ...t.subtasks.take(2).map((sub) => InlineSubtaskRow(sub: sub, taskId: t.id, compact: true)),
+            // +N more
+            if (t.subtasks.length > 2)
+              Padding(
+                padding: const EdgeInsets.only(top: 2, left: 18),
+                child: Text(
+                  '+${t.subtasks.length - 2} more',
+                  style: AppTypography.micro.copyWith(
+                    fontSize: 10,
+                    color: accent.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.w600,
+                  )),
               ),
-            ),
           ],
         ],
       ),
@@ -313,70 +293,45 @@ class _CardBody extends StatelessWidget {
   }
 }
 
-// ─── Footer ──────────────────────────────────────────────────────────
-
-class _CardFooter extends StatelessWidget {
+class _GridFooter extends StatelessWidget {
   final Task task;
-  const _CardFooter({required this.task});
+  const _GridFooter({required this.task});
 
   @override
   Widget build(BuildContext context) {
+    final t = task;
     final colors = context.appColors;
-    final isOverdue = task.isOverdue && !task.isCompleted;
 
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: colors.divider, width: 0.5)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       child: Row(
         children: [
-          // Due date
-          if (task.dueDate != null)
-            Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    PhosphorIcons.calendarBlank(),
-                    size: 10,
-                    color: isOverdue ? AppColors.red : colors.textQuaternary,
-                  ),
-                  const SizedBox(width: 3),
-                  Flexible(
-                    child: Text(
-                      AppDateUtils.formatShortDate(task.dueDate!),
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.caption.copyWith(
-                        fontSize: 10,
-                        color: isOverdue ? AppColors.red : colors.textQuaternary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Tags (max 2)
+          ...t.tags.take(2).map((tagId) {
+            final tag = context.read<TagProvider>().getById(tagId);
+            if (tag == null) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: CardTagPill(tagName: tag.name),
+            );
+          }),
           const Spacer(),
-          // Tags
-          if (task.tags.isNotEmpty)
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: AppColors.indigo.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '#${context.read<TagProvider>().getById(task.tags.first)?.name ?? 'Tag'}',
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.caption.copyWith(
+          // Due date
+          if (t.dueDate != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.schedule_rounded,
+                    size: 10,
+                    color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary),
+                const SizedBox(width: 3),
+                Text(
+                  AppDateUtils.formatShortDate(t.dueDate!),
+                  style: AppTypography.micro.copyWith(
                     fontSize: 10,
-                    color: AppColors.indigo,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+                    color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary,
+                  )),
+              ],
             ),
         ],
       ),

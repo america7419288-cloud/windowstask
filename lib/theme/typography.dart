@@ -6,22 +6,22 @@ class AppTypography {
 
   static TextStyle get _base => GoogleFonts.plusJakartaSans();
 
-  static TextStyle get micro => _base.copyWith(
+  static TextStyle get sectionHeader => _base.copyWith(
         fontSize: 11,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.2,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.08, // em
+        color: Colors.grey, // Placeholder, will be refined with color system
       );
 
-  static TextStyle get caption => _base.copyWith(
+  static TextStyle get metadata => _base.copyWith(
         fontSize: 12,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.1,
+        fontWeight: FontWeight.w400,
+        // color opacity 55% will be handled via color extension or .withValues
       );
 
-  static TextStyle get body => _base.copyWith(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        letterSpacing: -0.1,
+  static TextStyle get taskTitle => _base.copyWith(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
       );
 
   static TextStyle get bodyMedium => _base.copyWith(
@@ -59,6 +59,15 @@ class AppTypography {
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
       );
+
+  static TextStyle get micro => _base.copyWith(
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
+      );
+
+  static TextStyle get caption => metadata;
+  static TextStyle get body => bodyMedium;
 
   static TextStyle get title2 => _base.copyWith(
         fontSize: 20,

@@ -30,8 +30,8 @@ class TaskAdapter extends TypeAdapter<Task> {
       tags: (fields[10] as List?)?.cast<String>(),
       subtasks: (fields[11] as List?)?.cast<Subtask>(),
       isFlagged: fields[12] as bool,
-      isRecurring: fields[13] as bool,
-      recurrenceRule: fields[14] as String?,
+      isRecurringPlaceholder: fields[13] as bool,
+      recurrenceRulePlaceholder: fields[14] as String?,
       estimatedMinutes: fields[15] as int?,
       pomodoroCount: fields[16] as int,
       attachments: (fields[17] as List?)?.cast<String>(),
@@ -41,13 +41,18 @@ class TaskAdapter extends TypeAdapter<Task> {
       deletedAt: fields[21] as DateTime?,
       sortOrder: fields[22] as int,
       stickerId: fields[23] as String?,
+      hasReminder: fields[24] == null ? false : fields[24] as bool,
+      reminderMinutesBefore: fields[25] == null ? 0 : fields[25] as int,
+      recurrenceJson: fields[26] as String?,
+      recurringParentId: fields[27] as String?,
+      occurrenceIndex: fields[28] == null ? 0 : fields[28] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Task obj) {
     writer
-      ..writeByte(24)
+      ..writeByte(29)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -75,9 +80,9 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(12)
       ..write(obj.isFlagged)
       ..writeByte(13)
-      ..write(obj.isRecurring)
+      ..write(obj.isRecurringPlaceholder)
       ..writeByte(14)
-      ..write(obj.recurrenceRule)
+      ..write(obj.recurrenceRulePlaceholder)
       ..writeByte(15)
       ..write(obj.estimatedMinutes)
       ..writeByte(16)
@@ -95,7 +100,17 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(22)
       ..write(obj.sortOrder)
       ..writeByte(23)
-      ..write(obj.stickerId);
+      ..write(obj.stickerId)
+      ..writeByte(24)
+      ..write(obj.hasReminder)
+      ..writeByte(25)
+      ..write(obj.reminderMinutesBefore)
+      ..writeByte(26)
+      ..write(obj.recurrenceJson)
+      ..writeByte(27)
+      ..write(obj.recurringParentId)
+      ..writeByte(28)
+      ..write(obj.occurrenceIndex);
   }
 
   @override

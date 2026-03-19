@@ -9,12 +9,13 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
 import '../../../utils/date_utils.dart';
+import '../shared/card_helpers.dart';
+import '../../shared/sticker_widget.dart';
+import '../../shared/deco_sticker.dart';
+import '../../../data/app_stickers.dart';
+import '../../../data/sticker_packs.dart';
 import '../../shared/empty_state_widget.dart';
-import '../../../painters/empty_state_painters.dart';
-import '../shared/task_interaction_wrapper.dart';
-import '../shared/task_interaction_wrapper.dart';
-import '../shared/custom_checkbox.dart';
-import '../shared/sticker_badge.dart';
+import '../../../data/app_stickers.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class CompactLayout extends StatelessWidget {
@@ -26,7 +27,7 @@ class CompactLayout extends StatelessWidget {
     if (tasks.isEmpty) {
       return EmptyStateWidget(
         config: EmptyStateConfig(
-          painterBuilder: (v) => SearchEmptyPainter(v),
+          sticker: AppStickers.allTasksEmpty,
           headline: 'No tasks',
           subline: 'Tasks will appear here once added.',
         ),
@@ -62,248 +63,140 @@ class _CompactRowState extends State<_CompactRow> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
     final t = widget.task;
-    final isOverdue = t.isOverdue && !t.isCompleted;
-    final priorityColor = _priorityColor(t.priority);
-    final isSelected = context.watch<NavigationProvider>().selectedTaskId == t.id;
+    final nav = context.watch<NavigationProvider>();
+    final isSelected = nav.selectedTaskId == t.id || nav.isTaskSelected(t.id);
+    final priorityColor = getPriorityColor(t.priority);
 
-    return TaskInteractionWrapper(
-      task: t,
-      showHoverActions: false,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () {
+          if (nav.isSelectionMode) {
+            nav.toggleTaskSelection(t.id);
+          } else {
+            nav.selectTask(t.id);
+          }
+        },
+        onLongPress: () => nav.enterSelectionMode(t.id),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOutCubic,
-          color: isSelected
-              ? accent.withValues(alpha: 0.08)
-              : _hovered
-                  ? accent.withValues(alpha: 0.03)
-                  : Colors.transparent,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  // Left priority accent bar
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 3,
-                    decoration: BoxDecoration(
-                      color: t.isCompleted
-                          ? Colors.transparent
-                          : (t.priority != Priority.none
-                              ? priorityColor
-                              : Colors.transparent),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-
-                  // Main content
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Opacity(
-                        opacity: t.isCompleted ? 0.5 : 1.0,
-                        child: Row(
-                          children: [
-                            // Checkbox
-                            CustomCheckbox(
-                              value: t.isCompleted,
-                              onChanged: (val) =>
-                                  context.read<TaskProvider>().toggleComplete(
-                                    t.id,
-                                    celebration: context.read<CelebrationProvider>(),
-                                  ),
-                              activeColor: accent,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 10),
-
-                            // Title + metadata
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  // Title
-                                  Text(
-                                    t.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTypography.bodySemibold.copyWith(
-                                      fontSize: 13.5,
-                                      color: isOverdue
-                                          ? AppColors.red
-                                          : colors.textPrimary,
-                                      decoration: t.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                      decorationColor: colors.textTertiary,
-                                    ),
-                                  ),
-                                  // Metadata row
-                                  if (_hasMetadata(t)) ...[
-                                    const SizedBox(height: 3),
-                                    _MetadataRow(task: t),
-                                  ],
-                                ],
-                              ),
-                            ),
-
-                            // Right-side indicators
-                            if (t.isFlagged)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Icon(
-                                  PhosphorIcons.flag(PhosphorIconsStyle.fill),
-                                  size: 13,
-                                  color: AppColors.orange,
-                                ),
-                              ),
-                            if (t.stickerId != null && t.stickerId!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 10),
-                                child: StickerBadge(stickerId: t.stickerId!),
-                              ),
-                            if (isOverdue && t.dueDate != null)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(width: 4),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  bool _hasMetadata(Task t) =>
-      t.dueDate != null || t.subtasks.isNotEmpty || t.tags.isNotEmpty;
-
-  Color _priorityColor(Priority p) {
-    switch (p) {
-      case Priority.none:
-        return Colors.transparent;
-      case Priority.low:
-        return AppColors.green;
-      case Priority.medium:
-        return AppColors.orange;
-      case Priority.high:
-        return AppColors.red;
-      case Priority.urgent:
-        return AppColors.pink;
-    }
-  }
-}
-
-class _MetadataRow extends StatelessWidget {
-  final Task task;
-  const _MetadataRow({required this.task});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final isOverdue = task.isOverdue && !task.isCompleted;
-
-    final items = <Widget>[];
-
-    // Due date
-    if (task.dueDate != null) {
-      items.add(Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            PhosphorIcons.calendarBlank(),
-            size: 10,
-            color: isOverdue ? AppColors.red : colors.textTertiary,
-          ),
-          const SizedBox(width: 3),
-          Flexible(
-            child: Text(
-              AppDateUtils.formatDueDate(task.dueDate!, task.dueHour, task.dueMinute),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.caption.copyWith(
-                fontSize: 11,
-                color: isOverdue ? AppColors.red : colors.textTertiary,
-                fontWeight: isOverdue ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ),
-        ],
-      ));
-    }
-
-    // Subtask count
-    if (task.subtasks.isNotEmpty) {
-      final completed = task.subtasks.where((s) => s.isCompleted).length;
-      if (items.isNotEmpty) items.add(_dot(colors));
-      items.add(Text(
-        '$completed/${task.subtasks.length}',
-        style: AppTypography.caption.copyWith(
-          fontSize: 11,
-          color: colors.textTertiary,
-        ),
-      ));
-    }
-
-    // Tags
-    if (task.tags.isNotEmpty) {
-      if (items.isNotEmpty) items.add(_dot(colors));
-      final tagName =
-          context.read<TagProvider>().getById(task.tags.first)?.name ?? 'Tag';
-      items.add(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: AppColors.indigo.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            '#$tagName',
-            style: AppTypography.caption.copyWith(
-              fontSize: 10,
-              color: AppColors.indigo,
-              fontWeight: FontWeight.w500,
+            color: isSelected 
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                : _hovered ? colors.surface.withValues(alpha: 0.5) : Colors.transparent,
+            border: Border(
+              left: BorderSide(color: priorityColor, width: 3),
+              bottom: BorderSide(color: colors.divider.withValues(alpha: 0.5), width: 0.5),
             ),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            children: [
+              // STICKER OR SELECTION
+              SizedBox(
+                width: 32, height: 32,
+                child: nav.isSelectionMode
+                  ? Center(
+                      child: Container(
+                        width: 20, height: 20,
+                        decoration: BoxDecoration(
+                          color: nav.isTaskSelected(t.id) ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: nav.isTaskSelected(t.id) ? Theme.of(context).colorScheme.primary : colors.textQuaternary,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: nav.isTaskSelected(t.id)
+                            ? const Icon(Icons.check, size: 12, color: Colors.white)
+                            : null,
+                      ),
+                    )
+                  : GestureDetector(
+                      onTap: () => context.read<TaskProvider>().toggleComplete(
+                        t.id,
+                        celebration: context.read<CelebrationProvider>(),
+                      ),
+                      child: t.stickerId != null && t.stickerId!.isNotEmpty
+                        ? StickerWidget(
+                            sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.todayMorning,
+                            size: 32,
+                            animate: _hovered,
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: colors.border),
+                            ),
+                            child: const Center(child: Icon(Icons.check, size: 16, color: Colors.transparent)),
+                          ),
+                    ),
+              ),
+              const SizedBox(width: 12),
+
+              // CONTENT
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySemibold.copyWith(
+                        fontSize: 14,
+                        color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
+                        decoration: t.isCompleted ? TextDecoration.lineThrough : null,
+                      )),
+                    
+                    // Metadata inline
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (t.priority != Priority.none)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: PriorityBadgeInline(priority: t.priority),
+                          ),
+                        if (t.dueDate != null)
+                          Row(children: [
+                            Icon(Icons.schedule_rounded, size: 10, color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary),
+                            const SizedBox(width: 3),
+                            Text(AppDateUtils.formatShortDate(t.dueDate!),
+                              style: AppTypography.micro.copyWith(
+                                color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary,
+                              )),
+                            const SizedBox(width: 8),
+                          ]),
+                        if (t.subtasks.isNotEmpty)
+                          Row(children: [
+                            Icon(Icons.check_box_outlined, size: 10, color: colors.textQuaternary),
+                            const SizedBox(width: 3),
+                            Text('${t.subtasks.where((s)=>s.isCompleted).length}/${t.subtasks.length}',
+                              style: AppTypography.micro.copyWith(color: colors.textQuaternary)),
+                            const SizedBox(width: 8),
+                          ]),
+                        // Tags
+                        ...t.tags.take(1).map((tagId) {
+                          final tag = context.read<TagProvider>().getById(tagId);
+                          if (tag == null) return const SizedBox.shrink();
+                          return CardTagPill(tagName: tag.name);
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // FLAG
+              if (t.isFlagged)
+                const Icon(Icons.bookmark_rounded, size: 14, color: AppColors.orange),
+            ],
+          ),
         ),
-      );
-    }
-
-    return Wrap(
-      spacing: 4,
-      runSpacing: 2,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: items,
-    );
-  }
-
-  Widget _dot(AppColorsExtension colors) {
-    return Text(
-      '·',
-      style: AppTypography.caption.copyWith(
-        fontSize: 10,
-        color: colors.textQuaternary,
       ),
     );
   }

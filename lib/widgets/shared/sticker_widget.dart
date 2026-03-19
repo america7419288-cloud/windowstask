@@ -42,7 +42,14 @@ class _StickerWidgetState extends State<StickerWidget> {
   Future<void> _load() async {
     try {
       final bytes = await TgsLoader.load(widget.sticker.assetPath);
-      if (mounted) setState(() => _bytes = bytes);
+      if (mounted) {
+        if (bytes != null) {
+          setState(() => _bytes = bytes);
+        } else {
+          // No asset file yet — show emoji fallback
+          setState(() => _error = true);
+        }
+      }
     } catch (_) {
       if (mounted) setState(() => _error = true);
     }

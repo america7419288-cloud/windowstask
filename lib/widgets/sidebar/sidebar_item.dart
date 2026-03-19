@@ -39,69 +39,51 @@ class _SidebarItemState extends State<SidebarItem> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: PressableScale(
-        scaleDown: 0.97,
-        onTap: widget.onTap,
-        child: Stack(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: EdgeInsets.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? accent.withValues(alpha: 0.10)
-                    : _hovered
-                        ? Colors.white.withValues(alpha: 0.04)
-                        : Colors.transparent,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.icon,
-                    size: 16,
-                    color: isSelected ? accent : colors.textTertiary,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      style: AppTypography.body.copyWith(
-                        fontSize: 13.5,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? Colors.white : colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  if (widget.badge != null && widget.badge! > 0)
-                    _BadgePill(
-                      count: widget.badge!,
-                      isSelected: isSelected,
-                      accent: accent,
-                      colors: colors,
-                    ),
-                  if (widget.trailingWidget != null) widget.trailingWidget!,
-                ],
-              ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 100),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? accent.withValues(alpha: 0.12)
+                  : _hovered
+                      ? accent.withValues(alpha: 0.05)
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
             ),
-            // Left accent bar
-            if (isSelected)
-              Positioned(
-                left: 0,
-                top: 2,
-                bottom: 2,
-                child: Container(
-                  width: 3,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(2),
-                      bottomRight: Radius.circular(2),
+            child: Row(
+              children: [
+                Icon(
+                  widget.icon,
+                  size: 18,
+                  color: isSelected ? accent : colors.textPrimary.withValues(alpha: 0.60),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.label,
+                    style: AppTypography.taskTitle.copyWith(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected ? accent : colors.textPrimary.withValues(alpha: 0.60),
                     ),
                   ),
                 ),
-              ),
-          ],
+                if (widget.badge != null && widget.badge! > 0)
+                  _BadgePill(
+                    count: widget.badge!,
+                    isSelected: isSelected,
+                    accent: accent,
+                    colors: colors,
+                  ),
+                if (widget.trailingWidget != null) widget.trailingWidget!,
+              ],
+            ),
+          ),
         ),
       ),
     );

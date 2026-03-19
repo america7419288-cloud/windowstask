@@ -12,6 +12,10 @@ import '../../theme/typography.dart';
 import '../../utils/constants.dart';
 import 'sidebar_item.dart';
 import 'list_tile_item.dart';
+import '../../data/app_stickers.dart';
+import '../shared/deco_sticker.dart';
+import '../../providers/focus_provider.dart';
+import '../focus/session_setup_dialog.dart';
 
 class Sidebar extends StatelessWidget {
   const Sidebar({super.key});
@@ -22,19 +26,11 @@ class Sidebar extends StatelessWidget {
     return Container(
       width: AppConstants.sidebarWidth,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: colors.isDark
-              ? [const Color(0xFF201E1C), const Color(0xFF1A1917)]
-              : [const Color(0xFFF5F2EE), const Color(0xFFECE9E4)],
-        ),
+        color: colors.background,
         border: Border(
           right: BorderSide(
-            color: colors.isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.08),
-            width: 0.75,
+            color: colors.border,
+            width: 1.0,
           ),
         ),
       ),
@@ -44,6 +40,13 @@ class Sidebar extends StatelessWidget {
           const _SidebarHeader(),
           const SizedBox(height: 8),
           Expanded(child: _NavContent()),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: DecoSticker(
+              sticker: AppStickers.sidebarMascot,
+              size: 80,
+            ),
+          ),
           _SidebarFooter(),
         ],
       ),
@@ -65,31 +68,18 @@ class _SidebarHeader extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: AppColors.gradientPrimary,
-              borderRadius: BorderRadius.circular(9),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.40),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-                BoxShadow(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  blurRadius: 0,
-                  offset: const Offset(0, 1),
-                  spreadRadius: -1,
-                ),
-              ],
+              color: AppColors.accent,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.check_rounded, size: 17, color: Colors.white),
           ),
           const SizedBox(width: 10),
           Text(
             'Taski',
-            style: AppTypography.headline.copyWith(
-              fontWeight: FontWeight.w800,
+            style: AppTypography.taskTitle.copyWith(
+              fontWeight: FontWeight.w700,
               fontSize: 18,
-              letterSpacing: -0.8,
+              letterSpacing: -0.5,
               color: colors.textPrimary,
             ),
           ),
@@ -151,13 +141,7 @@ class _NavContentState extends State<_NavContent> {
                 isSelected: nav.selectedNavItem == AppConstants.navCompleted,
                 onTap: () => nav.selectNav(AppConstants.navCompleted),
               ),
-              SidebarItem(
-                label: 'Trash',
-                icon: PhosphorIcons.trash(),
-                isSelected: nav.selectedNavItem == AppConstants.navTrash,
-                onTap: () => nav.selectNav(AppConstants.navTrash),
-              ),
-              _gradientDivider(colors),
+              sidebarDivider(colors),
               _sectionHeader(context, 'Smart Lists'),
               SidebarItem(
                 label: 'High Priority',
@@ -177,7 +161,7 @@ class _NavContentState extends State<_NavContent> {
                 isSelected: nav.selectedNavItem == AppConstants.navFlagged,
                 onTap: () => nav.selectNav(AppConstants.navFlagged),
               ),
-              _gradientDivider(colors),
+              sidebarDivider(colors),
               _sectionHeader(context, 'My Lists'),
               ...lists.activeLists.map((list) {
                 final navId = 'list_${list.id}';
@@ -201,34 +185,24 @@ class _NavContentState extends State<_NavContent> {
   Widget _sectionHeader(BuildContext context, String title) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: AppTypography.micro.copyWith(
+        style: AppTypography.sectionHeader.copyWith(
           fontSize: 10,
-          color: colors.textQuaternary,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 1.2,
+          color: colors.textPrimary.withValues(alpha: 0.40),
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0, // 0.1em
         ),
       ),
     );
   }
 
-  Widget _gradientDivider(AppColorsExtension colors) {
+  Widget sidebarDivider(AppColorsExtension colors) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      height: 0.5,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            colors.divider,
-            colors.divider,
-            Colors.transparent,
-          ],
-          stops: const [0.0, 0.2, 0.8, 1.0],
-        ),
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 1,
+      color: colors.border,
     );
   }
 
@@ -378,6 +352,8 @@ class _SidebarFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final nav = context.watch<NavigationProvider>();
+    final focus = context.watch<FocusProvider>();
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       decoration: BoxDecoration(
@@ -385,6 +361,20 @@ class _SidebarFooter extends StatelessWidget {
       ),
       child: Row(
         children: [
+          _SidebarIconBtn(
+            icon: focus.isActive ? PhosphorIcons.timer(PhosphorIconsStyle.fill) : PhosphorIcons.timer(),
+            onTap: () {
+              if (focus.isActive) return;
+              showDialog(
+                context: context,
+                barrierColor: Colors.black.withValues(alpha: 0.4),
+                builder: (context) => const Center(child: SessionSetupDialog()),
+              );
+            },
+            isActive: focus.isActive,
+            color: focus.isActive ? AppColors.red : null,
+          ),
+          const SizedBox(width: 6),
           _SidebarIconBtn(
             icon: Icons.settings_outlined,
             onTap: () => nav.selectNav(AppConstants.navSettings),
@@ -406,11 +396,13 @@ class _SidebarIconBtn extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool isActive;
+  final Color? color;
 
   const _SidebarIconBtn({
     required this.icon,
     required this.onTap,
     this.isActive = false,
+    this.color,
   });
 
   @override
@@ -435,7 +427,7 @@ class _SidebarIconBtnState extends State<_SidebarIconBtn> {
           height: 32,
           decoration: BoxDecoration(
             color: widget.isActive
-                ? AppColors.primary.withValues(alpha: 0.12)
+                ? (widget.color ?? AppColors.primary).withValues(alpha: 0.12)
                 : _hovered
                     ? (colors.isDark
                         ? Colors.white.withValues(alpha: 0.08)
@@ -446,7 +438,7 @@ class _SidebarIconBtnState extends State<_SidebarIconBtn> {
           child: Icon(
             widget.icon,
             size: 18,
-            color: widget.isActive ? AppColors.primary : colors.textSecondary,
+            color: widget.isActive ? (widget.color ?? AppColors.primary) : colors.textSecondary,
           ),
         ),
       ),

@@ -12,6 +12,9 @@ import '../theme/typography.dart';
 import '../theme/wallpaper_presets.dart';
 import '../painters/wallpaper_pattern_painter.dart';
 import '../services/wallpaper_image_service.dart';
+import '../models/sticker.dart';
+import '../data/app_stickers.dart';
+import '../widgets/shared/deco_sticker.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -135,6 +138,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 4: return const _AboutSection();
       default: return const SizedBox.shrink();
     }
+  }
+}
+
+class _SettingsSectionHeader extends StatelessWidget {
+  final Sticker sticker;
+  final String title;
+  const _SettingsSectionHeader({required this.sticker, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DecoSticker(sticker: sticker, size: 48),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: AppTypography.title1.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 40,
+            height: 3,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -280,8 +322,12 @@ class _AppearanceSection extends StatelessWidget {
     final colorOptions = settings.accentColorOptions;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _SettingsSectionHeader(
+          sticker: AppStickers.settingsAppearance,
+          title: 'Appearance',
+        ),
         _SectionCard(
           title: 'Theme',
           children: [
@@ -464,8 +510,12 @@ class _LayoutDensitySection extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _SettingsSectionHeader(
+          sticker: AppStickers.settingsLayout,
+          title: 'Layout & Density',
+        ),
         _SectionCard(
           title: 'Default View',
           children: [
@@ -730,8 +780,12 @@ class _WallpaperSection extends StatelessWidget {
     final wallType = settings.settings.wallpaperType;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _SettingsSectionHeader(
+          sticker: AppStickers.settingsWallpaper,
+          title: 'Wallpaper',
+        ),
 
         // ── TYPE SELECTOR ─────────────────────────────────────────
         _SectionCard(
@@ -1222,8 +1276,12 @@ class _TasksDefaultsSection extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _SettingsSectionHeader(
+          sticker: AppStickers.settingsTasks,
+          title: 'Tasks & Defaults',
+        ),
         _SectionCard(
           title: 'Defaults',
           children: [
@@ -1350,8 +1408,12 @@ class _AboutSectionState extends State<_AboutSection> {
     final accent = Theme.of(context).colorScheme.primary;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _SettingsSectionHeader(
+          sticker: AppStickers.settingsAbout,
+          title: 'About',
+        ),
         _SectionCard(
           title: 'App Info',
           children: [

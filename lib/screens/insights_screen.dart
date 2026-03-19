@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../providers/task_provider.dart';
 import '../providers/list_provider.dart';
 import '../theme/app_theme.dart';
@@ -9,6 +10,9 @@ import '../theme/colors.dart';
 import '../utils/constants.dart';
 import '../widgets/charts/completion_chart.dart';
 import '../widgets/charts/heatmap_chart.dart';
+import '../widgets/shared/progress_ring.dart';
+import '../services/storage_service.dart';
+import 'package:intl/intl.dart';
 
 class InsightsScreen extends StatelessWidget {
   const InsightsScreen({super.key});
@@ -38,6 +42,12 @@ class InsightsScreen extends StatelessWidget {
               child: const HeatmapChart(),
             ),
             const SizedBox(height: 20),
+            // Focus Stats
+            _Section(
+              title: 'Focus Stats (Last 7 Days)',
+              child: const _FocusStatsCard(),
+            ),
+            const SizedBox(height: 20),
             // Category breakdown
             _CategoryBreakdown(),
           ],
@@ -52,40 +62,51 @@ class _StatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tasks = context.watch<TaskProvider>();
     final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final todayCount = tasks.completedInRange(todayStart, todayEnd);
+    final todayTarget = 5; // Example target
+    
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final weekCount = tasks.completedInRange(weekStart, now);
+    
     final monthStart = DateTime(now.year, now.month, 1);
+    final monthCount = tasks.completedInRange(monthStart, now);
 
     return Row(
       children: [
         Expanded(child: _StatCard(
           label: 'Today',
-          value: '${tasks.completedInRange(
-            DateTime(now.year, now.month, now.day),
-            DateTime(now.year, now.month, now.day, 23, 59, 59),
-          )}',
-          icon: Icons.today_rounded,
-          color: AppColors.blue,
+          value: '$todayCount/$todayTarget',
+          icon: PhosphorIcons.calendar(),
+          color: AppColors.primary,
+          trailing: ProgressRing(
+            value: (todayCount / todayTarget).clamp(0.0, 1.0),
+            size: 32,
+            strokeWidth: 3,
+          ),
         )),
         const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'This Week',
-          value: '${tasks.completedInRange(weekStart, now)}',
-          icon: Icons.date_range_rounded,
-          color: AppColors.purple,
+          value: '$weekCount',
+          icon: PhosphorIcons.calendarBlank(),
+          color: AppColors.warning,
+          // Sparkline placeholder...
         )),
         const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'This Month',
-          value: '${tasks.completedInRange(monthStart, now)}',
-          icon: Icons.calendar_month_rounded,
-          color: AppColors.green,
+          value: '$monthCount',
+          icon: PhosphorIcons.calendarCheck(),
+          color: AppColors.success,
         )),
         const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'Streak',
           value: '${tasks.currentStreak}d',
-          icon: Icons.local_fire_department_rounded,
-          color: AppColors.orange,
+          icon: PhosphorIcons.fire(PhosphorIconsStyle.fill),
+          color: AppColors.danger,
         )),
       ],
     );
@@ -98,48 +119,57 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.trailing,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final Color color;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.isDark
-            ? const Color(0xFF2A2725).withValues(alpha: 0.90)
-            : Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(AppConstants.radiusCard),
-        border: Border.all(color: colors.isDark ? colors.border : colors.border.withValues(alpha: 0.5)),
-        boxShadow: colors.isDark ? [] : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 18, color: color),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: AppTypography.sectionHeader.copyWith(
+                  fontSize: 10,
+                  color: colors.textSecondary.withValues(alpha: 0.55),
+                ),
+              ),
+              Icon(icon, size: 14, color: color.withValues(alpha: 0.6)),
+            ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: AppTypography.title1.copyWith(color: colors.textPrimary)),
-          const SizedBox(height: 2),
-          Text(label, style: AppTypography.caption.copyWith(color: colors.textSecondary)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: AppTypography.taskTitle.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textPrimary,
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
         ],
       ),
     );
@@ -155,26 +185,23 @@ class _Section extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colors.isDark
-            ? const Color(0xFF2A2725).withValues(alpha: 0.90)
-            : Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(AppConstants.radiusCard),
-        border: Border.all(color: colors.isDark ? colors.border : colors.border.withValues(alpha: 0.5)),
-        boxShadow: colors.isDark ? [] : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTypography.bodySemibold.copyWith(color: colors.textPrimary, fontSize: 13)),
-          const SizedBox(height: 12),
+          Text(
+            title.toUpperCase(),
+            style: AppTypography.sectionHeader.copyWith(
+              fontSize: 10,
+              color: colors.textSecondary.withValues(alpha: 0.55),
+            ),
+          ),
+          const SizedBox(height: 20),
           child,
         ],
       ),
@@ -260,5 +287,162 @@ class _CategoryBreakdown extends StatelessWidget {
         ),
       ]),
     ));
+  }
+}
+class _FocusStatsCard extends StatelessWidget {
+  const _FocusStatsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+    final stats = StorageService.instance.getFocusStats();
+    
+    // Process last 7 days
+    final now = DateTime.now();
+    final last7Days = List.generate(7, (i) {
+      final date = now.subtract(Duration(days: 6 - i));
+      final dateStr = date.toIso8601String().split('T')[0];
+      return MapEntry(date, stats[dateStr] ?? 0);
+    });
+
+    final totalMinutes = last7Days.fold(0, (sum, e) => sum + e.value);
+    final maxMinutes = last7Days.map((e) => e.value).fold(0, (a, b) => a > b ? a : b);
+    final yInterval = (maxMinutes / 4).clamp(1.0, 60.0).ceilToDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _MiniStat(label: 'Total Focused', value: '${totalMinutes}m', color: AppColors.red),
+            const SizedBox(width: 24),
+            _MiniStat(
+              label: 'Daily Avg', 
+              value: '${(totalMinutes / 7).round()}m', 
+              color: AppColors.orange
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 180,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: (maxMinutes * 1.2).clamp(10.0, double.infinity),
+              barTouchData: BarTouchData(enabled: true),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      if (index < 0 || index >= 7) return const SizedBox.shrink();
+                      final date = last7Days[index].key;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          DateFormat('E').format(date)[0],
+                          style: AppTypography.caption.copyWith(
+                            fontSize: 10,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    interval: yInterval,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        '${value.toInt()}m',
+                        style: AppTypography.caption.copyWith(
+                          fontSize: 9,
+                          color: colors.textTertiary,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: yInterval,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: colors.border.withValues(alpha: 0.5),
+                  strokeWidth: 1,
+                  dashArray: [4, 4],
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: List.generate(7, (i) {
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: last7Days[i].value.toDouble(),
+                      color: AppColors.red,
+                      width: 14,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: true,
+                        toY: (maxMinutes * 1.2).clamp(10.0, double.infinity),
+                        color: colors.isDark 
+                            ? Colors.white.withValues(alpha: 0.05) 
+                            : Colors.black.withValues(alpha: 0.03),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MiniStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.caption.copyWith(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: colors.textQuaternary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: AppTypography.taskTitle.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 }

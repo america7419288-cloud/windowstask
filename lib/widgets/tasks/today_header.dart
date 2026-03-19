@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../theme/typography.dart';
 import 'package:provider/provider.dart';
-import '../../providers/celebration_provider.dart';
+import '../../models/sticker.dart';
+import '../../theme/typography.dart';
+import '../../theme/colors.dart';
+import '../../theme/app_theme.dart';
+import '../../data/app_stickers.dart';
+import '../shared/deco_sticker.dart';
+import '../../providers/navigation_provider.dart';
 
 class TodayHeader extends StatelessWidget {
   final int taskCount;
@@ -15,93 +20,81 @@ class TodayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final nav = context.watch<NavigationProvider>();
+    
+    final isDone = taskCount > 0 && completedCount == taskCount;
+    final sticker = isDone ? AppStickers.todayAllDone : _getTimeSticker();
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
       decoration: BoxDecoration(
-        gradient: _timeBasedGradient(),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+        color: colors.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colors.border,
+            width: 1,
           ),
-        ],
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
                   _greeting(),
-                  style: AppTypography.title2.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
+                  style: AppTypography.title1.copyWith(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                    letterSpacing: -0.8,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _dateString(),
-                  style: AppTypography.callout.copyWith(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '• ${_taskSummary()}',
-                  style: AppTypography.caption.copyWith(
-                    color: Colors.white.withValues(alpha: 0.88),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              ),
+              DecoSticker(
+                sticker: sticker,
+                size: 64,
+                animate: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _dateString(),
+            style: AppTypography.callout.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: colors.textTertiary,
             ),
           ),
-          _DailyProgressRing(
-            completed: completedCount,
-            total: taskCount,
-          ),
+          if (DateTime.now().hour < 12 && nav.mitTaskIds.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _PlanningButton(),
+            ),
         ],
       ),
     );
   }
 
-  LinearGradient _timeBasedGradient() {
+  Sticker _getTimeSticker() {
     final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) {
-      return const LinearGradient(
-        colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-      );
-    } else if (hour >= 12 && hour < 17) {
-      return const LinearGradient(
-        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-      );
-    } else if (hour >= 17 && hour < 21) {
-      return const LinearGradient(
-        colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-      );
-    } else {
-      return const LinearGradient(
-        colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-      );
-    }
+    if (hour >= 5 && hour < 12) return AppStickers.todayMorning;
+    if (hour >= 12 && hour < 17) return AppStickers.todayAfternoon;
+    if (hour >= 17 && hour < 21) return AppStickers.todayEvening;
+    return AppStickers.todayNight;
   }
 
   String _greeting() {
     final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return 'Good morning ☀️';
-    if (hour >= 12 && hour < 17) return 'Good afternoon 🌤';
-    if (hour >= 17 && hour < 21) return 'Good evening 🌆';
-    return 'Good night 🌙';
+    if (hour >= 5 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    if (hour >= 17 && hour < 21) return 'Good evening';
+    return 'Good night';
   }
 
   String _dateString() {
@@ -111,111 +104,41 @@ class TodayHeader extends StatelessWidget {
                     'July', 'August', 'September', 'October', 'November', 'December'];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
-
-  String _taskSummary() {
-    if (taskCount == 0) return 'Nothing scheduled — enjoy your day ✨';
-    if (completedCount == taskCount) return 'All $taskCount tasks done! 🎉';
-    if (completedCount == 0) return '$taskCount tasks to tackle today 💪';
-    return '$completedCount of $taskCount done';
-  }
 }
 
-class _DailyProgressRing extends StatelessWidget {
-  final int completed;
-  final int total;
-
-  const _DailyProgressRing({super.key, required this.completed, required this.total});
-
+class _PlanningButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final progress = total == 0 ? 0.0 : completed / total;
-    final percent = (progress * 100).round();
-    final isAllDone = progress >= 1.0;
-    final ringColor = isAllDone ? const Color(0xFFFFD60A) : Colors.white;
-
-    return SizedBox(
-      width: 60,
-      height: 60,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background track
-          SizedBox(
-            width: 60, height: 60,
-            child: CircularProgressIndicator(
-              value: 1.0,
-              strokeWidth: 5,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.white.withValues(alpha: 0.2),
+    return GestureDetector(
+      onTap: () => context.read<NavigationProvider>().enterPlanningMode(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: AppColors.gradientPrimary,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.sunny_snowing, size: 14, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              'Plan my day',
+              style: AppTypography.caption.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-          // Progress arc with gold celebration
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: progress),
-            duration: const Duration(milliseconds: 1200),
-            curve: Curves.easeOutCubic,
-            builder: (_, value, __) => TweenAnimationBuilder<Color?>(
-              tween: ColorTween(begin: Colors.white, end: ringColor),
-              duration: const Duration(milliseconds: 600),
-              builder: (_, color, __) => SizedBox(
-                width: 60, height: 60,
-                child: CircularProgressIndicator(
-                  value: value,
-                  strokeWidth: 5,
-                  strokeCap: StrokeCap.round,
-                  valueColor: AlwaysStoppedAnimation(color ?? Colors.white),
-                ),
-              ),
-            ),
-          ),
-          // Center text
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isAllDone)
-                const Text('🎉', style: TextStyle(fontSize: 18))
-              else ...[
-                Text(
-                  '$percent%',
-                  style: AppTypography.bodySemibold.copyWith(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  'done',
-                  style: AppTypography.micro.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
-
-class _HeaderShimmerPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.white.withValues(alpha: 0.12),
-          Colors.white.withValues(alpha: 0.0),
-          Colors.white.withValues(alpha: 0.06),
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size, paint);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
