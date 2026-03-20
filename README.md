@@ -1,4 +1,4 @@
-# Taski 🎨
+# KeepList 🎨
 
 **The most aesthetic, sticker-driven task manager for Windows & Web.**
 
