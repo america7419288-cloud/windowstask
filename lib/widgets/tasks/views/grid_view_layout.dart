@@ -98,18 +98,80 @@ class _GridTaskCardState extends State<_GridTaskCard> {
               )
             ] : CardDesign.shadow(context),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(CardDesign.radius - 1),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _GridCover(task: t),
-                Expanded(child: _GridContent(task: t)),
-                _GridFooter(task: t),
-              ],
-            ),
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(CardDesign.radius - 1),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _GridCover(task: t),
+                    Expanded(child: _GridContent(task: t)),
+                    _GridFooter(task: t),
+                  ],
+                ),
+              ),
+              // Quick Actions Overlay
+              Positioned(
+                top: 8,
+                right: 8,
+                child: AnimatedOpacity(
+                  opacity: _hovered ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _QuickActionButton(
+                          icon: t.isCompleted ? PhosphorIcons.circle(PhosphorIconsStyle.bold) : PhosphorIcons.checkCircle(PhosphorIconsStyle.bold),
+                          color: t.isCompleted ? colors.textTertiary : AppColors.primary,
+                          onTap: () => context.read<TaskProvider>().toggleComplete(t.id),
+                        ),
+                        _QuickActionButton(
+                          icon: PhosphorIcons.flag(t.isFlagged ? PhosphorIconsStyle.fill : PhosphorIconsStyle.bold),
+                          color: t.isFlagged ? AppColors.orange : colors.textTertiary,
+                          onTap: () => context.read<TaskProvider>().toggleFlag(t.id),
+                        ),
+                        _QuickActionButton(
+                          icon: PhosphorIcons.trash(PhosphorIconsStyle.bold),
+                          color: AppColors.priorityHigh,
+                          onTap: () => context.read<TaskProvider>().moveToTrash(t.id),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _QuickActionButton({required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(icon, size: 16, color: color),
       ),
     );
   }

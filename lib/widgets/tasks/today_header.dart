@@ -71,6 +71,8 @@ class TodayHeader extends StatelessWidget {
               color: colors.textTertiary,
             ),
           ),
+          const SizedBox(height: 16),
+          _QuoteCard(),
           if (DateTime.now().hour < 12 && nav.mitTaskIds.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -96,13 +98,65 @@ class TodayHeader extends StatelessWidget {
     if (hour >= 17 && hour < 21) return 'Good evening';
     return 'Good night';
   }
-
   String _dateString() {
     final now = DateTime.now();
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
                     'July', 'August', 'September', 'October', 'November', 'December'];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+}
+
+class _QuoteCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final quotes = [
+      "Focus is a matter of deciding what things you're not going to do.",
+      "The secret of getting ahead is getting started.",
+      "Your mind is for having ideas, not holding them.",
+      "Simple can be harder than complex: You have to work hard to get your thinking clean.",
+      "Yesterday is not ours to recover, but tomorrow is ours to win or lose.",
+      "Absorb what is useful, discard what is not, add what is uniquely your own.",
+      "The way to get started is to quit talking and begin doing."
+    ];
+    
+    final now = DateTime.now();
+    final quoteIndex = (now.year + now.month + now.day) % quotes.length;
+    final quote = quotes[quoteIndex];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.format_quote_rounded, color: AppColors.primary, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              quote,
+              style: AppTypography.body.copyWith(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: colors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

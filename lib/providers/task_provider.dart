@@ -12,6 +12,7 @@ import '../utils/constants.dart';
 import 'celebration_provider.dart';
 import '../models/sticker.dart';
 import '../services/reminder_service.dart';
+import '../utils/sticker_suggester.dart';
 
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
@@ -170,6 +171,7 @@ class TaskProvider extends ChangeNotifier {
     String? recurrenceJson,
   }) async {
     final now = DateTime.now();
+    final autoStickerId = StickerSuggester.suggest(title);
     final task = Task(
       id: _uuid.v4(),
       title: title,
@@ -182,6 +184,7 @@ class TaskProvider extends ChangeNotifier {
       tags: tags ?? [],
       isFlagged: isFlagged,
       recurrenceJson: recurrenceJson,
+      stickerId: autoStickerId,
       createdAt: now,
       updatedAt: now,
       sortOrder: _tasks.length,
