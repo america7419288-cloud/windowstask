@@ -10,6 +10,8 @@ import '../../utils/constants.dart';
 import '../../utils/date_utils.dart';
 import '../../services/nlp_parser.dart';
 import '../../models/task.dart';
+import '../../models/sticker.dart';
+import '../../data/app_stickers.dart';
 import '../../widgets/shared/priority_badge.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -26,13 +28,34 @@ class _QuickAddBarState extends State<QuickAddBar> {
   final FocusNode _focusNode = FocusNode();
   bool _focused = false;
   ParsedTaskInput? _parsed;
+  Sticker? _suggestedSticker;
 
   bool _hasDetectedAnything(ParsedTaskInput p) {
     return p.dueDate != null ||
         p.dueHour != null ||
         p.priority != null ||
         p.isFlagged ||
-        p.recurrence != null;
+        p.recurrence != null ||
+        _suggestedSticker != null;
+  }
+
+  void _analyzeForStickers(String text) {
+    final lower = text.toLowerCase();
+    Sticker? suggested;
+    
+    if (lower.contains('gym') || lower.contains('work') || lower.contains('run') || lower.contains('sport') || lower.contains('fit')) {
+      suggested = AppStickers.fitness;
+    } else if (lower.contains('work') || lower.contains('office') || lower.contains('code') || lower.contains('dev') || lower.contains('meet')) {
+      suggested = AppStickers.work;
+    } else if (lower.contains('care') || lower.contains('doctor') || lower.contains('health') || lower.contains('med')) {
+      suggested = AppStickers.care;
+    } else if (lower.contains('study') || lower.contains('exam') || lower.contains('book') || lower.contains('learn') || lower.contains('focus')) {
+      suggested = AppStickers.focus;
+    }
+
+    if (_suggestedSticker != suggested) {
+      setState(() => _suggestedSticker = suggested);
+    }
   }
 
   @override
@@ -44,7 +67,10 @@ class _QuickAddBarState extends State<QuickAddBar> {
         context.read<NavigationProvider>().closeQuickAdd();
       }
     });
-    _controller.addListener(() => setState(() {}));
+    _controller.addListener(() {
+      _analyzeForStickers(_controller.text);
+      setState(() {});
+    });
   }
 
   @override
@@ -114,7 +140,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
                   ),
                   decoration: InputDecoration(
                     hintText: _focused
-                        ? 'e.g. \"Submit report tomorrow 3pm !high\"'
+                        ? 'e.g. "Submit report tomorrow 3pm !high"'
                         : 'Add a task',
                     hintStyle: AppTypography.body.copyWith(
                       color: colors.textTertiary,
@@ -167,38 +193,45 @@ class _QuickAddBarState extends State<QuickAddBar> {
           ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            child: _parsed != null && _hasDetectedAnything(_parsed!)
+            child: (_parsed != null && _hasDetectedAnything(_parsed!)) || _suggestedSticker != null
                 ? Padding(
                     padding: const EdgeInsets.fromLTRB(36, 0, 12, 4),
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        if (_parsed!.dueDate != null)
+                        if (_suggestedSticker != null)
+                          _PreviewChip(
+                            icon: Icons.auto_awesome_rounded,
+                            label: '${_suggestedSticker!.emoji} Suggest: ${_suggestedSticker!.name}',
+                            color: AppColors.purple,
+                            isBadge: true,
+                          ),
+                        if (_parsed != null && _parsed!.dueDate != null)
                           _PreviewChip(
                             icon: Icons.schedule_rounded,
                             label: AppDateUtils.formatShortDate(_parsed!.dueDate!),
                             color: AppColors.blue,
                           ),
-                        if (_parsed!.dueHour != null)
+                        if (_parsed != null && _parsed!.dueHour != null)
                           _PreviewChip(
                             icon: Icons.access_time_rounded,
                             label: '${_parsed!.dueHour.toString().padLeft(2, '0')}:${(_parsed!.dueMinute ?? 0).toString().padLeft(2, '0')}',
                             color: AppColors.indigo,
                           ),
-                        if (_parsed!.priority != null && _parsed!.priority != Priority.none)
+                        if (_parsed != null && _parsed!.priority != null && _parsed!.priority != Priority.none)
                           _PreviewChip(
                             icon: Icons.flag_rounded,
                             label: PriorityBadge.labelForPriority(_parsed!.priority!),
                             color: AppColors.priorityHigh,
                           ),
-                        if (_parsed!.isFlagged)
+                        if (_parsed != null && _parsed!.isFlagged)
                           _PreviewChip(
                             icon: Icons.bookmark_rounded,
                             label: 'Flagged',
                             color: AppColors.orange,
                           ),
-                        if (_parsed!.recurrence != null)
+                        if (_parsed != null && _parsed!.recurrence != null)
                           _PreviewChip(
                             icon: Icons.repeat_rounded,
                             label: _parsed!.recurrence!.displayLabel,
@@ -214,7 +247,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
     );
   }
 
-  void _submit(String value) {
+  void _submit(String value) async {
     final parsed = NlpParser.parse(value);
     if (parsed.title.isEmpty) return;
 
@@ -253,7 +286,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
       }
     }
 
-    tasks.createTask(
+    final newTask = await tasks.createTask(
       title: parsed.title,
       listId: listId,
       dueDate: dueDate,
@@ -263,8 +296,19 @@ class _QuickAddBarState extends State<QuickAddBar> {
       priority: priority,
       recurrenceJson: parsed.recurrence != null ? jsonEncode(parsed.recurrence!.toJson()) : null,
     );
+
+    // Apply the suggested sticker if it was present
+    if (_suggestedSticker != null) {
+      await tasks.updateSticker(newTask.id, _suggestedSticker);
+    }
+
     _controller.clear();
-    setState(() => _parsed = null);
+    if (mounted) {
+      setState(() {
+        _parsed = null;
+        _suggestedSticker = null;
+      });
+    }
   }
 }
 
@@ -272,10 +316,12 @@ class _PreviewChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final bool isBadge;
   const _PreviewChip({
     required this.icon,
     required this.label,
     required this.color,
+    this.isBadge = false,
   });
 
   @override
@@ -283,10 +329,10 @@ class _PreviewChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: color.withValues(alpha: isBadge ? 0.20 : 0.10),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withValues(alpha: 0.25),
+          color: color.withValues(alpha: isBadge ? 0.40 : 0.25),
           width: 0.75,
         ),
       ),

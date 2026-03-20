@@ -17,9 +17,7 @@ class CardDesign {
   static BoxBorder border(BuildContext context) {
     final colors = context.appColors;
     return Border.all(
-      color: colors.isDark 
-          ? Colors.white.withValues(alpha: 0.08) 
-          : Colors.black.withValues(alpha: 0.08),
+      color: colors.border,
       width: borderWidth,
     );
   }
@@ -38,7 +36,7 @@ class CardDesign {
 
   static Color background(BuildContext context) {
     final colors = context.appColors;
-    return colors.isDark ? const Color(0xFF1E1C1A) : Colors.white;
+    return colors.surfaceElevated;
   }
 }
 
@@ -72,14 +70,19 @@ class CardTagPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.10),
+        color: colors.isDark
+            ? accent.withValues(alpha: 0.15)
+            : accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: accent.withValues(alpha: 0.20),
+          color: colors.isDark
+              ? accent.withValues(alpha: 0.25)
+              : accent.withValues(alpha: 0.15),
           width: 0.75,
         ),
       ),
@@ -208,10 +211,11 @@ class PriorityBadgeInline extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = getPriorityColor(priority);
     final label = getPriorityLabel(priority);
+    final isDark = context.appColors.isDark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: isDark ? color.withValues(alpha: 0.20) : color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(

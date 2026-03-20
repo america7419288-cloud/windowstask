@@ -79,29 +79,34 @@ class _GridTaskCardState extends State<_GridTaskCard> {
           }
         },
         onLongPress: () => nav.enterSelectionMode(t.id),
-        child: AnimatedScale(
-          scale: _hovered ? 1.02 : 1.0,
-          duration: const Duration(milliseconds: 180),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
-          child: Container(
-            decoration: BoxDecoration(
-              color: CardDesign.background(context),
-              borderRadius: BorderRadius.circular(CardDesign.radius),
-              border: isSelected 
-                  ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
-                  : CardDesign.border(context),
-              boxShadow: CardDesign.shadow(context),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(CardDesign.radius - 1),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _GridCover(task: t),
-                  Expanded(child: _GridContent(task: t)),
-                  _GridFooter(task: t),
-                ],
-              ),
+          transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
+          decoration: BoxDecoration(
+            color: CardDesign.background(context),
+            borderRadius: BorderRadius.circular(CardDesign.radius),
+            border: isSelected 
+                ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                : CardDesign.border(context),
+            boxShadow: _hovered ? [
+              BoxShadow(
+                color: colors.isDark ? Colors.black.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.1),
+                blurRadius: 15,
+                spreadRadius: 1,
+                offset: const Offset(0, 8),
+              )
+            ] : CardDesign.shadow(context),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(CardDesign.radius - 1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _GridCover(task: t),
+                Expanded(child: _GridContent(task: t)),
+                _GridFooter(task: t),
+              ],
             ),
           ),
         ),

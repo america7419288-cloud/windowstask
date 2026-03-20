@@ -89,7 +89,7 @@ class _CompactRowState extends State<_CompactRow> {
                 : _hovered ? colors.surface.withValues(alpha: 0.5) : Colors.transparent,
             border: Border(
               left: BorderSide(color: priorityColor, width: 3),
-              bottom: BorderSide(color: colors.divider.withValues(alpha: 0.5), width: 0.5),
+              bottom: BorderSide(color: colors.border.withValues(alpha: 0.4), width: 0.5),
             ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

@@ -170,7 +170,7 @@ class _KanbanColumnWidgetState extends State<_KanbanColumnWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: colors.isDark ? 0.20 : 0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text('${widget.tasks.length}',

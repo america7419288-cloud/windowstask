@@ -101,8 +101,8 @@ class _MagazineCardState extends State<_MagazineCard> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        getPriorityColor(t.priority).withValues(alpha: 0.12),
-                        getPriorityColor(t.priority).withValues(alpha: 0.02),
+                        getPriorityColor(t.priority).withValues(alpha: colors.isDark ? 0.25 : 0.12),
+                        getPriorityColor(t.priority).withValues(alpha: colors.isDark ? 0.08 : 0.02),
                       ],
                     ),
                   ),

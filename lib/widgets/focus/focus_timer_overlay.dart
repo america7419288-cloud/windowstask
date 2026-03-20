@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -15,7 +16,7 @@ class FocusTimerOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
+    final isDark = colors.isDark;
 
     return Consumer<FocusProvider>(
       builder: (context, focus, _) {
@@ -32,129 +33,128 @@ class FocusTimerOverlay extends StatelessWidget {
           child: Material(
             elevation: 0,
             color: Colors.transparent,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 240,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colors.isDark 
-                    ? const Color(0xFF1C1C1E).withValues(alpha: 0.95) 
-                    : Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: statusColor.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 32,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                border: Border.all(
-                  color: statusColor.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Icon(
-                        isBreak ? PhosphorIcons.coffee() : PhosphorIcons.timer(),
-                        size: 16,
-                        color: statusColor,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  width: 260,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: AppColors.glassBackground(isDark),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: statusColor.withValues(alpha: focus.isActive ? 0.2 : 0.05),
+                        blurRadius: focus.isActive ? 30 : 15,
+                        spreadRadius: focus.isActive ? 4 : 0,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          isBreak ? 'Break Time' : 'Focus Session',
-                          style: AppTypography.caption.copyWith(
+                    ],
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: isDark ? 0.3 : 0.1),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Icon(
+                            isBreak ? PhosphorIcons.coffee() : PhosphorIcons.timer(),
+                            size: 16,
                             color: statusColor,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isBreak ? 'Break Time' : 'Focus Session',
+                              style: AppTypography.caption.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => focus.stopFocus(),
+                            child: Icon(PhosphorIcons.x(), size: 14, color: colors.textQuaternary),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Timer
+                      Text(
+                        focus.timeDisplay,
+                        style: AppTypography.headline.copyWith(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Progress
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: focus.progress,
+                          minHeight: 4,
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.05),
+                          valueColor: AlwaysStoppedAnimation(statusColor),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Session Goals checklist
+                      if (!isBreak && focus.sessionTaskIds.isNotEmpty) ...[
+                        _SectionTitle(title: 'GOALS', color: colors.textQuaternary),
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 120),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: focus.sessionTaskIds.map((taskId) {
+                                return _GoalItem(taskId: taskId);
+                              }).toList(),
+                            ),
                           ),
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () => focus.stopFocus(),
-                        child: Icon(PhosphorIcons.x(), size: 14, color: colors.textQuaternary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                        const SizedBox(height: 16),
+                      ],
 
-                  // Timer
-                  Text(
-                    focus.timeDisplay,
-                    style: AppTypography.headline.copyWith(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Progress
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: focus.progress,
-                      minHeight: 4,
-                      backgroundColor: colors.isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.black.withValues(alpha: 0.05),
-                      valueColor: AlwaysStoppedAnimation(statusColor),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Session Goals checklist
-                  if (!isBreak && focus.sessionTaskIds.isNotEmpty) ...[
-                    _SectionTitle(title: 'GOALS', color: colors.textQuaternary),
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 120),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: focus.sessionTaskIds.map((taskId) {
-                            return _GoalItem(taskId: taskId);
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (focus.state == FocusState.running || focus.state == FocusState.onBreak)
-                        _TimerBtn(
-                          icon: PhosphorIcons.pause(PhosphorIconsStyle.fill),
-                          onTap: () => focus.pauseFocus(),
-                          color: AppColors.orange,
-                        )
-                      else if (focus.state == FocusState.paused)
-                        _TimerBtn(
-                          icon: PhosphorIcons.play(PhosphorIconsStyle.fill),
-                          onTap: () => focus.resumeFocus(),
-                          color: AppColors.green,
-                        ),
-                      const SizedBox(width: 12),
-                      _TimerBtn(
-                        icon: PhosphorIcons.stop(PhosphorIconsStyle.fill),
-                        onTap: () => focus.stopFocus(),
-                        color: AppColors.red,
+                      // Controls
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (focus.state == FocusState.running || focus.state == FocusState.onBreak)
+                            _TimerBtn(
+                              icon: PhosphorIcons.pause(PhosphorIconsStyle.fill),
+                              onTap: () => focus.pauseFocus(),
+                              color: AppColors.orange,
+                            )
+                          else if (focus.state == FocusState.paused)
+                            _TimerBtn(
+                              icon: PhosphorIcons.play(PhosphorIconsStyle.fill),
+                              onTap: () => focus.resumeFocus(),
+                              color: AppColors.green,
+                            ),
+                          const SizedBox(width: 12),
+                          _TimerBtn(
+                            icon: PhosphorIcons.stop(PhosphorIconsStyle.fill),
+                            onTap: () => focus.stopFocus(),
+                            color: AppColors.red,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

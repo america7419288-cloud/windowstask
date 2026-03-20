@@ -17,38 +17,50 @@ import '../shared/deco_sticker.dart';
 import '../../providers/focus_provider.dart';
 import '../focus/session_setup_dialog.dart';
 
+import 'dart:ui';
+
 class Sidebar extends StatelessWidget {
   const Sidebar({super.key});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final isDark = colors.isDark;
+
     return Container(
       width: AppConstants.sidebarWidth,
       decoration: BoxDecoration(
-        color: colors.background,
+        color: Colors.transparent, // Using child blur
         border: Border(
           right: BorderSide(
-            color: colors.border,
+            color: colors.border.withValues(alpha: isDark ? 0.1 : 0.5),
             width: 1.0,
           ),
         ),
       ),
-      child: Column(
-        children: [
-          const SizedBox(height: AppConstants.titlebarHeight),
-          const _SidebarHeader(),
-          const SizedBox(height: 8),
-          Expanded(child: _NavContent()),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: DecoSticker(
-              sticker: AppStickers.sidebarMascot,
-              size: 80,
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            color: AppColors.glassBackground(isDark),
+            child: Column(
+              children: [
+                const SizedBox(height: AppConstants.titlebarHeight),
+                const _SidebarHeader(),
+                const SizedBox(height: 8),
+                Expanded(child: _NavContent()),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DecoSticker(
+                    sticker: AppStickers.sidebarMascot,
+                    size: 80,
+                  ),
+                ),
+                _SidebarFooter(),
+              ],
             ),
           ),
-          _SidebarFooter(),
-        ],
+        ),
       ),
     );
   }

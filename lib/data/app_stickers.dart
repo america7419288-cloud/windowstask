@@ -145,6 +145,39 @@ class AppStickers {
     emoji: '💡',
   );
 
+  // ── Task Suggesters ───────────────────────────────
+  static const Sticker work = Sticker(
+    id: 'deco_task_work',
+    packId: 'decorative',
+    assetPath: 'assets/stickers/deco/bear_work.tgs',
+    name: 'Work',
+    emoji: '💼',
+  );
+
+  static const Sticker focus = Sticker(
+    id: 'deco_task_focus',
+    packId: 'decorative',
+    assetPath: 'assets/stickers/deco/bear_pproductive.tgs',
+    name: 'Focus',
+    emoji: '🎯',
+  );
+
+  static const Sticker care = Sticker(
+    id: 'deco_task_care',
+    packId: 'decorative',
+    assetPath: 'assets/stickers/deco/bear_care.tgs',
+    name: 'Care',
+    emoji: '🤍',
+  );
+
+  static const Sticker fitness = Sticker(
+    id: 'deco_task_fitness',
+    packId: 'decorative',
+    assetPath: 'assets/stickers/deco/funny.tgs', // Using the playful one for fitness
+    name: 'Fitness',
+    emoji: '💪',
+  );
+
   // ── Detail panel ──────────────────────────────────
   static const Sticker detailDefault = Sticker(
     id: 'deco_detail',

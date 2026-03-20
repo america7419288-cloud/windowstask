@@ -10,6 +10,7 @@ import '../services/search_service.dart';
 import '../utils/date_utils.dart';
 import '../utils/constants.dart';
 import 'celebration_provider.dart';
+import '../models/sticker.dart';
 import '../services/reminder_service.dart';
 
 class TaskProvider extends ChangeNotifier {
@@ -24,6 +25,22 @@ class TaskProvider extends ChangeNotifier {
   void init() {
     _tasks = StorageService.instance.getAllTasks();
     ReminderService.instance.updateTasks(_tasks);
+  }
+
+  // ─── Sticker support ──────────────────────────────────────────────────────
+  
+  Future<void> updateSticker(String taskId, Sticker? sticker) async {
+    final idx = _tasks.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+    
+    final updated = _tasks[idx].copyWith(
+      stickerId: sticker?.id,
+      clearSticker: sticker == null,
+      updatedAt: DateTime.now(),
+    );
+    _tasks[idx] = updated;
+    await StorageService.instance.saveTask(updated);
+    notifyListeners();
   }
 
   // ─── Counts ───────────────────────────────────────────────────────────────

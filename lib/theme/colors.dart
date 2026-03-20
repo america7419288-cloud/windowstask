@@ -65,6 +65,12 @@ class AppColors {
     }
   }
 
+  static Color glassBackground(bool isDark) {
+    return isDark 
+        ? const Color(0x99111827) // Stronger dark glass
+        : const Color(0xB3FFFFFF); // Milky light glass
+  }
+
   static BoxDecoration elevatedDecoration({
     required bool isDark,
     double borderRadius = 12,
@@ -77,15 +83,15 @@ class AppColors {
         width: 1.0,
       ),
       boxShadow: [
-        const BoxShadow(
-          color: Color(0x14000000), // 0.08 opacity black
+        BoxShadow(
+          color: isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0x14000000), 
           blurRadius: 3,
-          offset: Offset(0, 1),
+          offset: const Offset(0, 1),
         ),
-        const BoxShadow(
-          color: Color(0x0A000000), // 0.04 opacity black
+        BoxShadow(
+          color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0x0A000000),
           blurRadius: 12,
-          offset: Offset(0, 4),
+          offset: const Offset(0, 4),
         ),
       ],
     );
