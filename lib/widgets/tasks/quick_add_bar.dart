@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/list_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
@@ -14,7 +15,9 @@ import '../../models/sticker.dart';
 import '../../data/app_stickers.dart';
 import '../../widgets/shared/priority_badge.dart';
 import 'dart:convert';
-import 'dart:async';
+import 'template_picker.dart';
+import '../../providers/template_provider.dart';
+import '../../utils/global_focus_states.dart';
 
 class QuickAddBar extends StatefulWidget {
   const QuickAddBar({super.key});
@@ -71,6 +74,13 @@ class _QuickAddBarState extends State<QuickAddBar> {
       _analyzeForStickers(_controller.text);
       setState(() {});
     });
+    GlobalFocusStates.quickAddFocus.addListener(_onQuickAddFocusRequested);
+  }
+
+  void _onQuickAddFocusRequested() {
+    if (mounted) {
+      _focusNode.requestFocus();
+    }
   }
 
   @override
@@ -86,6 +96,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
 
   @override
   void dispose() {
+    GlobalFocusStates.quickAddFocus.removeListener(_onQuickAddFocusRequested);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -94,154 +105,60 @@ class _QuickAddBarState extends State<QuickAddBar> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final isDark = colors.isDark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(24, 8, 24, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1C1A) : Colors.white,
-        border: Border(
-          bottom: BorderSide(color: colors.divider, width: 0.5),
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: AppColors.ambientShadow(
+          opacity: 0.04,
+          blur: 16,
+          offset: const Offset(0, 3),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Plus icon
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  gradient: _focused ? AppColors.gradientPrimary : null,
-                  color: _focused
-                      ? null
-                      : (isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : AppColors.primary.withValues(alpha: 0.08)),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Icon(
-                  Icons.add_rounded,
-                  size: 16,
-                  color: _focused ? Colors.white : AppColors.primary,
-                ),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  style: AppTypography.body.copyWith(
-                    color: colors.textPrimary,
-                    fontSize: 14,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: _focused
-                        ? 'e.g. "Submit report tomorrow 3pm !high"'
-                        : 'Add a task',
-                    hintStyle: AppTypography.body.copyWith(
-                      color: colors.textTertiary,
-                      fontSize: 14,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _parsed = value.trim().isNotEmpty
-                          ? NlpParser.parse(value)
-                          : null;
-                    });
-                  },
-                  onSubmitted: _submit,
-                ),
-              ),
-              // Save button
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                child: _focused && _controller.text.isNotEmpty
-                    ? Padding(
-                        key: const ValueKey('add_btn'),
-                        padding: const EdgeInsets.only(right: 4),
-                        child: GestureDetector(
-                          onTap: () => _submit(_controller.text),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              gradient: AppColors.gradientPrimary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'Add',
-                              style: AppTypography.caption.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox(key: ValueKey('empty'), width: 4),
-              ),
-            ],
+          Icon(
+            Icons.add_circle_outline_rounded,
+            size: 18,
+            color: AppColors.primary.withValues(alpha: 0.6),
           ),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: (_parsed != null && _hasDetectedAnything(_parsed!)) || _suggestedSticker != null
-                ? Padding(
-                    padding: const EdgeInsets.fromLTRB(36, 0, 12, 4),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (_suggestedSticker != null)
-                          _PreviewChip(
-                            icon: Icons.auto_awesome_rounded,
-                            label: '${_suggestedSticker!.emoji} Suggest: ${_suggestedSticker!.name}',
-                            color: AppColors.purple,
-                            isBadge: true,
-                          ),
-                        if (_parsed != null && _parsed!.dueDate != null)
-                          _PreviewChip(
-                            icon: Icons.schedule_rounded,
-                            label: AppDateUtils.formatShortDate(_parsed!.dueDate!),
-                            color: AppColors.blue,
-                          ),
-                        if (_parsed != null && _parsed!.dueHour != null)
-                          _PreviewChip(
-                            icon: Icons.access_time_rounded,
-                            label: '${_parsed!.dueHour.toString().padLeft(2, '0')}:${(_parsed!.dueMinute ?? 0).toString().padLeft(2, '0')}',
-                            color: AppColors.indigo,
-                          ),
-                        if (_parsed != null && _parsed!.priority != null && _parsed!.priority != Priority.none)
-                          _PreviewChip(
-                            icon: Icons.flag_rounded,
-                            label: PriorityBadge.labelForPriority(_parsed!.priority!),
-                            color: AppColors.priorityHigh,
-                          ),
-                        if (_parsed != null && _parsed!.isFlagged)
-                          _PreviewChip(
-                            icon: Icons.bookmark_rounded,
-                            label: 'Flagged',
-                            color: AppColors.orange,
-                          ),
-                        if (_parsed != null && _parsed!.recurrence != null)
-                          _PreviewChip(
-                            icon: Icons.repeat_rounded,
-                            label: _parsed!.recurrence!.displayLabel,
-                            color: AppColors.teal,
-                          ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              style: AppTypography.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: _focused
+                    ? 'Task title... press Enter to save'
+                    : 'Add a task',
+                hintStyle: AppTypography.bodyMedium.copyWith(
+                  color: colors.textTertiary,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _parsed = value.trim().isNotEmpty ? NlpParser.parse(value) : null;
+                });
+              },
+              onSubmitted: _submit,
+            ),
           ),
+          // NLP preview chips if parsed
+          if (_focused && _controller.text.trim().isNotEmpty)
+            _NlpPreviewRow(
+              parsed: _parsed,
+              suggestedSticker: _suggestedSticker,
+              hasDetected: _parsed != null && _hasDetectedAnything(_parsed!),
+            ),
         ],
       ),
     );
@@ -254,6 +171,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
     final tasks = context.read<TaskProvider>();
     final settings = context.read<SettingsProvider>();
     final nav = context.read<NavigationProvider>();
+    final lists = context.read<ListProvider>();
     final navItem = nav.selectedNavItem;
 
     final now = DateTime.now();
@@ -263,9 +181,22 @@ class _QuickAddBarState extends State<QuickAddBar> {
     String? listId = settings.settings.defaultListId;
     bool isFlagged = parsed.isFlagged;
     Priority priority = parsed.priority ?? Priority.none;
+    List<String> tagsList = parsed.tags;
 
-    // Overlay navigation context if not explicitly parsed
-    if (dueDate == null) {
+    // Resolve listName to listId
+    if (parsed.listName != null) {
+      final name = parsed.listName!.toLowerCase();
+      try {
+        final match = lists.activeLists.firstWhere(
+          (l) => l.name.toLowerCase() == name || l.name.toLowerCase().contains(name));
+        listId = match.id;
+      } catch (_) {
+        // List not found, create it? For now just ignore or use default
+      }
+    }
+
+    // Overlay navigation context if not explicitly parsed and NO list specified
+    if (dueDate == null && parsed.listName == null) {
       switch (navItem) {
         case AppConstants.navToday:
           dueDate = today;
@@ -294,6 +225,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
       dueMinute: parsed.dueMinute,
       isFlagged: isFlagged,
       priority: priority,
+      tags: tagsList,
       recurrenceJson: parsed.recurrence != null ? jsonEncode(parsed.recurrence!.toJson()) : null,
     );
 
@@ -312,6 +244,58 @@ class _QuickAddBarState extends State<QuickAddBar> {
   }
 }
 
+class _NlpPreviewRow extends StatelessWidget {
+  final ParsedTaskInput? parsed;
+  final Sticker? suggestedSticker;
+  final bool hasDetected;
+
+  const _NlpPreviewRow({
+    this.parsed,
+    this.suggestedSticker,
+    required this.hasDetected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasDetected && suggestedSticker == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.only(left: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (suggestedSticker != null)
+            _PreviewChip(
+              icon: Icons.auto_awesome_rounded,
+              label: '${suggestedSticker!.emoji} Suggest',
+              color: AppColors.purple,
+              isBadge: true,
+            ),
+          if (parsed != null && parsed!.listName != null)
+            _PreviewChip(
+              icon: Icons.folder_rounded,
+              label: '#${parsed!.listName}',
+              color: AppColors.blue,
+              isBadge: true,
+            ),
+          if (parsed != null && parsed!.dueDate != null)
+            _PreviewChip(
+              icon: Icons.schedule_rounded,
+              label: AppDateUtils.formatShortDate(parsed!.dueDate!),
+              color: AppColors.blue,
+            ),
+          if (parsed != null && parsed!.priority != null && parsed!.priority != Priority.none)
+            _PreviewChip(
+              icon: Icons.flag_rounded,
+              label: PriorityBadge.labelForPriority(parsed!.priority!),
+              color: AppColors.priorityHigh,
+            ),
+        ],
+      ),
+    );
+  }
+
+}
 class _PreviewChip extends StatelessWidget {
   final IconData icon;
   final String label;

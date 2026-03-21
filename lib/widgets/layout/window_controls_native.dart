@@ -9,19 +9,21 @@ class WindowDragArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Uses window_manager's DragToMoveArea to make the wrapped widget act as a window handle
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onPanStart: (details) {
-        windowManager.startDragging();
-      },
-      onDoubleTap: () async {
-        if (await windowManager.isMaximized()) {
-          windowManager.unmaximize();
-        } else {
-          windowManager.maximize();
-        }
-      },
-      child: child,
+    return RepaintBoundary(
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanStart: (details) {
+          windowManager.startDragging();
+        },
+        onDoubleTap: () async {
+          if (await windowManager.isMaximized()) {
+            windowManager.unmaximize();
+          } else {
+            windowManager.maximize();
+          }
+        },
+        child: child,
+      ),
     );
   }
 }

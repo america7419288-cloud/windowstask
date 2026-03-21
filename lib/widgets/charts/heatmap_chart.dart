@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/task_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 
 class HeatmapChart extends StatelessWidget {
@@ -39,11 +40,19 @@ class HeatmapChart extends StatelessWidget {
                       final date = e.key;
                       
                       Color color;
-                      if (val == 0) color = const Color(0xFFF3F4F6);
-                      else if (val <= 2) color = const Color(0xFFF5E6FF);
-                      else if (val <= 5) color = const Color(0xFFE9CCFF);
-                      else if (val <= 10) color = const Color(0xFFD9A3FF);
-                      else color = const Color(0xFFC475FF);
+                      if (val == 0) {
+                        color = colors.isDark 
+                            ? AppColors.surfaceContainerHighDk 
+                            : const Color(0xFFF3F4F6);
+                      } else if (val <= 2) {
+                        color = const Color(0xFFF5E6FF);
+                      } else if (val <= 5) {
+                        color = const Color(0xFFE9CCFF);
+                      } else if (val <= 10) {
+                        color = const Color(0xFFD9A3FF);
+                      } else {
+                        color = const Color(0xFFC475FF);
+                      }
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 4),

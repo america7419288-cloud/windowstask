@@ -25,35 +25,64 @@ class ProgressRing extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: Stack(
-        children: [
-          // Background circle
-          Center(
-            child: SizedBox(
-              width: size,
-              height: size,
-              child: CircularProgressIndicator(
-                value: 1.0,
-                strokeWidth: strokeWidth,
-                color: bg,
-              ),
-            ),
-          ),
-          // Foreground progress
-          Center(
-            child: SizedBox(
-              width: size,
-              height: size,
-              child: CircularProgressIndicator(
-                value: value,
-                strokeWidth: strokeWidth,
-                color: accent,
-                strokeCap: StrokeCap.round,
-              ),
-            ),
-          ),
-        ],
+      child: CustomPaint(
+        painter: _ProgressPainter(
+          value: value,
+          color: accent,
+          backgroundColor: bg,
+          strokeWidth: strokeWidth,
+        ),
       ),
     );
+  }
+}
+
+class _ProgressPainter extends CustomPainter {
+  final double value;
+  final Color color;
+  final Color backgroundColor;
+  final double strokeWidth;
+
+  _ProgressPainter({
+    required this.value,
+    required this.color,
+    required this.backgroundColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    // Draw background track
+    final trackPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    // Draw progress arc
+    final progressPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -1.5708, // -90 degrees in radians
+      6.28318 * value.clamp(0.0, 1.0), // 360 degrees in radians
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ProgressPainter oldDelegate) {
+    return oldDelegate.value != value ||
+        oldDelegate.color != color ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }

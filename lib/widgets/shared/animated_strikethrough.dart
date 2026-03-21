@@ -18,17 +18,7 @@ class AnimatedStrikethrough extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Measure the text width using TextPainter
-    final tp = TextPainter(
-      text: TextSpan(text: text, style: textStyle),
-      maxLines: 1,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: double.infinity);
-
-    final textWidth = tp.width;
-
     return Stack(
-      alignment: Alignment.centerLeft,
       children: [
         Text(
           text,
@@ -36,19 +26,25 @@ class AnimatedStrikethrough extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0, end: isStruck ? 1.0 : 0.0),
-          duration: duration,
-          curve: Curves.easeOutCubic,
-          builder: (context, value, _) {
-            return SizedBox(
-              width: textWidth * value,
-              child: Container(
-                height: 1.5,
-                color: strikeColor,
-              ),
-            );
-          },
+        // Positioned.fill ensures the strike layer matches the Text's bounds
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Center(
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: duration,
+                      curve: Curves.easeOutCubic,
+                      width: isStruck ? constraints.maxWidth : 0,
+                      height: 1.5,
+                      color: strikeColor,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ],
     );

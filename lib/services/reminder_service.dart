@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:win_toast/win_toast.dart';
 import '../models/task.dart';
+import '../services/notification_service.dart';
 
 class ReminderService {
   ReminderService._();
@@ -67,17 +68,11 @@ class ReminderService {
 
     if (!kIsWeb) {
       try {
-        final xml = """
-<toast scenario="reminder">
-  <visual>
-    <binding template="ToastGeneric">
-      <text>⏰ ${task.title}</text>
-      <text>Due at $timeStr</text>
-    </binding>
-  </visual>
-</toast>
-""";
-        await WinToast.instance().showCustomToast(xml: xml);
+        await NotificationService.instance.showNotification(
+          taskId: task.id,
+          title: '⏰ ${task.title}',
+          body: 'Due at $timeStr',
+        );
         return;
       } catch (_) {}
     }

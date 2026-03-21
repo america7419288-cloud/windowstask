@@ -5,6 +5,11 @@ import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import 'sticker_widget.dart';
+import 'package:provider/provider.dart';
+import '../../providers/user_provider.dart';
+import '../../providers/navigation_provider.dart';
+import '../../utils/constants.dart';
+import '../../data/store_catalog.dart';
 
 class StickerPicker extends StatefulWidget {
   final String? currentStickerId;
@@ -155,69 +160,122 @@ class _StickerPickerState extends State<StickerPicker>
               child: TabBarView(
                 controller: _tabController,
                 children: packs.map((pack) {
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 5,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        childAspectRatio: 1,
-                      ),
-                    itemCount: pack.stickers.length,
-                    itemBuilder: (context, index) {
-                      final sticker = pack.stickers[index];
-                      final isSelected =
-                          sticker.id == widget.currentStickerId;
-                      final isHovered = _hoveredId == sticker.id;
+                  return Consumer<UserProvider>(
+                    builder: (context, user, _) {
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 5,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            childAspectRatio: 1,
+                          ),
+                        itemCount: pack.stickers.length,
+                        itemBuilder: (context, index) {
+                          final sticker = pack.stickers[index];
+                          final isSelected =
+                              sticker.id == widget.currentStickerId;
+                          final isHovered = _hoveredId == sticker.id;
+                          
+                          final isUnlocked =
+                              sticker.packId == 'pack_free' ||
+                              sticker.packId == 'decorative' ||
+                              user.hasUnlocked(sticker.id);
 
-                      return Tooltip(
-                        message: sticker.name,
-                        waitDuration:
-                            const Duration(milliseconds: 400),
-                        child: MouseRegion(
-                          onEnter: (_) =>
-                              setState(() => _hoveredId = sticker.id),
-                          onExit: (_) =>
-                              setState(() => _hoveredId = null),
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () =>
-                                Navigator.pop(context, sticker.id),
-                            child: AnimatedContainer(
-                              duration:
-                                  const Duration(milliseconds: 150),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? accent.withValues(alpha: 0.12)
-                                    : isHovered
-                                        ? (colors.isDark
-                                            ? Colors.white
-                                                .withValues(alpha: 0.06)
-                                            : Colors.black
-                                                .withValues(alpha: 0.04))
-                                        : Colors.transparent,
-                                borderRadius:
-                                    BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? accent.withValues(alpha: 0.5)
-                                      : Colors.transparent,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Center(
-                                child: StickerWidget(
-                                  sticker: sticker,
-                                  size: 48,
-                                  animate: isHovered || isSelected,
-                                  // Only animate on hover/selected
-                                  // to save performance
+                          return Tooltip(
+                            message: isUnlocked ? sticker.name : 'Unlock in Store',
+                            waitDuration: const Duration(milliseconds: 400),
+                            child: MouseRegion(
+                              onEnter: (_) => setState(() => _hoveredId = sticker.id),
+                              onExit: (_) => setState(() => _hoveredId = null),
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (isUnlocked) {
+                                    Navigator.pop(context, sticker.id);
+                                  } else {
+                                    // Feedback: Unlock first
+                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('Unlock the sticker first!'),
+                                        backgroundColor: AppColors.primary,
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 2),
+                                        width: 240,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        action: SnackBarAction(
+                                          label: 'Visit Store',
+                                          textColor: Colors.white,
+                                          onPressed: () {
+                                            Navigator.pop(context, null);
+                                            context.read<NavigationProvider>().selectNav(AppConstants.navStore);
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? accent.withValues(alpha: 0.12)
+                                        : isHovered
+                                            ? (colors.isDark
+                                                ? Colors.white.withValues(alpha: 0.06)
+                                                : Colors.black.withValues(alpha: 0.04))
+                                            : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? accent.withValues(alpha: 0.5)
+                                          : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: isUnlocked
+                                        ? StickerWidget(
+                                            sticker: sticker,
+                                            size: 48,
+                                            animate: isHovered || isSelected,
+                                          )
+                                        : Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              Opacity(
+                                                opacity: 0.3,
+                                                child: StickerWidget(
+                                                  sticker: sticker,
+                                                  size: 48,
+                                                  animate: false,
+                                                ),
+                                              ),
+                                              Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.lock_rounded,
+                                                      size: 14,
+                                                      color: colors.textTertiary),
+                                                  Text(
+                                                    'Unlock',
+                                                    style: AppTypography.micro.copyWith(
+                                                      color: colors.textTertiary,
+                                                      fontSize: 8,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   );

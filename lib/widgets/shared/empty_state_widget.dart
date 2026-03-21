@@ -94,7 +94,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final colors = context.appColors;
 
     return Center(
       child: Padding(
@@ -112,7 +112,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
                     opacity: _illusFade.value,
                     child: DecoSticker(
                       sticker: widget.config.sticker,
-                      size: 120,
+                      size: 160,
                       animate: true,
                     ),
                   ),
@@ -126,10 +126,8 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
                     opacity: _headFade.value,
                     child: Text(
                       widget.config.headline,
-                      style: AppTypography.title2.copyWith(
-                        fontSize: 20,
+                      style: AppTypography.headlineSmall.copyWith(
                         fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
                         color: colors.textPrimary,
                       ),
                       textAlign: TextAlign.center,
@@ -145,8 +143,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
                     opacity: _subFade.value,
                     child: Text(
                       widget.config.subline,
-                      style: AppTypography.body.copyWith(
-                        fontSize: 13.5,
+                      style: AppTypography.bodyMedium.copyWith(
                         color: colors.textTertiary,
                         height: 1.5,
                       ),
@@ -173,7 +170,6 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
   }
 
   Widget _buildCta(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: widget.config.onCta,
       child: Container(

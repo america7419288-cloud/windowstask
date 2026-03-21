@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/colors.dart';
+import 'dart:ui';
 
 class CheckboxPainter extends CustomPainter {
   final double progress;
@@ -14,6 +15,9 @@ class CheckboxPainter extends CustomPainter {
     required this.accentColor,
     required this.isDark,
   });
+
+  static final Map<Size, Path> _pathCache = {};
+  static final Map<Size, PathMetric> _metricsCache = {};
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -62,16 +66,24 @@ class CheckboxPainter extends CustomPainter {
     if (progress > 0.5) {
       final tickProgress = ((progress - 0.5) * 2).clamp(0.0, 1.0);
 
-      final checkPath = Path();
-      final p1 = Offset(size.width * 0.28, size.height * 0.52);
-      final p2 = Offset(size.width * 0.45, size.height * 0.68);
-      final p3 = Offset(size.width * 0.72, size.height * 0.35);
+      Path? checkPath = _pathCache[size];
+      PathMetric? metrics = _metricsCache[size];
 
-      checkPath.moveTo(p1.dx, p1.dy);
-      checkPath.lineTo(p2.dx, p2.dy);
-      checkPath.lineTo(p3.dx, p3.dy);
+      if (checkPath == null || metrics == null) {
+        checkPath = Path();
+        final p1 = Offset(size.width * 0.28, size.height * 0.52);
+        final p2 = Offset(size.width * 0.45, size.height * 0.68);
+        final p3 = Offset(size.width * 0.72, size.height * 0.35);
 
-      final metrics = checkPath.computeMetrics().first;
+        checkPath.moveTo(p1.dx, p1.dy);
+        checkPath.lineTo(p2.dx, p2.dy);
+        checkPath.lineTo(p3.dx, p3.dy);
+        
+        metrics = checkPath.computeMetrics().first;
+        _pathCache[size] = checkPath;
+        _metricsCache[size] = metrics;
+      }
+
       final drawPath = metrics.extractPath(0, metrics.length * tickProgress);
 
       final tickPaint = Paint()

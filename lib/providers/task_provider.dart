@@ -12,6 +12,7 @@ import '../utils/constants.dart';
 import 'celebration_provider.dart';
 import '../models/sticker.dart';
 import '../services/reminder_service.dart';
+import '../services/notification_service.dart';
 import '../utils/sticker_suggester.dart';
 
 class TaskProvider extends ChangeNotifier {
@@ -20,12 +21,17 @@ class TaskProvider extends ChangeNotifier {
   static const _uuid = Uuid();
   SortOption _sortOption = SortOption.manual;
 
+  // Memoization cache
+  final Map<String, List<Task>> _navCache = {};
+  bool _isCacheDirty = true;
+
   List<Task> get allTasks => _tasks;
   SortOption get sortOption => _sortOption;
 
-  void init() {
+  Future<void> init() async {
     _tasks = StorageService.instance.getAllTasks();
     ReminderService.instance.updateTasks(_tasks);
+    _isCacheDirty = true;
   }
 
   // ─── Sticker support ──────────────────────────────────────────────────────
@@ -48,21 +54,56 @@ class TaskProvider extends ChangeNotifier {
 
   int get todayCount => getTasksForNav(AppConstants.navToday).length;
 
+  int get todayCompletedCount =>
+      getTasksForNav(AppConstants.navToday, filterMITs: false, filterHighPriority: false, filterOverdue: false).where((t) => t.isCompleted).length;
+
   int countForList(String listId) =>
       _tasks.where((t) => t.listId == listId && !t.isDeleted && !t.isCompleted).length;
 
   // ─── Filtering ────────────────────────────────────────────────────────────
 
-  List<Task> getTasksForNav(String navItem, {String? searchQuery}) {
+  List<Task> getTasksForNav(
+    String navItem, {
+    String? searchQuery,
+    bool filterMITs = false,
+    bool filterHighPriority = false,
+    bool filterOverdue = false,
+    List<String> mitIds = const [],
+  }) {
+    // Return cached result if query and filters are null/empty and cache is clean
+    final bool canCache = (searchQuery == null || searchQuery.isEmpty) && 
+                         !filterMITs && !filterHighPriority && !filterOverdue;
+    
+    if (canCache && !_isCacheDirty && _navCache.containsKey(navItem)) {
+      return _navCache[navItem]!;
+    }
+
     List<Task> base;
 
     switch (navItem) {
       case AppConstants.navToday:
-        base = _tasks.where((t) {
-          if (t.isDeleted) return false;
+        final now = DateTime.now();
+        final todayStart = DateTime(now.year, now.month, now.day);
+        final todayEnd = todayStart.add(const Duration(days: 1));
+        
+        var filtered = _tasks.where((t) {
+          if (t.isDeleted || t.isCompleted) return false;
           if (t.dueDate == null) return false;
-          return AppDateUtils.isToday(t.dueDate!) || (t.isOverdue && !t.isCompleted);
+          return t.dueDate!.isBefore(todayEnd);
         }).toList();
+
+        // Apply quick filters
+        if (filterMITs) {
+          filtered = filtered.where((t) => mitIds.contains(t.id)).toList();
+        }
+        if (filterHighPriority) {
+          filtered = filtered.where((t) => t.priority == Priority.high || t.priority == Priority.urgent).toList();
+        }
+        if (filterOverdue) {
+          filtered = filtered.where((t) => t.isOverdue).toList();
+        }
+
+        base = filtered;
         break;
       case AppConstants.navUpcoming:
         base = _tasks.where((t) {
@@ -73,8 +114,9 @@ class TaskProvider extends ChangeNotifier {
         }).toList();
         break;
       case AppConstants.navAll:
-        base = _tasks.where((t) => !t.isDeleted).toList();
-        break;
+        final active = _tasks.where((t) => !t.isDeleted && !t.isCompleted).toList();
+        final completed = _tasks.where((t) => !t.isDeleted && t.isCompleted).toList();
+        return [..._sort(active), ..._sort(completed)];
       case AppConstants.navCompleted:
         base = _tasks.where((t) => !t.isDeleted && t.isCompleted).toList();
         break;
@@ -88,7 +130,7 @@ class TaskProvider extends ChangeNotifier {
         break;
       case AppConstants.navScheduled:
         base = _tasks.where((t) =>
-            !t.isDeleted && t.dueDate != null).toList();
+            !t.isDeleted && !t.isCompleted && t.dueDate != null).toList();
         break;
       case AppConstants.navFlagged:
         base = _tasks.where((t) =>
@@ -108,7 +150,14 @@ class TaskProvider extends ChangeNotifier {
       base = SearchService.search(base, searchQuery);
     }
 
-    return _sort(base);
+    final result = _sort(base);
+    
+    if (canCache) {
+      _navCache[navItem] = result;
+      if (_navCache.length > 20) _navCache.clear(); // Simple eviction
+    }
+    
+    return result;
   }
 
   List<Task> searchAll(String query) {
@@ -145,6 +194,7 @@ class TaskProvider extends ChangeNotifier {
 
   void setSortOption(SortOption option) {
     _sortOption = option;
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -192,8 +242,17 @@ class TaskProvider extends ChangeNotifier {
     _tasks.add(task);
     await StorageService.instance.saveTask(task);
     ReminderService.instance.updateTasks(_tasks);
+    _isCacheDirty = true;
     notifyListeners();
     return task;
+  }
+
+  Future<void> addTask(Task task) async {
+    _tasks.add(task);
+    await StorageService.instance.saveTask(task);
+    ReminderService.instance.updateTasks(_tasks);
+    _isCacheDirty = true;
+    notifyListeners();
   }
 
   Future<void> updateTask(Task task) async {
@@ -224,12 +283,21 @@ class TaskProvider extends ChangeNotifier {
     ));
   }
 
+  Future<void> updateTitle(String id, String title) async {
+    _updateTask(id, (t) => t.copyWith(title: title));
+  }
+
+  Future<void> updateDescription(String id, String description) async {
+    _updateTask(id, (t) => t.copyWith(description: description));
+  }
+
   void _updateTask(String id, Task Function(Task) transform) {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
     _tasks[idx] = transform(_tasks[idx]).copyWith(updatedAt: DateTime.now());
     StorageService.instance.saveTask(_tasks[idx]);
     ReminderService.instance.updateTasks(_tasks);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -248,11 +316,16 @@ class TaskProvider extends ChangeNotifier {
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
 
+    if (!wasCompleted && updated.isCompleted) {
+      NotificationService.instance.cancelNotification(id);
+    }
+
     // Spawn next recurring instance
     if (!wasCompleted && updated.isCompleted && updated.isRecurring && updated.dueDate != null) {
       await _spawnNextOccurrence(updated);
     }
 
+    _isCacheDirty = true;
     notifyListeners();
 
     if (!wasCompleted && celebration != null) {
@@ -277,20 +350,25 @@ class TaskProvider extends ChangeNotifier {
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
 
+    if (completed) {
+      NotificationService.instance.cancelNotification(id);
+    }
+
     // Spawn next recurring instance
     if (completed && updated.isRecurring && updated.dueDate != null) {
       await _spawnNextOccurrence(updated);
     }
 
+    _isCacheDirty = true;
     notifyListeners();
   }
-
   Future<void> toggleFlag(String id) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
     final updated = _tasks[idx].copyWith(isFlagged: !_tasks[idx].isFlagged, updatedAt: DateTime.now());
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -300,6 +378,7 @@ class TaskProvider extends ChangeNotifier {
     final updated = _tasks[idx].copyWith(priority: priority, updatedAt: DateTime.now());
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -329,12 +408,30 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> bulkUpdateDueDate(List<String> ids, DateTime? dueDate) async {
+    for (final id in ids) {
+      final task = getById(id);
+      if (task != null) {
+        final updated = task.copyWith(
+          dueDate: dueDate,
+          updatedAt: DateTime.now(),
+        );
+        final idx = _tasks.indexWhere((t) => t.id == id);
+        if (idx != -1) {
+          _tasks[idx] = updated;
+          await StorageService.instance.saveTask(updated);
+        }
+      }
+    }
+    ReminderService.instance.updateTasks(_tasks);
+    notifyListeners();
+  }
+
   Future<void> bulkFlag(List<String> ids) async {
     for (final id in ids) {
       await toggleFlag(id);
     }
   }
-
   Future<void> updateDueDate(String id, DateTime date) async {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
@@ -346,6 +443,7 @@ class TaskProvider extends ChangeNotifier {
     );
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -355,6 +453,7 @@ class TaskProvider extends ChangeNotifier {
     final updated = _tasks[idx].copyWith(listId: listId, clearListId: listId == null, updatedAt: DateTime.now());
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -370,6 +469,17 @@ class TaskProvider extends ChangeNotifier {
     );
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
+
+    if (status == TaskStatus.done) {
+      NotificationService.instance.cancelNotification(id);
+    }
+
+    // Spawn next recurring instance
+    if (status == TaskStatus.done && updated.isRecurring && updated.dueDate != null) {
+      await _spawnNextOccurrence(updated);
+    }
+
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -412,6 +522,7 @@ class TaskProvider extends ChangeNotifier {
     _tasks[idx] = updated;
     await StorageService.instance.saveTask(updated);
     _undoStack.add(_UndoAction(type: 'trash', task: original));
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -427,6 +538,7 @@ class TaskProvider extends ChangeNotifier {
   Future<void> permanentlyDelete(String id) async {
     _tasks.removeWhere((t) => t.id == id);
     await StorageService.instance.deleteTask(id);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -436,6 +548,7 @@ class TaskProvider extends ChangeNotifier {
       await StorageService.instance.deleteTask(t.id);
     }
     _tasks.removeWhere((t) => t.isDeleted);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -453,6 +566,7 @@ class TaskProvider extends ChangeNotifier {
     );
     _tasks.add(copy);
     await StorageService.instance.saveTask(copy);
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -510,6 +624,7 @@ class TaskProvider extends ChangeNotifier {
       if (idx != -1) _tasks[idx] = updated;
       await StorageService.instance.saveTask(updated);
     }
+    _isCacheDirty = true;
     notifyListeners();
   }
 
@@ -523,6 +638,7 @@ class TaskProvider extends ChangeNotifier {
       if (idx != -1) {
         _tasks[idx] = action.task;
         await StorageService.instance.saveTask(action.task);
+        _isCacheDirty = true;
         notifyListeners();
       }
     }
@@ -533,7 +649,6 @@ class TaskProvider extends ChangeNotifier {
   // ─── Statistics ───────────────────────────────────────────────────────────
 
   int get completedToday {
-    final today = DateTime.now();
     return _tasks.where((t) =>
         t.isCompleted &&
         t.completedAt != null &&

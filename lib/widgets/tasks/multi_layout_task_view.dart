@@ -28,8 +28,14 @@ class MultiLayoutTaskView extends StatelessWidget {
     final tasks = context.watch<TaskProvider>();
     final navItem = nav.selectedNavItem;
     final query = nav.searchQuery;
-    final taskList = tasks.getTasksForNav(navItem,
-        searchQuery: query.isEmpty ? null : query);
+    final taskList = tasks.getTasksForNav(
+      navItem,
+      searchQuery: query.isEmpty ? null : query,
+      filterMITs: nav.filterMITs,
+      filterHighPriority: nav.filterHighPriority,
+      filterOverdue: nav.filterOverdue,
+      mitIds: nav.mitTaskIds,
+    );
     final allTasks = tasks.allTasks.where((t) => !t.isDeleted).toList();
 
     final bool showControls = navItem != AppConstants.navTrash &&

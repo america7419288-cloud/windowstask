@@ -4,8 +4,11 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   bitsdojo_window_windows
+  flutter_acrylic
   flutter_secure_storage_windows
+  hotkey_manager_windows
   screen_retriever
+  tray_manager
   win_toast
   window_manager
 )

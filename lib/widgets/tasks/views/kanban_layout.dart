@@ -22,7 +22,14 @@ enum KanbanColumn { todo, inProgress, done }
 
 class KanbanLayout extends StatelessWidget {
   final List<Task> tasks;
-  const KanbanLayout({super.key, required this.tasks});
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  const KanbanLayout({
+    super.key,
+    required this.tasks,
+    this.shrinkWrap = false,
+    this.physics,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,15 +39,16 @@ class KanbanLayout extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      physics: physics,
       padding: const EdgeInsets.all(16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _KanbanColumnWidget(column: KanbanColumn.todo, tasks: todo, allTasks: tasks),
+          _KanbanColumnWidget(column: KanbanColumn.todo, tasks: todo, allTasks: tasks, shrinkWrap: shrinkWrap),
           const SizedBox(width: 12),
-          _KanbanColumnWidget(column: KanbanColumn.inProgress, tasks: inProgress, allTasks: tasks),
+          _KanbanColumnWidget(column: KanbanColumn.inProgress, tasks: inProgress, allTasks: tasks, shrinkWrap: shrinkWrap),
           const SizedBox(width: 12),
-          _KanbanColumnWidget(column: KanbanColumn.done, tasks: done, allTasks: tasks),
+          _KanbanColumnWidget(column: KanbanColumn.done, tasks: done, allTasks: tasks, shrinkWrap: shrinkWrap),
         ],
       ),
     );
@@ -53,11 +61,13 @@ class _KanbanColumnWidget extends StatefulWidget {
   final KanbanColumn column;
   final List<Task> tasks;
   final List<Task> allTasks;
+  final bool shrinkWrap;
 
   const _KanbanColumnWidget({
     required this.column,
     required this.tasks,
     required this.allTasks,
+    this.shrinkWrap = false,
   });
 
   @override
@@ -130,15 +140,26 @@ class _KanbanColumnWidgetState extends State<_KanbanColumnWidget> {
       child: Column(
         children: [
           _buildHeader(colors),
-          Expanded(
-            child: widget.tasks.isEmpty && !_isAdding
+          if (widget.shrinkWrap)
+            widget.tasks.isEmpty && !_isAdding
                 ? _buildEmptyState(colors)
                 : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     itemCount: widget.tasks.length,
                     itemBuilder: (context, index) => _KanbanCard(task: widget.tasks[index]),
-                  ),
-          ),
+                  )
+          else
+            Expanded(
+              child: widget.tasks.isEmpty && !_isAdding
+                  ? _buildEmptyState(colors)
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      itemCount: widget.tasks.length,
+                      itemBuilder: (context, index) => _KanbanCard(task: widget.tasks[index]),
+                    ),
+            ),
           _buildAddTaskArea(colors),
         ],
       ),
@@ -355,16 +376,16 @@ class _KanbanCardState extends State<_KanbanCard> {
                   children: [
             // TOP ROW — sticker + title
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Sticker — prominent, left-aligned
                   if (t.stickerId != null && t.stickerId!.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.only(right: 10, top: 2),
                       child: StickerWidget(
-                        sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.todayMorning,
+                        sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
                         size: 48,
                         animate: true,
                       ),

@@ -21,7 +21,7 @@ class StickerWidget extends StatefulWidget {
 }
 
 class _StickerWidgetState extends State<StickerWidget> {
-  Uint8List? _bytes;
+  LottieComposition? _composition;
   bool _error = false;
 
   @override
@@ -34,17 +34,17 @@ class _StickerWidgetState extends State<StickerWidget> {
   void didUpdateWidget(StickerWidget old) {
     super.didUpdateWidget(old);
     if (old.sticker.assetPath != widget.sticker.assetPath) {
-      setState(() { _bytes = null; _error = false; });
+      setState(() { _composition = null; _error = false; });
       _load();
     }
   }
 
   Future<void> _load() async {
     try {
-      final bytes = await TgsLoader.load(widget.sticker.assetPath);
+      final composition = await TgsLoader.load(widget.sticker.assetPath);
       if (mounted) {
-        if (bytes != null) {
-          setState(() => _bytes = bytes);
+        if (composition != null) {
+          setState(() => _composition = composition);
         } else {
           // No asset file yet — show emoji fallback
           setState(() => _error = true);
@@ -71,7 +71,7 @@ class _StickerWidgetState extends State<StickerWidget> {
     }
 
     // Loading: show subtle shimmer placeholder
-    if (_bytes == null) {
+    if (_composition == null) {
       return SizedBox(
         width: size, height: size,
         child: Center(
@@ -90,17 +90,12 @@ class _StickerWidgetState extends State<StickerWidget> {
     // Loaded: play Lottie animation
     return SizedBox(
       width: size, height: size,
-      child: Lottie.memory(
-        _bytes!,
+      child: Lottie(
+        composition: _composition!,
         width: size,
         height: size,
         fit: BoxFit.contain,
         repeat: widget.animate,
-        // Lottie renders TGS at the correct frame rate automatically
-        errorBuilder: (_, __, ___) => Center(
-          child: Text(widget.sticker.emoji,
-            style: TextStyle(fontSize: size * 0.65)),
-        ),
       ),
     );
   }

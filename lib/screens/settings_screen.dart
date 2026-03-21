@@ -5,11 +5,13 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../models/app_settings.dart';
 import '../providers/settings_provider.dart';
+import '../providers/template_provider.dart';
 import '../providers/list_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../theme/wallpaper_presets.dart';
+import '../models/task_template.dart';
 import '../painters/wallpaper_pattern_painter.dart';
 import '../services/wallpaper_image_service.dart';
 import '../models/sticker.dart';
@@ -43,7 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         // Left nav
         Container(
-          width: 200,
+          width: 280,
           decoration: BoxDecoration(
             color: colors.isDark
                 ? Colors.black.withValues(alpha: 0.35)
@@ -118,7 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Align(
                 alignment: Alignment.topLeft,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 680),
+                  constraints: const BoxConstraints(maxWidth: 800),
                   child: _buildSection(_selectedSection),
                 ),
               ),
@@ -221,29 +223,12 @@ class _SectionCard extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: colors.isDark
-                ? const Color(0xFF2A2725).withValues(alpha: 0.90)
-                : Colors.white.withValues(alpha: 0.88),
+            color: AppColors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: colors.isDark
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : Colors.black.withValues(alpha: 0.07),
-              width: 0.75,
+              color: colors.border,
+              width: 1.0,
             ),
-            boxShadow: colors.isDark ? [] : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.045),
-                blurRadius: 12,
-                offset: const Offset(0, 3),
-                spreadRadius: -1,
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
-              ),
-            ],
           ),
           child: Column(
             children: children,
@@ -275,9 +260,9 @@ class _SettingsRow extends StatelessWidget {
     return Column(
       children: [
         if (!isFirst)
-          Divider(height: 1, color: colors.divider, indent: 16, endIndent: 16),
+          Divider(height: 1, color: colors.divider, indent: 24, endIndent: 24),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Row(
             crossAxisAlignment: subtitle != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
@@ -285,14 +270,13 @@ class _SettingsRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label, style: AppTypography.body.copyWith(
-                      fontSize: 14, fontWeight: FontWeight.w500,
+                    Text(label, style: AppTypography.labelLarge.copyWith(
                       color: colors.textPrimary,
                     )),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 1),
-                      Text(subtitle!, style: AppTypography.caption.copyWith(
-                        fontSize: 12, color: colors.textTertiary,
+                      const SizedBox(height: 2),
+                      Text(subtitle!, style: AppTypography.bodyMedium.copyWith(
+                        color: colors.textTertiary,
                       )),
                     ],
                   ],
@@ -346,21 +330,21 @@ class _AppearanceSection extends StatelessWidget {
           title: 'Accent Color',
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Used for buttons, highlights, and active states',
-                    style: AppTypography.caption.copyWith(
-                      fontSize: 13, color: colors.textTertiary,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: colors.textTertiary,
                     ),
                   ),
                   const SizedBox(height: 16),
                   // Color swatches
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 12,
+                    runSpacing: 12,
                     children: colorOptions.map((opt) {
                       final hex = opt['hex'] as String;
                       final color = opt['color'] as Color;
@@ -456,7 +440,7 @@ class _ThemeSegmentedControl extends StatelessWidget {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: colors.isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(3),
@@ -471,21 +455,17 @@ class _ThemeSegmentedControl extends StatelessWidget {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: isActive ? (colors.isDark ? const Color(0xFF3A3A3C) : Colors.white) : Colors.transparent,
+                color: isActive ? AppColors.primary.withValues(alpha: 0.10) : Colors.transparent,
                 borderRadius: BorderRadius.circular(7),
-                boxShadow: isActive ? [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 4, offset: const Offset(0, 1),
-                )] : [],
               ),
               child: Row(
                 children: [
                   Icon(icon, size: 13,
                     color: isActive ? accent : colors.textSecondary),
                   const SizedBox(width: 4),
-                  Text(label, style: AppTypography.caption.copyWith(
+                  Text(label, style: AppTypography.labelLarge.copyWith(
                     fontSize: 12,
-                    color: isActive ? colors.textPrimary : colors.textSecondary,
+                    color: isActive ? accent : colors.textSecondary,
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   )),
                 ],
@@ -520,7 +500,7 @@ class _LayoutDensitySection extends StatelessWidget {
           title: 'Default View',
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -568,7 +548,7 @@ class _LayoutDensitySection extends StatelessWidget {
           title: 'Interface Density',
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: Row(
                 children: FontDensity.values.map((density) {
                   final isActive = settings.fontDensity == density;
@@ -729,7 +709,7 @@ class _StickerSizeSelector extends StatelessWidget {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: colors.isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(3),
@@ -744,18 +724,14 @@ class _StickerSizeSelector extends StatelessWidget {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: isActive ? (colors.isDark ? const Color(0xFF3A3A3C) : Colors.white) : Colors.transparent,
+                color: isActive ? AppColors.primary.withValues(alpha: 0.10) : Colors.transparent,
                 borderRadius: BorderRadius.circular(7),
-                boxShadow: isActive ? [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 4, offset: const Offset(0, 1),
-                )] : [],
               ),
               child: Text(
                 label,
-                style: AppTypography.caption.copyWith(
+                style: AppTypography.labelLarge.copyWith(
                   fontSize: 12,
-                  color: isActive ? colors.textPrimary : colors.textSecondary,
+                  color: isActive ? accent : colors.textSecondary,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
@@ -792,7 +768,7 @@ class _WallpaperSection extends StatelessWidget {
           title: 'Background',
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1319,6 +1295,13 @@ class _TasksDefaultsSection extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        _SectionCard(
+          title: 'Templates',
+          children: [
+            const _TemplatesList(),
+          ],
+        ),
       ],
     );
   }
@@ -1441,6 +1424,84 @@ class _AboutSectionState extends State<_AboutSection> {
           ],
         ),
       ],
+    );
+  }
+}
+class _TemplatesList extends StatelessWidget {
+  const _TemplatesList();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final templates = context.watch<TemplateProvider>().templates;
+
+    if (templates.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            'No templates saved yet.',
+            style: AppTypography.caption.copyWith(color: colors.textTertiary),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: templates.map((t) => _TemplateItem(
+        template: t,
+        isFirst: t == templates.first,
+        isLast: t == templates.last,
+      )).toList(),
+    );
+  }
+}
+
+class _TemplateItem extends StatelessWidget {
+  final TaskTemplate template;
+  final bool isFirst;
+  final bool isLast;
+
+  const _TemplateItem({
+    required this.template,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return _SettingsRow(
+      isFirst: isFirst,
+      isLast: isLast,
+      label: template.name,
+      subtitle: '${template.emoji} ${template.title}',
+      control: GestureDetector(
+        onTap: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: colors.surfaceElevated,
+              title: Text('Delete Template', style: AppTypography.titleMedium.copyWith(color: colors.textPrimary)),
+              content: Text('Are you sure you want to delete "${template.name}"?', style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary)),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text('Cancel', style: AppTypography.labelLarge.copyWith(color: colors.textSecondary)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text('Delete', style: AppTypography.labelLarge.copyWith(color: AppColors.error)),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true && context.mounted) {
+            context.read<TemplateProvider>().delete(template.id);
+          }
+        },
+        child: Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error.withValues(alpha: 0.7)),
+      ),
     );
   }
 }

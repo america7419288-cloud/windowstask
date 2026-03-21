@@ -10,8 +10,10 @@ import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../../utils/constants.dart';
-import 'sidebar_item.dart';
 import 'list_tile_item.dart';
+import 'sidebar_item.dart';
+import '../../data/app_stickers.dart';
+import '../../providers/user_provider.dart';
 import '../../data/app_stickers.dart';
 import '../shared/deco_sticker.dart';
 import '../../providers/focus_provider.dart';
@@ -30,37 +32,17 @@ class Sidebar extends StatelessWidget {
     return Container(
       width: AppConstants.sidebarWidth,
       decoration: BoxDecoration(
-        color: Colors.transparent, // Using child blur
-        border: Border(
-          right: BorderSide(
-            color: colors.border.withValues(alpha: isDark ? 0.1 : 0.5),
-            width: 1.0,
-          ),
-        ),
+        color: isDark ? AppColors.surfaceContainerLowDk : AppColors.surfaceContainerLow,
       ),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            color: AppColors.glassBackground(isDark),
-            child: Column(
-              children: [
-                const SizedBox(height: AppConstants.titlebarHeight),
-                const _SidebarHeader(),
-                const SizedBox(height: 8),
-                Expanded(child: _NavContent()),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: DecoSticker(
-                    sticker: AppStickers.sidebarMascot,
-                    size: 80,
-                  ),
-                ),
-                _SidebarFooter(),
-              ],
-            ),
-          ),
-        ),
+      child: Column(
+        children: const [
+          SizedBox(height: AppConstants.titlebarHeight),
+          _SidebarHeader(),
+          SizedBox(height: 8),
+          Expanded(child: _NavContent()),
+          _UserHeader(),
+          _SidebarFooter(),
+        ],
       ),
     );
   }
@@ -102,6 +84,7 @@ class _SidebarHeader extends StatelessWidget {
 }
 
 class _NavContent extends StatefulWidget {
+  const _NavContent();
   @override
   State<_NavContent> createState() => _NavContentState();
 }
@@ -110,72 +93,244 @@ class _NavContentState extends State<_NavContent> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    // Listen to navigation changes and scroll to top when primary categories change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NavigationProvider>().addListener(_onNavChanged);
+    });
+  }
+
+  void _onNavChanged() {
+    final nav = context.read<NavigationProvider>();
+    // If we switch to Today or Upcoming, scroll to top
+    if (nav.selectedNavItem == AppConstants.navToday || 
+        nav.selectedNavItem == AppConstants.navUpcoming) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    context.read<NavigationProvider>().removeListener(_onNavChanged);
     _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _InboxSection(),
+          _SmartListSection(),
+          _CustomListSection(),
+          SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _InboxSection extends StatelessWidget {
+  const _InboxSection();
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = context.select<NavigationProvider, bool>(
+      (n) => n.selectedNavItem == AppConstants.navToday
+    );
+    final count = context.select<TaskProvider, int>((t) => t.todayCount);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _sectionHeader(context, 'Inbox'),
+        SidebarItem(
+          label: 'Today',
+          icon: PhosphorIcons.calendarStar(),
+          isSelected: isSelected,
+          onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navToday),
+          badge: count,
+        ),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navUpcoming,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'Upcoming',
+            icon: PhosphorIcons.calendarBlank(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navUpcoming),
+          ),
+        ),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navAll,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'All Tasks',
+            icon: PhosphorIcons.tray(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navAll),
+          ),
+        ),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navCompleted,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'Completed',
+            icon: PhosphorIcons.checkCircle(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navCompleted),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SmartListSection extends StatelessWidget {
+  const _SmartListSection();
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        sidebarDivider(colors),
+        _sectionHeader(context, 'Smart Lists'),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navHighPriority,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'High Priority',
+            icon: PhosphorIcons.warningCircle(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navHighPriority),
+          ),
+        ),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navScheduled,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'Scheduled',
+            icon: PhosphorIcons.clock(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navScheduled),
+          ),
+        ),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navFlagged,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'Flagged',
+            icon: PhosphorIcons.flag(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navFlagged),
+          ),
+        ),
+        Selector<NavigationProvider, bool>(
+          selector: (_, n) => n.selectedNavItem == AppConstants.navCalendar,
+          builder: (context, isSelected, _) => SidebarItem(
+            label: 'Calendar',
+            icon: PhosphorIcons.calendarDots(),
+            isSelected: isSelected,
+            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navCalendar),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomListSection extends StatelessWidget {
+  const _CustomListSection();
+  @override
+  Widget build(BuildContext context) {
+    final nav = context.watch<NavigationProvider>();
+    final tasks = context.watch<TaskProvider>();
+    final lists = context.watch<ListProvider>();
     final colors = context.appColors;
 
-    return Consumer4<NavigationProvider, TaskProvider, ListProvider, SettingsProvider>(
-      builder: (context, nav, tasks, lists, settings, _) {
-        return SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _sectionHeader(context, 'Inbox'),
-              SidebarItem(
-                label: 'Today',
-                icon: PhosphorIcons.calendarStar(),
-                isSelected: nav.selectedNavItem == AppConstants.navToday,
-                onTap: () => nav.selectNav(AppConstants.navToday),
-                badge: tasks.todayCount,
-              ),
-              SidebarItem(
-                label: 'Upcoming',
-                icon: PhosphorIcons.calendarBlank(),
-                isSelected: nav.selectedNavItem == AppConstants.navUpcoming,
-                onTap: () => nav.selectNav(AppConstants.navUpcoming),
-              ),
-              SidebarItem(
-                label: 'All Tasks',
-                icon: PhosphorIcons.tray(),
-                isSelected: nav.selectedNavItem == AppConstants.navAll,
-                onTap: () => nav.selectNav(AppConstants.navAll),
-              ),
-              SidebarItem(
-                label: 'Completed',
-                icon: PhosphorIcons.checkCircle(),
-                isSelected: nav.selectedNavItem == AppConstants.navCompleted,
-                onTap: () => nav.selectNav(AppConstants.navCompleted),
-              ),
-              sidebarDivider(colors),
-              _sectionHeader(context, 'Smart Lists'),
-              SidebarItem(
-                label: 'High Priority',
-                icon: PhosphorIcons.warningCircle(),
-                isSelected: nav.selectedNavItem == AppConstants.navHighPriority,
-                onTap: () => nav.selectNav(AppConstants.navHighPriority),
-              ),
-              SidebarItem(
-                label: 'Scheduled',
-                icon: PhosphorIcons.clock(),
-                isSelected: nav.selectedNavItem == AppConstants.navScheduled,
-                onTap: () => nav.selectNav(AppConstants.navScheduled),
-              ),
-              SidebarItem(
-                label: 'Flagged',
-                icon: PhosphorIcons.flag(),
-                isSelected: nav.selectedNavItem == AppConstants.navFlagged,
-                onTap: () => nav.selectNav(AppConstants.navFlagged),
-              ),
-              sidebarDivider(colors),
-              _sectionHeader(context, 'My Lists'),
-              ...lists.activeLists.map((list) {
+    final Map<String, List<TaskList>> folders = {};
+    final List<TaskList> noFolder = [];
+
+    for (var list in lists.activeLists) {
+      if (list.folderName != null && list.folderName!.trim().isNotEmpty) {
+        folders.putIfAbsent(list.folderName!.trim(), () => []).add(list);
+      } else {
+        noFolder.add(list);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        sidebarDivider(colors),
+        _sectionHeader(context, 'My Lists'),
+        ...folders.entries.map((e) => _FolderGroup(
+          folderName: e.key,
+          lists: e.value,
+        )),
+        ...noFolder.map((list) {
+          final navId = 'list_${list.id}';
+          return ListTileItem(
+            list: list,
+            taskCount: tasks.countForList(list.id),
+            isSelected: nav.selectedNavItem == navId,
+            onTap: () => nav.selectList(list.id),
+            onEdit: () => _showEditListDialog(context, list),
+          );
+        }),
+        const _NewListButton(),
+      ],
+    );
+  }
+}
+
+class _FolderGroup extends StatefulWidget {
+  final String folderName;
+  final List<TaskList> lists;
+  const _FolderGroup({required this.folderName, required this.lists});
+
+  @override
+  State<_FolderGroup> createState() => _FolderGroupState();
+}
+
+class _FolderGroupState extends State<_FolderGroup> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final nav = context.watch<NavigationProvider>();
+    final tasks = context.watch<TaskProvider>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Icon(_isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded, 
+                     size: 16, color: colors.textSecondary),
+                const SizedBox(width: 8),
+                Text(widget.folderName, 
+                  style: AppTypography.labelMedium.copyWith(color: colors.textSecondary, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+        if (_isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: widget.lists.map((list) {
                 final navId = 'list_${list.id}';
                 return ListTileItem(
                   list: list,
@@ -184,46 +339,44 @@ class _NavContentState extends State<_NavContent> {
                   onTap: () => nav.selectList(list.id),
                   onEdit: () => _showEditListDialog(context, list),
                 );
-              }),
-              _NewListButton(),
-              const SizedBox(height: 8),
-            ],
+              }).toList(),
+            ),
           ),
-        );
-      },
+      ],
     );
-  }
-
-  Widget _sectionHeader(BuildContext context, String title) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: AppTypography.sectionHeader.copyWith(
-          fontSize: 10,
-          color: colors.textPrimary.withValues(alpha: 0.40),
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0, // 0.1em
-        ),
-      ),
-    );
-  }
-
-  Widget sidebarDivider(AppColorsExtension colors) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      height: 1,
-      color: colors.border,
-    );
-  }
-
-  void _showEditListDialog(BuildContext context, TaskList list) {
-    showDialog(context: context, builder: (_) => _EditListDialog(list: list));
   }
 }
 
+void _showEditListDialog(BuildContext context, TaskList list) {
+  showDialog(context: context, builder: (_) => _EditListDialog(list: list));
+}
+
+Widget _sectionHeader(BuildContext context, String title) {
+  final colors = context.appColors;
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
+    child: Text(
+      title.toUpperCase(),
+      style: AppTypography.labelSmall.copyWith(
+        fontSize: 10,
+        color: colors.textQuaternary,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.5,
+      ),
+    ),
+  );
+}
+
+Widget sidebarDivider(AppColorsExtension colors) {
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    height: 1,
+    color: colors.border,
+  );
+}
+
 class _NewListButton extends StatefulWidget {
+  const _NewListButton();
   @override
   State<_NewListButton> createState() => _NewListButtonState();
 }
@@ -271,21 +424,24 @@ class _EditListDialog extends StatefulWidget {
 }
 
 class _EditListDialogState extends State<_EditListDialog> {
-  late TextEditingController _controller;
+  late TextEditingController _nameController;
+  late TextEditingController _folderController;
   late String _emoji;
   late String _colorHex;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.list?.name ?? '');
+    _nameController = TextEditingController(text: widget.list?.name ?? '');
+    _folderController = TextEditingController(text: widget.list?.folderName ?? '');
     _emoji = widget.list?.emoji ?? '📋';
     _colorHex = widget.list?.colorHex ?? '6366F1';
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _nameController.dispose();
+    _folderController.dispose();
     super.dispose();
   }
 
@@ -307,10 +463,24 @@ class _EditListDialogState extends State<_EditListDialog> {
                 style: AppTypography.headline.copyWith(color: colors.textPrimary)),
             const SizedBox(height: 16),
             TextField(
-              controller: _controller,
+              controller: _nameController,
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'List name...',
+                filled: true,
+                fillColor: colors.isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.04),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              ),
+              onSubmitted: (_) => _save(context),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _folderController,
+              decoration: InputDecoration(
+                hintText: 'Folder name (Optional)...',
                 filled: true,
                 fillColor: colors.isDark
                     ? Colors.white.withValues(alpha: 0.06)
@@ -347,30 +517,84 @@ class _EditListDialogState extends State<_EditListDialog> {
   }
 
   void _save(BuildContext context) {
-    final name = _controller.text.trim();
+    final name = _nameController.text.trim();
+    final folder = _folderController.text.trim();
     if (name.isEmpty) return;
     final provider = context.read<ListProvider>();
     if (widget.list != null) {
-      provider.updateList(widget.list!.copyWith(name: name, emoji: _emoji, colorHex: _colorHex));
+      provider.updateList(widget.list!.copyWith(
+        name: name, 
+        emoji: _emoji, 
+        colorHex: _colorHex,
+        folderName: folder.isEmpty ? null : folder,
+        clearFolderName: folder.isEmpty,
+      ));
     } else {
-      provider.createList(name: name, emoji: _emoji, colorHex: _colorHex);
+      provider.createList(
+        name: name, 
+        emoji: _emoji, 
+        colorHex: _colorHex,
+        folderName: folder.isEmpty ? null : folder,
+      );
     }
     Navigator.pop(context);
   }
 }
 
-class _SidebarFooter extends StatelessWidget {
+class _UserHeader extends StatelessWidget {
+  const _UserHeader();
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final firstName = context.select<UserProvider, String>((p) => p.firstName);
+    final xp = context.select<UserProvider, int>((p) => p.totalXP);
+    final streak = context.select<UserProvider, int>((p) => p.streak);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      child: Row(
+        children: [
+          const DecoSticker(
+            sticker: AppStickers.sidebarMascot,
+            size: 40,
+            animate: true,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  firstName,
+                  style: AppTypography.labelLarge.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '$xp XP · $streak d streak',
+                  style: AppTypography.caption.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarFooter extends StatelessWidget {
+  const _SidebarFooter();
+  @override
+  Widget build(BuildContext context) {
     final nav = context.watch<NavigationProvider>();
     final focus = context.watch<FocusProvider>();
     
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: colors.divider, width: 0.5)),
-      ),
       child: Row(
         children: [
           _SidebarIconBtn(
@@ -397,6 +621,12 @@ class _SidebarFooter extends StatelessWidget {
             icon: Icons.bar_chart_rounded,
             onTap: () => nav.selectNav(AppConstants.navInsights),
             isActive: nav.selectedNavItem == AppConstants.navInsights,
+          ),
+          const SizedBox(width: 6),
+          _SidebarIconBtn(
+            icon: Icons.storefront_rounded,
+            onTap: () => nav.selectNav(AppConstants.navStore),
+            isActive: nav.selectedNavItem == AppConstants.navStore,
           ),
         ],
       ),
@@ -439,18 +669,16 @@ class _SidebarIconBtnState extends State<_SidebarIconBtn> {
           height: 32,
           decoration: BoxDecoration(
             color: widget.isActive
-                ? (widget.color ?? AppColors.primary).withValues(alpha: 0.12)
+                ? AppColors.primary.withValues(alpha: 0.10)
                 : _hovered
-                    ? (colors.isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.06))
+                    ? AppColors.primary.withValues(alpha: 0.06)
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             widget.icon,
             size: 18,
-            color: widget.isActive ? (widget.color ?? AppColors.primary) : colors.textSecondary,
+            color: widget.isActive ? AppColors.primary : colors.textTertiary,
           ),
         ),
       ),

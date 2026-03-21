@@ -1,25 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:animations/animations.dart';
+import '../../screens/task_detail_page.dart';
 import 'package:provider/provider.dart';
 import '../../models/sticker.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/task.dart';
 import '../../models/subtask.dart';
+import '../../models/achievement.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/list_provider.dart';
 import '../../providers/tag_provider.dart';
 import '../../providers/celebration_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../../utils/date_utils.dart';
 import 'shared/custom_checkbox.dart';
+import 'shared/card_helpers.dart';
 import '../../painters/confetti_painter.dart';
 import '../context_menu/context_menu_controller.dart';
 import '../../data/sticker_packs.dart';
 import '../shared/sticker_widget.dart';
 import '../shared/deco_sticker.dart';
 import '../../data/app_stickers.dart';
+import 'package:flutter/services.dart';
+import 'save_template_dialog.dart';
 
 class TaskCard extends StatefulWidget {
   final Task task;
@@ -56,6 +63,15 @@ class _TaskCardState extends State<TaskCard> {
         _completionFlash = true;
       });
 
+      // Award XP via UserProvider
+      context.read<UserProvider>().recordTaskCompletion(widget.task);
+
+      // Calculate XP and show floating chip
+      int xp = XPValues.completeTask;
+      if (widget.task.priority == Priority.high) xp = XPValues.completeHigh;
+      if (widget.task.priority == Priority.urgent) xp = XPValues.completeUrgent;
+      _showXPChip(context, xp);
+
       // Show celebration sticker
       _CelebrationStickerOverlay.show(context);
 
@@ -82,100 +98,220 @@ class _TaskCardState extends State<TaskCard> {
     }
   }
 
+  void _showXPChip(BuildContext context, int xp) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final pos = box.localToGlobal(Offset(box.size.width - 60, 0));
+
+    final overlay = OverlayEntry(
+      builder: (_) => _XPChipOverlay(left: pos.dx, top: pos.dy, xp: xp),
+    );
+    Overlay.of(context).insert(overlay);
+    Future.delayed(const Duration(milliseconds: 1200), overlay.remove);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.task;
     final nav = context.watch<NavigationProvider>();
+    final colors = context.appColors;
     final isCompleted = t.isCompleted;
     final accent = Theme.of(context).colorScheme.primary;
-    final priorityColor = AppColors.getPriorityColor(t.priority);
+    final priorityColor = isCompleted ? const Color(0xFF94A3B8) : AppColors.getPriorityColor(t.priority);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onSecondaryTapUp: (details) {
-          CustomContextMenuController.show(
-            context: context,
-            position: details.globalPosition,
-            task: t,
-            taskProvider: context.read<TaskProvider>(),
-            listProvider: context.read<ListProvider>(),
-          );
-        },
-        onLongPress: () {
-          context.read<NavigationProvider>().enterSelectionMode(t.id);
-        },
-        onTap: () {
-          CustomContextMenuController.hide();
-          final nav = context.read<NavigationProvider>();
-          if (nav.isSelectionMode) {
-            nav.toggleTaskSelection(t.id);
-          } else {
-            if (widget.onTap != null) {
-              widget.onTap!();
-            } else {
-              nav.selectTask(t.id);
-            }
-          }
-        },
-        child: Opacity(
-          opacity: isCompleted && !_justCompleted ? 0.6 : 1.0,
-          child: Stack(
-            children: [
-              // 1. The main card container
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: nav.isTaskSelected(t.id) ? accent.withValues(alpha: 0.06) : AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: widget.isSelected || nav.isTaskSelected(t.id) ? accent : AppColors.border,
-                    width: widget.isSelected || nav.isTaskSelected(t.id) ? 1.5 : 1,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x14000000), // 0.08
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
-                    ),
-                    BoxShadow(
-                      color: Color(0x0A000000), // 0.04
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Content
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Title
+    return OpenContainer(
+      useRootNavigator: true,
+      transitionType: ContainerTransitionType.fadeThrough,
+      closedElevation: 0,
+      openElevation: 0,
+      closedColor: Colors.transparent,
+      openColor: colors.background,
+      tappable: false, // Handled manually by our GestureDetector
+      onClosed: (_) {
+        if (mounted) {
+          context.read<NavigationProvider>().closeDetail();
+        }
+      },
+      openBuilder: (context, action) => TaskDetailPage(task: t),
+      closedBuilder: (context, action) {
+        return MouseRegion(
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onSecondaryTapUp: (details) {
+              CustomContextMenuController.show(
+                context: context,
+                position: details.globalPosition,
+                task: t,
+                taskProvider: context.read<TaskProvider>(),
+                listProvider: context.read<ListProvider>(),
+              );
+            },
+            onLongPress: () async {
+              final saved = await SaveTemplateDialog.show(context, t);
+              if (saved) {
+                HapticFeedback.mediumImpact();
+              }
+            },
+            onTap: () {
+              CustomContextMenuController.hide();
+              final nav = context.read<NavigationProvider>();
+              if (nav.isSelectionMode) {
+                nav.toggleTaskSelection(t.id);
+              } else {
+                if (widget.onTap != null) {
+                  widget.onTap!();
+                } else {
+                  nav.selectTask(t.id);
+                  if (t.isDeleted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Restore task to edit it', style: TextStyle(color: Colors.white)),
+                        backgroundColor: colors.isDark ? const Color(0xFF333333) : const Color(0xFF222222),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    action(); // Trigger OpenContainer
+                  }
+                }
+              }
+            },
+            child: RepaintBoundary(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: isCompleted && !_justCompleted ? 0.65 : 1.0,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+              decoration: BoxDecoration(
+                color: _hovered || nav.isTaskSelected(t.id)
+                    ? (colors.isDark ? AppColors.surfaceContainerHighDk : AppColors.surfaceContainerLowest)
+                    : (colors.isDark ? AppColors.surfaceContainerDk : Colors.transparent),
+                borderRadius: BorderRadius.circular(12),
+                // Ambient shadow ONLY on hover/selected
+                boxShadow: (_hovered || nav.isTaskSelected(t.id)) && !colors.isDark
+                    ? AppColors.ambientShadow(
+                        opacity: 0.06,
+                        blur: 20,
+                        offset: const Offset(0, 4),
+                      )
+                    : [],
+                // Ghost border on selected only
+                border: nav.isTaskSelected(t.id) ? AppColors.ghostBorder() : null,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Selection or Checkbox
+                        if (nav.isSelectionMode)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, right: 12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: nav.isTaskSelected(t.id) ? accent : Colors.transparent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: nav.isTaskSelected(t.id)
+                                      ? accent
+                                      : colors.textTertiary.withValues(alpha: 0.4),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: nav.isTaskSelected(t.id)
+                                  ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
+                                  : null,
+                            ),
+                          )
+                        else if (t.isDeleted)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, right: 12),
+                            child: Icon(
+                              PhosphorIcons.trash(),
+                              size: 20,
+                              color: colors.textTertiary.withValues(alpha: 0.5),
+                            ),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, right: 12),
+                            child: CustomCheckbox(
+                              value: isCompleted,
+                              onChanged: (_) => _handleComplete(),
+                              activeColor: accent,
+                            ),
+                          ),
+                        
+                        // Title Text + Inline elements
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
+                                  // Priority dot (only if not in selection mode and not completed)
+                                  if (!nav.isSelectionMode && t.priority != Priority.none && !isCompleted)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: priorityColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  
                                   Expanded(
                                     child: Text(
                                       t.title,
                                       maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
-                                      style: AppTypography.taskTitle.copyWith(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
+                                      style: AppTypography.titleMedium.copyWith(
+                                        color: isCompleted ? colors.textTertiary : AppColors.onSurface,
                                         decoration: isCompleted ? TextDecoration.lineThrough : null,
-                                        decorationColor: AppColors.textMuted,
+                                        decorationColor: colors.textTertiary,
                                       ),
                                     ),
                                   ),
+  
+                                  // Inline Sticker
+                                  if (t.stickerId != null && t.stickerId!.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: StickerWidget(
+                                        sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
+                                        size: 28,
+                                        animate: true,
+                                      ),
+                                    ),
+                                  
+                                  // Flag icon
+                                  if (t.isFlagged)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 6),
+                                      child: Icon(
+                                        Icons.bookmark_rounded,
+                                        size: 14,
+                                        color: AppColors.orange,
+                                      ),
+                                    ),
+                                  
+                                  // MIT star
                                   if (nav.isMIT(t.id))
                                     const Padding(
                                       padding: EdgeInsets.only(left: 4),
@@ -187,94 +323,89 @@ class _TaskCardState extends State<TaskCard> {
                                     ),
                                 ],
                               ),
-                            if (t.dueDate != null || t.tags.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              _buildMetadataRow(context, t),
+                              
+                              // Metadata row
+                              if (t.dueDate != null || t.tags.isNotEmpty || t.isRecurring || t.hasReminder)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: _buildMetadataRow(context, t),
+                                ),
                             ],
-                          ],
+                          ),
                         ),
+                        
+                        // Trailing Actions for Deleted tasks
+                        if (t.isDeleted)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(PhosphorIcons.arrowCounterClockwise(), size: 20),
+                                  tooltip: 'Restore Task',
+                                  color: accent,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () => context.read<TaskProvider>().restoreTask(t.id),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(PhosphorIcons.trash(), size: 20),
+                                  tooltip: 'Delete Permanently',
+                                  color: colors.isDark ? Colors.red[400] : AppColors.red,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () => context.read<TaskProvider>().permanentlyDelete(t.id),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+  
+                    // Subtasks Section
+                    if (t.subtasks.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: _DashedDivider(),
                       ),
-                      // Bottom priority bar
-                      if (t.priority != Priority.none)
-                        Container(
-                          height: 4,
-                          color: priorityColor,
-                        ),
+                      _buildSubtasksSection(context, t, colors, accent, isCompleted),
                     ],
-                  ),
+                  ],
                 ),
               ),
-
-              // 2. Priority dot or Selection Indicator (Top-left)
-              if (nav.isSelectionMode)
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 20, height: 20,
-                    decoration: BoxDecoration(
-                      color: nav.isTaskSelected(t.id) ? accent : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: nav.isTaskSelected(t.id) ? accent : context.appColors.textTertiary.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: nav.isTaskSelected(t.id)
-                        ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
-                        : null,
-                  ),
-                )
-              else if (t.priority != Priority.none && !isCompleted)
-                Positioned(
-                  top: 16,
-                  left: 20,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: priorityColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-
-              // 3. Completed checkmark overlay
-              if (isCompleted)
-                Positioned.fill(
-                  child: Center(
-                    child: Icon(
-                      Icons.check_circle_rounded,
-                      size: 32,
-                      color: accent,
-                    ),
-                  ),
-                ),
-
-              // 4. Sticker (Bottom-right)
-              if (t.stickerId != null && t.stickerId!.isNotEmpty)
-                Positioned(
-                  bottom: 12,
-                  right: 16,
-                  child: _StickerBadge(stickerId: t.stickerId!),
-                ),
-            ],
+            ),
+            ),
           ),
         ),
-      ),
+      );
+    },
     );
   }
 
   Widget _buildMetadataRow(BuildContext context, Task t) {
     final colors = context.appColors;
-    // metadata row implementation...
+    
+    String formatTime(DateTime dt) {
+      final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+      final m = dt.minute.toString().padLeft(2, '0');
+      final p = dt.hour < 12 ? 'AM' : 'PM';
+      return '$h:$m $p';
+    }
+
     return Wrap(
       spacing: 8,
       runSpacing: 4,
       children: [
-        if (t.dueDate != null)
-           _MetaChip(
+        if (t.isCompleted && t.completedAt != null)
+          _MetaChip(
+            icon: Icons.check_circle_outline,
+            label: 'Completed at ${formatTime(t.completedAt!)}',
+            color: AppColors.tertiary,
+          ),
+        if (!t.isCompleted && t.dueDate != null)
+          _MetaChip(
             icon: PhosphorIcons.calendarBlank(),
             label: AppDateUtils.formatDueDate(t.dueDate!, t.dueHour, t.dueMinute),
             color: AppColors.textMuted,
@@ -283,140 +414,14 @@ class _TaskCardState extends State<TaskCard> {
           Icon(Icons.notifications_rounded, size: 10, color: colors.textTertiary),
         if (t.isRecurring)
           Icon(Icons.repeat_rounded, size: 10, color: colors.textTertiary),
+        ...t.tags.take(2).map((tagId) {
+          final tag = context.read<TagProvider>().getById(tagId);
+          if (tag == null) return const SizedBox.shrink();
+          return _TagPill(tagName: tag.name);
+        }),
       ],
     );
   }
-}
-
-  Widget _buildTopSection(BuildContext context, Task t, AppColorsExtension colors, Color accent, bool isCompleted, bool isOverdue) {
-    final nav = context.watch<NavigationProvider>();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Selection Indicator or Dot
-              if (nav.isSelectionMode)
-                Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 20, height: 20,
-                    decoration: BoxDecoration(
-                      color: nav.isTaskSelected(t.id) ? accent : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: nav.isTaskSelected(t.id) ? accent : colors.textTertiary.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: nav.isTaskSelected(t.id)
-                        ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
-                        : null,
-                  ),
-                )
-              else
-                const SizedBox(width: 8),
-              const SizedBox(width: 10),
-
-              // Task name
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        t.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySemibold.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          height: 1.3,
-                          color: isCompleted ? colors.textTertiary : colors.textPrimary,
-                          decoration: isCompleted ? TextDecoration.lineThrough : null,
-                          decorationColor: colors.textTertiary,
-                        ),
-                      ),
-                    ),
-                    if (nav.isMIT(t.id))
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4),
-                        child: Icon(
-                          Icons.star_rounded,
-                          size: 14,
-                          color: Color(0xFFFFD60A),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // Expand arrow
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: () => context.read<NavigationProvider>().selectTask(t.id),
-                child: Icon(
-                  Icons.arrow_outward_rounded,
-                  size: 14,
-                  color: colors.textQuaternary,
-                ),
-              ),
-            ],
-          ),
-
-          // Metadata row
-          if (t.dueDate != null || t.tags.isNotEmpty || t.isFlagged)
-            Padding(
-              padding: const EdgeInsets.only(left: 30, top: 5),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (t.dueDate != null)
-                    _MetaChip(
-                      icon: Icons.schedule_rounded,
-                      label: AppDateUtils.formatDueDate(t.dueDate!, t.dueHour, t.dueMinute),
-                      color: t.isOverdue && !isCompleted ? AppColors.red : colors.textTertiary,
-                    ),
-                  if (t.hasReminder)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(Icons.notifications_rounded, size: 10, color: colors.textTertiary),
-                    ),
-                  if (t.isRecurring)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(Icons.repeat_rounded, size: 10, color: colors.textTertiary),
-                    ),
-                  if (t.isFlagged)
-                    const _MetaChip(
-                      icon: Icons.bookmark_rounded,
-                      label: 'Flagged',
-                      color: AppColors.orange,
-                    ),
-                  ...t.tags.take(2).map((tagId) {
-                    final tag = context.read<TagProvider>().getById(tagId);
-                    if (tag == null) return const SizedBox.shrink();
-                    return _TagPill(tagName: tag.name);
-                  }),
-                  if (t.tags.length > 2)
-                    _MetaChip(
-                      label: '+${t.tags.length - 2}',
-                      color: colors.textQuaternary,
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSubtasksSection(BuildContext context, Task t, AppColorsExtension colors, Color accent, bool isParentCompleted) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
@@ -441,43 +446,6 @@ class _TaskCardState extends State<TaskCard> {
               ),
             ),
         ],
-      ),
-    );
-  }
-
-class _PriorityBar extends StatelessWidget {
-  final Priority priority;
-  const _PriorityBar({required this.priority});
-
-  Color _priorityColor(Priority p) {
-    switch (p) {
-      case Priority.none:   return Colors.transparent;
-      case Priority.low:    return AppColors.priorityLow;
-      case Priority.medium: return AppColors.priorityMedium;
-      case Priority.high:   return AppColors.priorityHigh;
-      case Priority.urgent: return AppColors.priorityUrgent;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _priorityColor(priority);
-    return Container(
-      width: 3,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(10),
-          bottomLeft: Radius.circular(10),
-        ),
-        boxShadow: priority == Priority.urgent
-            ? [
-                BoxShadow(
-                  color: AppColors.priorityUrgent.withValues(alpha: 0.5),
-                  blurRadius: 8,
-                )
-              ]
-            : null,
       ),
     );
   }
@@ -607,7 +575,7 @@ class _StickerBadge extends StatelessWidget {
 
     return StickerWidget(
       sticker: sticker,
-      size: 28,
+      size: 34,
       animate: true,
     );
   }
@@ -699,9 +667,7 @@ class _CelebrationStickerOverlayState extends State<_CelebrationStickerOverlay>
   @override
   void initState() {
     super.initState();
-    final stickers = [
-      AppStickers.celebration,
-    ];
+    final stickers = AppStickers.celebrationStickers;
     _sticker = stickers[DateTime.now().millisecond % stickers.length];
 
     _controller = AnimationController(
@@ -753,6 +719,142 @@ class _CelebrationStickerOverlayState extends State<_CelebrationStickerOverlay>
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── XP Chip Overlay ─────────────────────────────────────────────────────────
+class _XPChipOverlay extends StatefulWidget {
+  final double left;
+  final double top;
+  final int xp;
+
+  const _XPChipOverlay({
+    required this.left,
+    required this.top,
+    required this.xp,
+  });
+
+  @override
+  State<_XPChipOverlay> createState() => _XPChipOverlayState();
+}
+
+class _XPChipOverlayState extends State<_XPChipOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _slideUp;
+  late Animation<double> _opacity;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _slideUp = Tween<double>(begin: 0, end: -40).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
+    ]).animate(_controller);
+
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.8, end: 1.05)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.05, end: 1.0),
+        weight: 20,
+      ),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 50),
+    ]).animate(_controller);
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: widget.left,
+      top: widget.top,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Opacity(
+            opacity: _opacity.value.clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, _slideUp.value),
+              child: Transform.scale(
+                scale: _scale.value,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            gradient: AppColors.gradientSuccess,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppColors.ambientShadow(
+              opacity: 0.15,
+              blur: 12,
+              offset: const Offset(0, 4),
+            ),
+          ),
+          child: Text(
+            '+${widget.xp} XP',
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.onTertiary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineSticker extends StatelessWidget {
+  final String stickerId;
+  const _InlineSticker({required this.stickerId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32, height: 32,
+      decoration: BoxDecoration(
+        color: CardDesign.background(context),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: StickerWidget(
+          sticker: StickerRegistry.findById(stickerId) ?? AppStickers.detailDefault,
+          size: 24,
+          animate: true,
+        ),
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../data/app_stickers.dart';
 import '../shared/deco_sticker.dart';
 import '../../providers/navigation_provider.dart';
+import '../../providers/task_provider.dart';
 
 class TodayHeader extends StatelessWidget {
   final int taskCount;
@@ -20,11 +21,14 @@ class TodayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final colors = context.appColors;
     final nav = context.watch<NavigationProvider>();
+    final tasks = context.watch<TaskProvider>();
     
     final isDone = taskCount > 0 && completedCount == taskCount;
     final sticker = isDone ? AppStickers.todayAllDone : _getTimeSticker();
+    final remaining = taskCount - completedCount;
+    final progress = taskCount > 0 ? completedCount / taskCount : 0.0;
 
     return Container(
       width: double.infinity,
@@ -71,6 +75,90 @@ class TodayHeader extends StatelessWidget {
               color: colors.textTertiary,
             ),
           ),
+          // Progress bar
+          if (taskCount > 0) ...[
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                height: 5,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: progress),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, _) {
+                    return Stack(
+                      children: [
+                        Container(
+                          color: colors.isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.black.withValues(alpha: 0.06),
+                        ),
+                        FractionallySizedBox(
+                          widthFactor: value,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: isDone
+                                  ? const LinearGradient(
+                                      colors: [AppColors.success, Color(0xFF34D399)])
+                                  : AppColors.gradientPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Stats row
+            Row(
+              children: [
+                _MiniStat('✅', '$completedCount done',
+                    isDone ? AppColors.success : colors.textTertiary),
+                _dot(colors),
+                _MiniStat('📋', '$remaining left', colors.textTertiary),
+                if (tasks.currentStreak > 0) ...[
+                  _dot(colors),
+                  _MiniStat('🔥', '${tasks.currentStreak}d streak',
+                      AppColors.danger.withValues(alpha: 0.8)),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _FilterChip(
+                    label: 'MITs Only',
+                    isSelected: nav.filterMITs,
+                    onTap: nav.toggleFilterMITs,
+                    accentColor: const Color(0xFFFFD60A),
+                    icon: Icons.star_rounded,
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterChip(
+                    label: 'High Priority',
+                    isSelected: nav.filterHighPriority,
+                    onTap: nav.toggleFilterHighPriority,
+                    accentColor: AppColors.priorityHigh,
+                    icon: Icons.priority_high_rounded,
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterChip(
+                    label: 'Overdue',
+                    isSelected: nav.filterOverdue,
+                    onTap: nav.toggleFilterOverdue,
+                    accentColor: AppColors.red,
+                    icon: Icons.history_rounded,
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _QuoteCard(),
           if (DateTime.now().hour < 12 && nav.mitTaskIds.isEmpty)
@@ -82,6 +170,14 @@ class TodayHeader extends StatelessWidget {
       ),
     );
   }
+
+  static Widget _dot(AppColorsExtension colors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Text('•', style: TextStyle(color: colors.textQuaternary, fontSize: 10)),
+    );
+  }
+
 
   Sticker _getTimeSticker() {
     final hour = DateTime.now().hour;
@@ -104,6 +200,32 @@ class TodayHeader extends StatelessWidget {
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
                     'July', 'August', 'September', 'October', 'November', 'December'];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String emoji;
+  final String text;
+  final Color color;
+  const _MiniStat(this.emoji, this.text, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 10)),
+        const SizedBox(width: 3),
+        Text(
+          text,
+          style: AppTypography.micro.copyWith(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -134,13 +256,10 @@ class _QuoteCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.format_quote_rounded, color: AppColors.primary, size: 16),
+          const DecoSticker(
+            sticker: AppStickers.quoteSticker,
+            size: 40,
+            animate: true,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -188,6 +307,69 @@ class _PlanningButton extends StatelessWidget {
               style: AppTypography.caption.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Color accentColor;
+  final IconData icon;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.accentColor,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor.withValues(alpha: 0.15) : colors.surfaceElevated,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? accentColor.withValues(alpha: 0.4) : colors.border,
+            width: 1,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ] : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: isSelected ? accentColor : colors.textTertiary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTypography.caption.copyWith(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? colors.textPrimary : colors.textSecondary,
               ),
             ),
           ],

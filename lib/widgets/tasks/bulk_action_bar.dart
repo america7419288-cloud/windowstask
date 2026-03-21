@@ -89,6 +89,21 @@ class BulkActionBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
 
+                // Tomorrow
+                _BulkBtn(
+                  icon: Icons.next_plan_outlined,
+                  label: 'Tomorrow',
+                  color: AppColors.blue,
+                  onTap: () async {
+                    final tomorrow = DateTime.now().add(const Duration(days: 1));
+                    await tasks.bulkUpdateDueDate(ids, DateTime(tomorrow.year, tomorrow.month, tomorrow.day));
+                    nav.clearSelection();
+                  },
+                ),
+                const SizedBox(width: 8),
+
+                // Priority
+
                 // Priority
                 _BulkBtn(
                   icon: Icons.flag_outlined,

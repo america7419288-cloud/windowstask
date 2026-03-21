@@ -108,16 +108,20 @@ class CustomContextMenuController {
       itemOffsetY = menuTopPadding + (itemHeight * 4) + (dividerHeight * 2);
     }
 
-    double shiftX = openLeft
-        ? parentPosition.dx - 164
-        : parentPosition.dx + menuWidth + 4;
-    double shiftY = parentPosition.dy + itemOffsetY;
-
     final media = MediaQuery.of(context).size;
-    if (shiftY + 180 > media.height) {
-      shiftY = media.height - 200;
+    const double submenuWidth = 220;
+    const double submenuHeight = 200; // estimated max height
+
+    double shiftX = parentPosition.dx + menuWidth + 4;
+    if (shiftX + submenuWidth > media.width) {
+      shiftX = parentPosition.dx - submenuWidth - 4;
     }
-    if (shiftY < 0) shiftY = 8;
+
+    double shiftY = parentPosition.dy + itemOffsetY;
+    if (shiftY + submenuHeight > media.height) {
+      shiftY = media.height - submenuHeight - 8;
+    }
+    if (shiftY < 8) shiftY = 8;
 
     _currentSubmenu = OverlayEntry(
       builder: (ctx) => Stack(

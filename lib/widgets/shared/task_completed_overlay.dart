@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/celebration_provider.dart';
 import '../shared/sticker_widget.dart';
-import '../../data/sticker_packs.dart';
-import '../../models/sticker.dart';
+import '../../data/app_stickers.dart';
 
 class TaskCompletedOverlay extends StatefulWidget {
   const TaskCompletedOverlay({super.key});
@@ -80,6 +79,7 @@ class _TaskCompletedOverlayState extends State<TaskCompletedOverlay> with Single
           _targetOffset = Offset(screenSize.width / 2, 40);
         });
       }
+      _controller.reset();
       _controller.forward();
     });
   }
@@ -92,13 +92,7 @@ class _TaskCompletedOverlayState extends State<TaskCompletedOverlay> with Single
 
   @override
   Widget build(BuildContext context) {
-    final sticker = Sticker(
-      id: 'task_completed',
-      packId: 'special',
-      assetPath: 'assets/stickers/task_completed.tgs',
-      name: 'Done',
-      emoji: '✅',
-    );
+    final sticker = AppStickers.randomCelebration();
 
     return AnimatedBuilder(
       animation: _controller,

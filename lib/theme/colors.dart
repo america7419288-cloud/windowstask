@@ -4,71 +4,179 @@ import '../models/task.dart';
 class AppColors {
   AppColors._();
 
-  // ── NEW COLOR SYSTEM ──────────────────────────────────────────
-  static const background = Color(0xFFF9F9FB);
-  static const surface    = Color(0xFFFFFFFF);
-  static const border     = Color(0xFFE5E7EB);
-  
-  static const textPrimary = Color(0xFF111827);
-  static const textMuted   = Color(0xFF6B7280);
-  
-  static const accent = Color(0xFF7C3AED); // Default accent
-  static const danger = Color(0xFFEF4444);
-  static const success = Color(0xFF10B981);
-  static const warning = Color(0xFFF59E0B);
+  // ── MINDFUL ARCHITECT PALETTE ─────────────────────
+  // Primary — Professional Indigo
+  static const primary           = Color(0xFF27389A);
+  static const primaryContainer  = Color(0xFF4151B3);
+  static const primaryLight      = Color(0xFF5C6BC0);
+  static const onPrimary         = Color(0xFFFFFFFF);
 
-  // ── PRIORITY COLORS ───────────────────────────────────────────
-  static const priorityHigh   = Color(0xFFEF4444);
+  // Secondary — Professional Slate
+  static const secondary         = Color(0xFF505F76);
+  static const onSecondary       = Color(0xFFFFFFFF);
+
+  // Tertiary — Achievement Green
+  static const tertiary          = Color(0xFF004E33);
+  static const tertiaryContainer = Color(0xFF006846);
+  static const onTertiary        = Color(0xFF5DEBAF);
+
+  // ── SURFACE HIERARCHY ────────────────────────────
+  // Light mode — subtle indigo undertone
+  static const surfaceLight           = Color(0xFFF6FAFE);
+  static const surfaceContainerLow    = Color(0xFFF0F4F8);
+  static const surfaceContainerLowest = Color(0xFFFFFFFF);
+  static const surfaceContainer       = Color(0xFFEAEEF2);
+  static const surfaceContainerHigh   = Color(0xFFE4E9ED);
+
+  // Dark mode — warm charcoal with indigo tint
+  static const surfaceDark              = Color(0xFF111318);
+  static const surfaceContainerLowDk    = Color(0xFF191C23);
+  static const surfaceContainerLowestDk = Color(0xFF1E2128);
+  static const surfaceContainerDk       = Color(0xFF232730);
+  static const surfaceContainerHighDk   = Color(0xFF2A2E38);
+
+  // ── TEXT ──────────────────────────────────────────
+  static const onSurface          = Color(0xFF171C1F);
+  static const onSurfaceVariant   = Color(0xFF454652);
+  static const onSurfaceDark      = Color(0xFFE2E8F0);
+  static const onSurfaceVariantDk = Color(0xFF9AA5B4);
+
+  // Outline — "Ghost Border" rule: felt not seen
+  static const outlineVariant = Color(0x26C5C5D4); // 15% opacity of #C5C5D4
+
+  // Surface tint — 5% for large bg areas
+  static const surfaceTint = Color(0xFF4555B7);
+
+  // ── SEMANTIC ─────────────────────────────────────
+  static const error            = Color(0xFFBA1A1A);
+  static const errorContainer   = Color(0xFFFFDAD6);
+  static const success          = Color(0xFF006846);
+  static const successContainer = Color(0xFF89F8C7);
+  static const warning          = Color(0xFF7B5800);
+  static const warningContainer = Color(0xFFFFDEA0);
+
+  // ── PRIORITY ─────────────────────────────────────
+  static const priorityNone   = Color(0xFF94A3B8);
+  static const priorityLow    = Color(0xFF22C55E);
   static const priorityMedium = Color(0xFFF59E0B);
-  static const priorityLow    = Color(0xFF3B82F6);
-  static const priorityNone   = Colors.transparent;
+  static const priorityHigh   = Color(0xFFEF4444);
+  static const priorityUrgent = Color(0xFFEC4899);
 
-  // ── LEGACY DEALS (to be removed or refactored) ────────────────
-  static const canvasLight = background;
-  static const surfaceLight = surface;
-  static const textPrimaryLight = textPrimary;
-  static const textSecondaryLight = textMuted;
-  static const dividerLight = border;
+  // ── XP / ACHIEVEMENT ─────────────────────────────
+  static const xpGold   = Color(0xFFFFD60A);
+  static const xpSilver = Color(0xFFC0C0C0);
+  static const xpBronze = Color(0xFFCD7F32);
 
-  static const canvasDark = Color(0xFF111827); // Dark mode counterpart
-  static const surfaceDark = Color(0xFF1F2937);
-  static const textPrimaryDark = Color(0xFFF9FAFB);
-  static const textSecondaryDark = Color(0xFF9CA3AF);
-  static const dividerDark = Color(0xFF374151);
+  // ── GRADIENTS ────────────────────────────────────
+  static const gradientPrimary = LinearGradient(
+    colors: [Color(0xFF27389A), Color(0xFF4151B3)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
-  // ── BACKWARD COMPATIBILITY ALIASES ───────────────────────────
-  static const primary         = accent;
-  static const blue            = Color(0xFF3B82F6);
-  static const purple          = Color(0xFF8B5CF6);
-  static const pink            = Color(0xFFEC4899);
-  static const red             = danger;
-  static const orange          = warning;
-  static const green           = success;
-  static const teal            = Color(0xFF14B8A6);
-  static const indigo          = Color(0xFF6366F1);
-  static const gradientPrimary = LinearGradient(colors: [accent, purple]);
-  static const gradientBlue    = LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF2563EB)]);
-  
-  static const textTertiaryLight = Color(0xFF9CA3AF);
-  static const textTertiaryDark  = Color(0xFF6B7280);
+  static const gradientMomentum = LinearGradient(
+    colors: [Color(0xFF27389A), Color(0xFF3D4FC4)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
-  static const priorityUrgent = priorityHigh;
+  static const gradientSuccess = LinearGradient(
+    colors: [Color(0xFF004E33), Color(0xFF006846)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
-  // Helper for Priority Colors
-  static Color getPriorityColor(Priority p) {
+  static const gradientWarm = LinearGradient(
+    colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const gradientCool = LinearGradient(
+    colors: [Color(0xFF27389A), Color(0xFF6366F1)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // ── PRIORITY COLOR HELPER ────────────────────────
+  static Color priorityColor(Priority p, {bool isDark = false}) {
     switch (p) {
-      case Priority.high: return priorityHigh;
+      case Priority.none:   return priorityNone;
+      case Priority.low:    return priorityLow;
       case Priority.medium: return priorityMedium;
-      case Priority.low: return priorityLow;
-      case Priority.none: return priorityNone;
-      case Priority.urgent: return priorityHigh; // Mapping urgent to high for now
+      case Priority.high:   return priorityHigh;
+      case Priority.urgent: return priorityUrgent;
     }
   }
 
+  // ── AMBIENT SHADOW — never pure black ────────────
+  static List<BoxShadow> ambientShadow({
+    double opacity = 0.06,
+    double blur = 40,
+    double spread = 0,
+    Offset offset = const Offset(0, 20),
+  }) => [
+    BoxShadow(
+      color: const Color(0xFF171C1F).withValues(alpha: opacity),
+      blurRadius: blur,
+      spreadRadius: spread,
+      offset: offset,
+    ),
+  ];
+
+  // ── GHOST BORDER — 15% opacity, felt not seen ────
+  static Border ghostBorder({
+    double width = 1,
+    bool isDark = false,
+  }) => Border.all(
+    color: isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFC5C5D4).withValues(alpha: 0.15),
+    width: width,
+  );
+
+  // ── BACKWARD COMPATIBILITY ALIASES ───────────────
+  static const background = surfaceLight;
+  static const surface    = surfaceContainerLowest;
+  static const border     = outlineVariant;
+  static const textPrimary = onSurface;
+  static const textMuted   = onSurfaceVariant;
+  static const accent      = primary;
+
+  static const danger = error;
+  static const red    = error;
+  static const orange = warning;
+  static const green  = success;
+  static const blue   = Color(0xFF3B82F6);
+  static const purple = Color(0xFF8B5CF6);
+  static const pink   = Color(0xFFEC4899);
+  static const teal   = Color(0xFF14B8A6);
+  static const indigo = Color(0xFF6366F1);
+
+  static const canvasLight = surfaceLight;
+  static const surfaceLight_  = surfaceContainerLowest; // avoid conflict
+  static const textPrimaryLight = onSurface;
+  static const textSecondaryLight = onSurfaceVariant;
+  static const textTertiaryLight = onSurfaceVariant;
+  static const dividerLight = outlineVariant;
+
+  static const canvasDark = surfaceDark;
+  static const textPrimaryDark = onSurfaceDark;
+  static const textSecondaryDark = onSurfaceVariantDk;
+  static const textTertiaryDark = onSurfaceVariantDk;
+  static const dividerDark = Color(0xFF2A2E38);
+
+  static const gradientBlue = LinearGradient(
+    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+  );
+
+  /// Legacy helper — delegates to new priorityColor
+  static Color getPriorityColor(Priority p) => priorityColor(p);
+
   static Color glassBackground(bool isDark) {
-    return isDark 
-        ? const Color(0x99111827) // Stronger dark glass
-        : const Color(0xB3FFFFFF); // Milky light glass
+    return isDark
+        ? const Color(0x99111318)
+        : const Color(0xB3F6FAFE);
   }
 
   static BoxDecoration elevatedDecoration({
@@ -76,24 +184,14 @@ class AppColors {
     double borderRadius = 12,
   }) {
     return BoxDecoration(
-      color: isDark ? surfaceDark : surface,
+      color: isDark ? surfaceContainerLowestDk : surfaceContainerLowest,
       borderRadius: BorderRadius.circular(borderRadius),
-      border: Border.all(
-        color: isDark ? dividerDark : border,
-        width: 1.0,
+      border: ghostBorder(isDark: isDark),
+      boxShadow: ambientShadow(
+        opacity: isDark ? 0.20 : 0.06,
+        blur: 12,
+        offset: const Offset(0, 4),
       ),
-      boxShadow: [
-        BoxShadow(
-          color: isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0x14000000), 
-          blurRadius: 3,
-          offset: const Offset(0, 1),
-        ),
-        BoxShadow(
-          color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0x0A000000),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        ),
-      ],
     );
   }
 }

@@ -71,10 +71,10 @@ class Task extends HiveObject {
   bool isFlagged;
 
   @HiveField(13)
-  bool isRecurringPlaceholder = false; // kept for compatibility
+  bool isRecurringPlaceholder = false; // RESERVED/DEPRECATED - do not reuse this ID
 
   @HiveField(14)
-  String? recurrenceRulePlaceholder; // kept for compatibility
+  String? recurrenceRulePlaceholder; // RESERVED/DEPRECATED - do not reuse this ID
 
   @HiveField(26)
   String? recurrenceJson;
@@ -154,9 +154,22 @@ class Task extends HiveObject {
 
   bool get isCompleted => status == TaskStatus.done;
 
-  RecurrenceRule? get recurrence => recurrenceJson != null
-      ? RecurrenceRule.fromJson(jsonDecode(recurrenceJson!))
-      : null;
+  RecurrenceRule? _memoizedRecurrence;
+  String? _lastRecurrenceJson;
+
+  RecurrenceRule? get recurrence {
+    if (recurrenceJson == null) return null;
+    if (_memoizedRecurrence != null && _lastRecurrenceJson == recurrenceJson) {
+      return _memoizedRecurrence;
+    }
+    _lastRecurrenceJson = recurrenceJson;
+    try {
+      _memoizedRecurrence = RecurrenceRule.fromJson(jsonDecode(recurrenceJson!));
+    } catch (_) {
+      _memoizedRecurrence = null;
+    }
+    return _memoizedRecurrence;
+  }
 
   bool get isRecurring => recurrenceJson != null;
 
@@ -173,10 +186,18 @@ class Task extends HiveObject {
         DateTime(now.year, now.month, now.day));
   }
 
+  double? _memoizedProgress;
+  List<Subtask>? _lastSubtasks;
+
   double get subtaskProgress {
     if (subtasks.isEmpty) return 0;
+    if (_memoizedProgress != null && _lastSubtasks == subtasks) {
+      return _memoizedProgress!;
+    }
+    _lastSubtasks = subtasks;
     final completed = subtasks.where((s) => s.isCompleted).length;
-    return completed / subtasks.length;
+    _memoizedProgress = completed / subtasks.length;
+    return _memoizedProgress!;
   }
 
   Task copyWith({

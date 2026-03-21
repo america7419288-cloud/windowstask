@@ -19,7 +19,14 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class GridViewLayout extends StatelessWidget {
   final List<Task> tasks;
-  const GridViewLayout({super.key, required this.tasks});
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  const GridViewLayout({
+    super.key,
+    required this.tasks,
+    this.shrinkWrap = false,
+    this.physics,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +41,8 @@ class GridViewLayout extends StatelessWidget {
     }
 
     return GridView.builder(
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 240,
@@ -206,7 +215,7 @@ class _GridCover extends StatelessWidget {
           Center(
             child: t.stickerId != null && t.stickerId!.isNotEmpty
                 ? StickerWidget(
-                    sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.todayMorning,
+                    sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
                     size: 72,
                     animate: true,
                   )

@@ -7,12 +7,22 @@ import 'providers/settings_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/focus_provider.dart';
 import 'providers/celebration_provider.dart';
+import 'providers/template_provider.dart';
+import 'providers/user_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/layout/density_scaled_app.dart';
 
 class TaskiApp extends StatelessWidget {
-  const TaskiApp({super.key});
+  final UserProvider userProvider;
+  final TaskProvider taskProvider;
+
+  const TaskiApp({
+    super.key,
+    required this.userProvider,
+    required this.taskProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,19 +32,25 @@ class TaskiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
         ChangeNotifierProvider(create: (_) => ListProvider()..init()),
         ChangeNotifierProvider(create: (_) => TagProvider()..init()),
-        ChangeNotifierProvider(create: (_) => TaskProvider()..init()),
         ChangeNotifierProvider(create: (_) => FocusProvider()),
         ChangeNotifierProvider(create: (_) => CelebrationProvider()),
+        ChangeNotifierProvider(create: (_) => TemplateProvider()..init()),
+        ChangeNotifierProvider.value(value: userProvider),
+        ChangeNotifierProvider.value(value: taskProvider),
       ],
-      child: Consumer<SettingsProvider>(
-        builder: (context, settings, _) {
+      child: Consumer2<SettingsProvider, UserProvider>(
+        builder: (context, settings, user, _) {
           return MaterialApp(
             title: 'Taski',
             debugShowCheckedModeBanner: false,
             themeMode: settings.themeMode,
             theme: AppTheme.light(settings.accentColor),
             darkTheme: AppTheme.dark(settings.accentColor),
-            home: DensityScaledApp(child: const HomeScreen()),
+            home: DensityScaledApp(
+              child: user.hasProfile
+                  ? const HomeScreen()
+                  : const OnboardingScreen(),
+            ),
           );
         },
       ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
@@ -8,6 +9,9 @@ import '../models/app_settings.dart';
 import 'export_service.dart';
 import '../utils/constants.dart';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class StorageService {
   StorageService._();
   static final StorageService instance = StorageService._();
@@ -15,13 +19,79 @@ class StorageService {
   late Box<Task> _tasksBox;
   late Box<TaskList> _listsBox;
   late Box<Tag> _tagsBox;
+  late Box _settingsBox;
+  late Box _profileBox;
   SharedPreferences? _prefs;
 
   Future<void> init() async {
-    _tasksBox = await Hive.openBox<Task>(AppConstants.tasksBox);
-    _listsBox = await Hive.openBox<TaskList>(AppConstants.listsBox);
-    _tagsBox = await Hive.openBox<Tag>(AppConstants.tagsBox);
-    _prefs = await SharedPreferences.getInstance();
+    final secureStorage = FlutterSecureStorage();
+    _prefs = await SharedPreferences.getInstance(); // Init earlier for fallback
+    
+    // We only encrypt on native platforms (Windows) for now
+    // Hive on Web uses indexedDB which is already sandboxed, but we can add encryption there later if needed
+    List<int>? encryptionKey;
+    
+    if (!kIsWeb) {
+      if (Platform.isWindows) {
+        // Windows DPAPI often loses keys across debug sessions. Use a secure storage + shared prefs fallback.
+        String? keyBase64;
+        try {
+          keyBase64 = await secureStorage.read(key: 'db_encryption_key');
+        } catch (e) {
+          print('🔑 STORAGE ERROR Reading secure key: $e');
+        }
+
+        // Fallback to SharedPreferences if secure storage lost it (common in debug/unpackaged)
+        if (keyBase64 == null) {
+          keyBase64 = _prefs!.getString('db_encryption_key_backup');
+          if (keyBase64 != null) {
+            print('🔑 STORAGE: Recovered key from backup.');
+          }
+        }
+
+        if (keyBase64 == null) {
+          print('🔑 STORAGE: GENERATING NEW ENCRYPTION KEY');
+          final key = Hive.generateSecureKey();
+          keyBase64 = base64UrlEncode(key);
+          
+          try {
+            await secureStorage.write(key: 'db_encryption_key', value: keyBase64);
+          } catch (_) {}
+          await _prefs!.setString('db_encryption_key_backup', keyBase64);
+          
+          encryptionKey = key;
+        } else {
+          print('🔑 STORAGE: SUCCESSFULLY READ EXISTING ENCRYPTION KEY');
+          // Ensure it's backed up for next time in case DPAPI drops it later
+          await _prefs!.setString('db_encryption_key_backup', keyBase64);
+          encryptionKey = base64Url.decode(keyBase64);
+        }
+      } else {
+        // MacOS, iOS, Android (Reliable secure storage)
+        try {
+          final keyBase64 = await secureStorage.read(key: 'db_encryption_key');
+          if (keyBase64 == null) {
+            final key = Hive.generateSecureKey();
+            await secureStorage.write(key: 'db_encryption_key', value: base64UrlEncode(key));
+            encryptionKey = key;
+          } else {
+            encryptionKey = base64Url.decode(keyBase64);
+          }
+        } catch (e) {
+          print('🔑 STORAGE ERROR Reading key: $e');
+          final key = Hive.generateSecureKey();
+          encryptionKey = key;
+        }
+      }
+    }
+
+    final cipher = encryptionKey != null ? HiveAesCipher(encryptionKey) : null;
+
+    _tasksBox = await Hive.openBox<Task>(AppConstants.tasksBox, encryptionCipher: cipher);
+    _listsBox = await Hive.openBox<TaskList>(AppConstants.listsBox, encryptionCipher: cipher);
+    _tagsBox = await Hive.openBox<Tag>(AppConstants.tagsBox, encryptionCipher: cipher);
+    _settingsBox = await Hive.openBox('settings', encryptionCipher: cipher);
+    _profileBox = await Hive.openBox('profile', encryptionCipher: cipher);
   }
 
   // ─── Tasks ───────────────────────────────────────────────────────────────
@@ -30,6 +100,7 @@ class StorageService {
 
   Future<void> saveTask(Task task) async {
     await _tasksBox.put(task.id, task);
+    await _tasksBox.flush();
   }
 
   Future<void> deleteTask(String id) async {
@@ -44,6 +115,7 @@ class StorageService {
 
   Future<void> saveList(TaskList list) async {
     await _listsBox.put(list.id, list);
+    await _listsBox.flush();
   }
 
   Future<void> deleteList(String id) async {
@@ -56,6 +128,7 @@ class StorageService {
 
   Future<void> saveTag(Tag tag) async {
     await _tagsBox.put(tag.id, tag);
+    await _tagsBox.flush();
   }
 
   Future<void> deleteTag(String id) async {
@@ -65,19 +138,49 @@ class StorageService {
   // ─── Settings ─────────────────────────────────────────────────────────────
 
   AppSettings getSettings() {
-    if (_prefs == null) return const AppSettings();
-    final json = _prefs!.getString(AppConstants.settingsKey);
-    if (json == null) return const AppSettings();
-    try {
-      return AppSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
-    } catch (_) {
+    final data = _settingsBox.get(AppConstants.settingsKey);
+    if (data == null) {
+      // Fallback to Prefs (Migration)
+      if (_prefs != null) {
+        final json = _prefs!.getString(AppConstants.settingsKey);
+        if (json != null) {
+          try {
+            return AppSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
+          } catch (_) {}
+        }
+      }
       return const AppSettings();
     }
+    return AppSettings.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   Future<void> saveSettings(AppSettings settings) async {
-    if (_prefs == null) return;
-    await _prefs!.setString(AppConstants.settingsKey, jsonEncode(settings.toJson()));
+    await _settingsBox.put(AppConstants.settingsKey, settings.toJson());
+    await _settingsBox.flush();
+  }
+
+  // ─── Profile ──────────────────────────────────────────────────────────────
+
+  Map<String, dynamic>? getProfile() {
+    final data = _profileBox.get('user_profile');
+    if (data == null) {
+      // Fallback to Prefs (Migration)
+      if (_prefs != null) {
+        final json = _prefs!.getString('user_profile');
+        if (json != null) {
+          try {
+            return jsonDecode(json) as Map<String, dynamic>;
+          } catch (_) {}
+        }
+      }
+      return null;
+    }
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<void> saveProfile(Map<String, dynamic> json) async {
+    await _profileBox.put('user_profile', json);
+    await _profileBox.flush();
   }
 
   // ─── Focus Stats ─────────────────────────────────────────────────────────

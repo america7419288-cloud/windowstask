@@ -28,6 +28,7 @@ class ListProvider extends ChangeNotifier {
     required String name,
     String emoji = '📋',
     String colorHex = '007AFF',
+    String? folderName,
   }) async {
     final list = TaskList(
       id: _uuid.v4(),
@@ -36,6 +37,7 @@ class ListProvider extends ChangeNotifier {
       colorHex: colorHex,
       sortOrder: _lists.length,
       createdAt: DateTime.now(),
+      folderName: folderName,
     );
     _lists.add(list);
     await StorageService.instance.saveList(list);

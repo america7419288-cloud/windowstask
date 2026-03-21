@@ -11,6 +11,9 @@ import '../utils/constants.dart';
 import '../widgets/charts/completion_chart.dart';
 import '../widgets/charts/heatmap_chart.dart';
 import '../widgets/shared/progress_ring.dart';
+import '../widgets/shared/deco_sticker.dart';
+import '../data/app_stickers.dart';
+import '../models/sticker.dart';
 import '../services/storage_service.dart';
 import 'package:intl/intl.dart';
 
@@ -33,18 +36,21 @@ class InsightsScreen extends StatelessWidget {
             // Completion chart
             _Section(
               title: 'Completed (Last 14 Days)',
+              emoji: '📊',
               child: const CompletionChart(),
             ),
             const SizedBox(height: 20),
             // Heatmap
             _Section(
               title: 'Activity Heatmap (Last 70 Days)',
+              emoji: '🔥',
               child: const HeatmapChart(),
             ),
             const SizedBox(height: 20),
             // Focus Stats
             _Section(
               title: 'Focus Stats (Last 7 Days)',
+              emoji: '⏱️',
               child: const _FocusStatsCard(),
             ),
             const SizedBox(height: 20),
@@ -73,6 +79,7 @@ class _StatsRow extends StatelessWidget {
     final monthStart = DateTime(now.year, now.month, 1);
     final monthCount = tasks.completedInRange(monthStart, now);
 
+    final streak = tasks.currentStreak;
     return Row(
       children: [
         Expanded(child: _StatCard(
@@ -80,6 +87,7 @@ class _StatsRow extends StatelessWidget {
           value: '$todayCount/$todayTarget',
           icon: PhosphorIcons.calendar(),
           color: AppColors.primary,
+          sticker: AppStickers.insightsChart,
           trailing: ProgressRing(
             value: (todayCount / todayTarget).clamp(0.0, 1.0),
             size: 32,
@@ -92,7 +100,7 @@ class _StatsRow extends StatelessWidget {
           value: '$weekCount',
           icon: PhosphorIcons.calendarBlank(),
           color: AppColors.warning,
-          // Sparkline placeholder...
+          sticker: AppStickers.insightsWeek,
         )),
         const SizedBox(width: 8),
         Expanded(child: _StatCard(
@@ -100,13 +108,16 @@ class _StatsRow extends StatelessWidget {
           value: '$monthCount',
           icon: PhosphorIcons.calendarCheck(),
           color: AppColors.success,
+          sticker: AppStickers.insightsMonth,
         )),
         const SizedBox(width: 8),
         Expanded(child: _StatCard(
           label: 'Streak',
-          value: '${tasks.currentStreak}d',
+          value: '${streak}d',
           icon: PhosphorIcons.fire(PhosphorIconsStyle.fill),
           color: AppColors.danger,
+          sticker: AppStickers.insightsStreak,
+          showBigSticker: streak >= 3,
         )),
       ],
     );
@@ -120,6 +131,8 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.trailing,
+    this.sticker,
+    this.showBigSticker = false,
   });
 
   final String label;
@@ -127,47 +140,76 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Widget? trailing;
+  final Sticker? sticker;
+  final bool showBigSticker;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final isDark = colors.isDark;
     return Container(
       padding: const EdgeInsets.all(16),
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.isDark ? AppColors.surfaceContainerDk : AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        boxShadow: showBigSticker
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.15),
+                  blurRadius: 16,
+                  spreadRadius: -2,
+                ),
+              ]
+            : [],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: AppTypography.sectionHeader.copyWith(
-                  fontSize: 10,
-                  color: colors.textSecondary.withValues(alpha: 0.55),
-                ),
+          // Big background sticker for celebration (streak ≥ 3)
+          if (sticker != null && showBigSticker)
+            Positioned(
+              right: 8,
+              top: 8,
+              child: Opacity(
+                opacity: 0.18,
+                child: DecoSticker(sticker: sticker!, size: 48, animate: true),
               ),
-              Icon(icon, size: 14, color: color.withValues(alpha: 0.6)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
+            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: AppTypography.taskTitle.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    label.toUpperCase(),
+                    style: AppTypography.sectionHeader.copyWith(
+                      fontSize: 10,
+                      color: colors.textSecondary.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  if (sticker != null)
+                    DecoSticker(sticker: sticker!, size: 22, animate: true)
+                  else
+                    Icon(icon, size: 14, color: color.withValues(alpha: 0.6)),
+                ],
               ),
-              if (trailing != null) trailing!,
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: AppTypography.taskTitle.copyWith(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  if (trailing != null) trailing!,
+                ],
+              ),
             ],
           ),
         ],
@@ -177,31 +219,53 @@ class _StatCard extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
+  const _Section({required this.title, required this.child, this.emoji});
   final String title;
   final Widget child;
+  final String? emoji;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final isDark = colors.isDark;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.isDark ? AppColors.surfaceContainerDk : AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title.toUpperCase(),
-            style: AppTypography.sectionHeader.copyWith(
-              fontSize: 10,
-              color: colors.textSecondary.withValues(alpha: 0.55),
+          Row(
+            children: [
+              if (emoji != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Text(emoji!, style: const TextStyle(fontSize: 12)),
+                ),
+              Text(
+                title.toUpperCase(),
+                style: AppTypography.sectionHeader.copyWith(
+                  fontSize: 10,
+                  color: colors.textSecondary.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.2),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -236,7 +300,7 @@ class _CategoryBreakdown extends StatelessWidget {
       return PieChartSectionData(
         value: e.value.toDouble(),
         color: color,
-        radius: 32,
+        radius: 50,
         title: '',
         showTitle: false,
       );
@@ -245,16 +309,16 @@ class _CategoryBreakdown extends StatelessWidget {
     return _Section(
       title: 'Tasks by List',
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 120),
+        constraints: const BoxConstraints(maxHeight: 180),
         child: Row(
           children: [
             SizedBox(
-              width: 100,
-              height: 100,
+              width: 160,
+              height: 160,
               child: PieChart(
                 PieChartData(
                   sections: sections,
-                  centerSpaceRadius: 28,
+                  centerSpaceRadius: 30,
                   sectionsSpace: 2,
                 ),
               ),

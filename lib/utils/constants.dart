@@ -56,12 +56,16 @@ class AppConstants {
   static const String navHighPriority = 'high_priority';
   static const String navScheduled = 'scheduled';
   static const String navFlagged = 'flagged';
+  static const String navCalendar = 'calendar';
   static const String navInsights = 'insights';
   static const String navSettings = 'settings';
+  static const String navStore = 'store';
 
   // Emojis for lists
   static const List<String> listEmojis = [
     '📋', '📌', '🎯', '💼', '🏠', '🎓', '💡', '🚀', '❤️', '🌟',
     '📚', '🏃', '🎵', '🍕', '🌿', '🔧', '💰', '✈️', '🎨', '🛒',
   ];
+
+  static const String defaultColorHex = '007AFF';
 }

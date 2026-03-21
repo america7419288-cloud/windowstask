@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/typography.dart';
 import '../../utils/constants.dart';
+import 'pressable_scale.dart';
 
 enum MacOSButtonStyle { primary, secondary, ghost, danger }
 
@@ -61,46 +62,47 @@ class _MacOSButtonState extends State<MacOSButton> {
 
     if (_pressed) bg = bg.withValues(alpha: 0.8);
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onPressed?.call();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: AppConstants.animFast,
-        padding: EdgeInsets.symmetric(
-          horizontal: widget.isSmall ? 10 : 14,
-          vertical: widget.isSmall ? 5 : 7,
-        ),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppConstants.radiusButton),
-          border: border,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.isLoading) ...[
-              SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+    return PressableScale(
+      onTap: widget.onPressed,
+      behavior: HitTestBehavior.opaque,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedContainer(
+          duration: AppConstants.animFast,
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.isSmall ? 10 : 14,
+            vertical: widget.isSmall ? 5 : 7,
+          ),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(AppConstants.radiusButton),
+            border: border,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.isLoading) ...[
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+                ),
+                const SizedBox(width: 6),
+              ] else if (widget.icon != null) ...[
+                Icon(widget.icon, size: 14, color: fg),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                widget.label,
+                style: (widget.isSmall ? AppTypography.caption : AppTypography.body).copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              const SizedBox(width: 6),
-            ] else if (widget.icon != null) ...[
-              Icon(widget.icon, size: 14, color: fg),
-              const SizedBox(width: 5),
             ],
-            Text(
-              widget.label,
-              style: (widget.isSmall ? AppTypography.caption : AppTypography.body).copyWith(
-                color: fg,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -135,12 +137,12 @@ class _MacOSIconButtonState extends State<MacOSIconButton> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    Widget btn = MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onPressed,
+    Widget btn = PressableScale(
+      onTap: widget.onPressed,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
         child: AnimatedContainer(
           duration: AppConstants.animFast,
           width: widget.size,

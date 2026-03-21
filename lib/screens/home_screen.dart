@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:animations/animations.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../providers/navigation_provider.dart';
@@ -10,7 +11,8 @@ import '../theme/typography.dart';
 import '../utils/constants.dart';
 import '../widgets/sidebar/sidebar.dart';
 import '../widgets/tasks/multi_layout_task_view.dart';
-import '../widgets/tasks/task_detail_panel.dart';
+import 'task_detail_page.dart';
+import 'calendar_screen.dart';
 import '../widgets/shared/traffic_light_buttons.dart';
 import '../widgets/focus/focus_timer_overlay.dart';
 import '../widgets/shared/task_completed_overlay.dart';
@@ -18,9 +20,11 @@ import '../providers/celebration_provider.dart';
 import '../widgets/layout/responsive_layout.dart';
 import '../widgets/layout/app_shortcuts.dart';
 import '../widgets/layout/window_controls.dart';
-import '../widgets/layout/content_wallpaper.dart';
+import '../widgets/layout/app_background.dart';
 import 'settings_screen.dart';
 import 'insights_screen.dart';
+import 'dashboard_screen.dart';
+import 'store_screen.dart';
 
 import '../services/reminder_service.dart';
 import '../widgets/tasks/bulk_action_bar.dart';
@@ -83,18 +87,30 @@ class _HomeScreenState extends State<HomeScreen> {
               case AppConstants.navInsights:
                 mainContent = const InsightsScreen();
                 break;
+              case AppConstants.navToday:
+                mainContent = const DashboardScreen();
+                break;
+              case AppConstants.navCalendar:
+                mainContent = const CalendarScreen();
+                break;
+              case AppConstants.navStore:
+                mainContent = const StoreScreen();
+                break;
               default:
                 mainContent = const MultiLayoutTaskView();
             }
 
-            final showDetail = nav.isDetailPanelOpen && nav.selectedTaskId != null;
-            Widget? detailPanel;
-            if (showDetail) {
+            // Full-page detail replaces main content
+            if (nav.isDetailOpen && nav.selectedTaskId != null) {
               final task = context.watch<TaskProvider>().getById(nav.selectedTaskId!);
               if (task != null) {
-                detailPanel = TaskDetailPanel(task: task);
+                mainContent = TaskDetailPage(task: task);
               }
             }
+
+            // Detail panel is removed — full page replaces it
+            const showDetail = false;
+            Widget? detailPanel;
 
             return Container(
               color: colors.background,
@@ -102,31 +118,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   ResponsiveLayout(
                     sidebar: const Sidebar(),
-                    content: ContentWallpaper(
+                    content: AppBackground(
                       child: Column(
                         children: [
                           WindowDragArea(child: _ContentHeader()),
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 180),
-                            transitionBuilder: (child, animation) {
-                              return FadeTransition(
-                                opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                                child: SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0, 0.015),
-                                    end: Offset.zero,
-                                  ).animate(CurvedAnimation(
-                                    parent: animation,
-                                    curve: Curves.easeOutCubic,
-                                  )),
+                          Expanded(
+                            child: PageTransitionSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
+                                return SharedAxisTransition(
+                                  animation: primaryAnimation,
+                                  secondaryAnimation: secondaryAnimation,
+                                  transitionType: SharedAxisTransitionType.scaled,
                                   child: child,
-                                ),
-                              );
-                            },
-                            child: mainContent,
+                                );
+                              },
+                              child: KeyedSubtree(
+                                key: ValueKey(nav.selectedNavItem + (nav.isDetailOpen ? '_detail' : '')),
+                                child: mainContent,
+                              ),
+                            ),
                           ),
-                        ),
                         ],
                       ),
                     ),
@@ -157,24 +169,52 @@ class _ContentHeader extends StatelessWidget {
     final nav = context.watch<NavigationProvider>();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       decoration: BoxDecoration(
         color: colors.background,
-        border: Border(
-          bottom: BorderSide(color: colors.divider, width: 0.5),
-        ),
+        // Surface shift separator — NO border
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (!nav.isSearchOpen)
-            Text(
-              nav.pageTitle,
-              style: AppTypography.headline.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
-                fontSize: 20,
-                letterSpacing: -0.5,
-              ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nav.pageTitle,
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Selector<TaskProvider, int>(
+                  selector: (context, tasks) => tasks
+                           .getTasksForNav(
+                             nav.selectedNavItem,
+                             filterMITs: nav.filterMITs,
+                             filterHighPriority: nav.filterHighPriority,
+                             filterOverdue: nav.filterOverdue,
+                             mitIds: nav.mitTaskIds,
+                           )
+                           .where((t) {
+                             if (nav.selectedNavItem == AppConstants.navCompleted) return true;
+                             if (nav.selectedNavItem == AppConstants.navTrash) return true;
+                             return !t.isCompleted;
+                           })
+                           .length,
+                  builder: (context, count, _) {
+                    return Text(
+                      _subtitleForNav(nav.selectedNavItem, count),
+                      style: AppTypography.caption.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           if (nav.isSearchOpen) Expanded(child: _SearchBar()),
           if (!nav.isSearchOpen) const Spacer(),
@@ -184,17 +224,53 @@ class _ContentHeader extends StatelessWidget {
               onTap: () => nav.openSearch(),
               tooltip: 'Search  Ctrl+F',
             ),
-          const SizedBox(width: 6),
-          if (!nav.isSearchOpen &&
-              nav.selectedNavItem != AppConstants.navSettings &&
-              nav.selectedNavItem != AppConstants.navInsights &&
-              nav.selectedNavItem != AppConstants.navTrash)
+          const SizedBox(width: 8),
+          if (!nav.isSearchOpen && _showNewTask(nav.selectedNavItem))
             _NewTaskButton(),
           const SizedBox(width: 8),
           const _WindowCaptionButtons(),
         ],
       ),
     );
+  }
+
+  bool _showNewTask(String navItem) {
+    return navItem != AppConstants.navSettings &&
+        navItem != AppConstants.navInsights &&
+        navItem != AppConstants.navTrash &&
+        navItem != AppConstants.navCalendar;
+  }
+
+  String _subtitleForNav(String navItem, int count) {
+    switch (navItem) {
+      case AppConstants.navToday:
+        return 'Your workspace for today';
+      case AppConstants.navUpcoming:
+        return '$count tasks in the next 7 days';
+      case AppConstants.navAll:
+        return '$count tasks total';
+      case AppConstants.navCompleted:
+        return '$count tasks completed';
+      case AppConstants.navTrash:
+        return 'Items deleted in the last 30 days';
+      case AppConstants.navHighPriority:
+        return '$count high priority tasks';
+      case AppConstants.navScheduled:
+        return '$count scheduled tasks';
+      case AppConstants.navFlagged:
+        return '$count flagged tasks';
+      case AppConstants.navSettings:
+        return 'Customize your workspace';
+      case AppConstants.navInsights:
+        return 'Your productivity overview';
+      case AppConstants.navCalendar:
+        return 'See your schedule at a glance';
+      default:
+        if (navItem.startsWith('list_')) {
+          return '$count tasks in this list';
+        }
+        return '';
+    }
   }
 }
 
@@ -204,27 +280,25 @@ class _NewTaskButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.read<NavigationProvider>().openQuickAdd(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
           gradient: AppColors.gradientPrimary,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: AppColors.ambientShadow(
+            opacity: 0.20,
+            blur: 16,
+            offset: const Offset(0, 4),
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.add_rounded, size: 14, color: Colors.white),
-            const SizedBox(width: 5),
+            const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+            const SizedBox(width: 7),
             Text(
               'New Task',
-              style: AppTypography.caption.copyWith(
+              style: AppTypography.labelLarge.copyWith(
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

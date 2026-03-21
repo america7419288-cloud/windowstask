@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/task.dart';
 import '../models/app_settings.dart';
 import '../utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationProvider extends ChangeNotifier {
   String _selectedNavItem = AppConstants.navToday;
@@ -16,6 +20,18 @@ class NavigationProvider extends ChangeNotifier {
 
   bool _isPlanningMode = false;
   final List<String> _mitTaskIds = [];
+  String? _lastPlanningDate;
+  Timer? _searchDebounce;
+
+  // Today view filters
+  bool _filterMITs = false;
+  bool _filterHighPriority = false;
+  bool _filterOverdue = false;
+
+  // Phase 3 — filter bar state
+  Priority? _filterPriority;
+  String? _filterListId;
+  String? _filterDateRange; // 'today' | 'week' | 'overdue' | null
 
   String get selectedNavItem => _selectedNavItem;
   String? get selectedListId => _selectedListId;
@@ -23,6 +39,7 @@ class NavigationProvider extends ChangeNotifier {
   bool get isSearchOpen => _isSearchOpen;
   String get searchQuery => _searchQuery;
   bool get isDetailPanelOpen => _isDetailPanelOpen;
+  bool get isDetailOpen => _isDetailPanelOpen;
   bool get isQuickAddOpen => _isQuickAddOpen;
 
   bool get isSelectionMode => _isSelectionMode;
@@ -34,11 +51,61 @@ class NavigationProvider extends ChangeNotifier {
   List<String> get mitTaskIds => List.unmodifiable(_mitTaskIds);
   bool isMIT(String taskId) => _mitTaskIds.contains(taskId);
 
+  bool get filterMITs => _filterMITs;
+  bool get filterHighPriority => _filterHighPriority;
+  bool get filterOverdue => _filterOverdue;
+
+  Priority? get filterPriority => _filterPriority;
+  String? get filterListId => _filterListId;
+  String? get filterDateRange => _filterDateRange;
+
+  void toggleFilterMITs() {
+    _filterMITs = !_filterMITs;
+    notifyListeners();
+  }
+
+  void toggleFilterHighPriority() {
+    _filterHighPriority = !_filterHighPriority;
+    notifyListeners();
+  }
+
+  void toggleFilterOverdue() {
+    _filterOverdue = !_filterOverdue;
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    _filterMITs = false;
+    _filterHighPriority = false;
+    _filterOverdue = false;
+    _filterPriority = null;
+    _filterListId = null;
+    _filterDateRange = null;
+    notifyListeners();
+  }
+
+  void setFilterPriority(Priority? p) {
+    _filterPriority = p;
+    notifyListeners();
+  }
+
+  void setFilterListId(String? id) {
+    _filterListId = id;
+    notifyListeners();
+  }
+
+  void setFilterDateRange(String? range) {
+    _filterDateRange = range;
+    notifyListeners();
+  }
+
   void selectNav(String item) {
     _selectedNavItem = item;
     _selectedListId = null;
     _selectedTaskId = null;
     _isDetailPanelOpen = false;
+    _isSelectionMode = false;
+    _selectedTaskIds.clear();
 
     // Force list view for sections that don't benefit from other layouts
     if (item == 'trash' || item == 'completed') {
@@ -53,6 +120,7 @@ class NavigationProvider extends ChangeNotifier {
     _selectedListId = listId;
     _selectedTaskId = null;
     _isDetailPanelOpen = false;
+    clearSelection();
     notifyListeners();
   }
 
@@ -81,10 +149,19 @@ class NavigationProvider extends ChangeNotifier {
 
   void updateSearchQuery(String query) {
     _searchQuery = query;
-    notifyListeners();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      notifyListeners();
+    });
   }
 
   void closeDetailPanel() {
+    _selectedTaskId = null;
+    _isDetailPanelOpen = false;
+    notifyListeners();
+  }
+
+  void closeDetail() {
     _selectedTaskId = null;
     _isDetailPanelOpen = false;
     notifyListeners();
@@ -136,6 +213,9 @@ class NavigationProvider extends ChangeNotifier {
 
   void exitPlanningMode() {
     _isPlanningMode = false;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    _lastPlanningDate = today;
+    _savePlanningDate(today);
     notifyListeners();
   }
 
@@ -145,6 +225,46 @@ class NavigationProvider extends ChangeNotifier {
     } else if (_mitTaskIds.length < 5) {
       _mitTaskIds.add(taskId);
     }
+    notifyListeners();
+  }
+
+  void clearMITs() {
+    _mitTaskIds.clear();
+    notifyListeners();
+  }
+
+  bool get shouldShowPlanningPrompt {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return _lastPlanningDate != today && DateTime.now().hour < 14;
+    // Only prompt before 2PM
+  }
+
+  Future<void> _saveSections() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = _sectionLayouts.map((k, v) => MapEntry(k, v.index));
+    await prefs.setString('section_layouts', jsonEncode(data));
+  }
+
+  Future<void> _loadSections() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString('section_layouts');
+    if (json != null) {
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      data.forEach((k, v) {
+        _sectionLayouts[k] = TaskViewLayout.values[v as int];
+      });
+    }
+  }
+
+  Future<void> _savePlanningDate(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_planning_date', date);
+  }
+
+  Future<void> loadPlanningState() async {
+    final prefs = await SharedPreferences.getInstance();
+    _lastPlanningDate = prefs.getString('last_planning_date');
+    await _loadSections();
     notifyListeners();
   }
 
@@ -170,6 +290,8 @@ class NavigationProvider extends ChangeNotifier {
         return 'Insights';
       case AppConstants.navSettings:
         return 'Settings';
+      case AppConstants.navStore:
+        return 'Sticker Store';
       default:
         return _selectedNavItem;
     }
@@ -188,6 +310,11 @@ class NavigationProvider extends ChangeNotifier {
 
   void setLayoutForCurrentSection(TaskViewLayout layout) {
     _sectionLayouts[_selectedNavItem] = layout;
+    _saveSections();
     notifyListeners();
+  }
+
+  NavigationProvider() {
+    loadPlanningState();
   }
 }

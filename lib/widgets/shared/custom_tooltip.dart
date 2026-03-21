@@ -11,7 +11,7 @@ class CustomTooltip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: message,
-      waitDuration: const Duration(milliseconds: 600),
+      waitDuration: const Duration(milliseconds: 350),
       showDuration: const Duration(milliseconds: 1500),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       margin: const EdgeInsets.only(top: 8),

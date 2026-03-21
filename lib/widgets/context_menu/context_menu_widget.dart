@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/task.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/list_provider.dart';
+import '../../providers/focus_provider.dart';
 import '../../theme/app_theme.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'context_menu_item.dart';
@@ -10,6 +11,7 @@ import 'context_menu_divider.dart';
 import 'priority_submenu.dart';
 import 'move_to_list_submenu.dart';
 import 'context_menu_controller.dart';
+import 'package:provider/provider.dart';
 
 class ContextMenuWidget extends StatefulWidget {
   final Task task;
@@ -142,9 +144,42 @@ class _ContextMenuWidgetState extends State<ContextMenuWidget> with SingleTicker
             borderRadius: BorderRadius.circular(12),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+              child: widget.task.isDeleted
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildAnimatedItem(
+                          index: 0,
+                          child: ContextMenuItem(
+                            icon: PhosphorIcons.arrowCounterClockwise(),
+                            label: 'Restore Task',
+                            onHoverAction: () => CustomContextMenuController.hideSubmenu(),
+                            onTap: () => _closeAnd(() {
+                              widget.taskProvider.restoreTask(widget.task.id);
+                            }),
+                          ),
+                        ),
+                        _buildAnimatedItem(
+                          index: 1,
+                          child: const ContextMenuDivider(),
+                        ),
+                        _buildAnimatedItem(
+                          index: 2,
+                          child: ContextMenuItem(
+                            icon: PhosphorIcons.trash(),
+                            label: 'Delete Permanently',
+                            isDestructive: true,
+                            onHoverAction: () => CustomContextMenuController.hideSubmenu(),
+                            onTap: () => _closeAnd(() {
+                              widget.taskProvider.permanentlyDelete(widget.task.id);
+                            }),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                   _buildAnimatedItem(
                     index: 0,
                     child: ContextMenuItem(
@@ -156,10 +191,24 @@ class _ContextMenuWidgetState extends State<ContextMenuWidget> with SingleTicker
                   ),
                   _buildAnimatedItem(
                     index: 1,
-                    child: const ContextMenuDivider(),
+                    child: ContextMenuItem(
+                      icon: PhosphorIcons.timer(),
+                      label: 'Start Focus',
+                      onHoverAction: () => CustomContextMenuController.hideSubmenu(),
+                      onTap: () => _closeAnd(() {
+                        context.read<FocusProvider>().startFocus(
+                          taskIds: [widget.task.id],
+                          currentTaskId: widget.task.id,
+                        );
+                      }),
+                    ),
                   ),
                   _buildAnimatedItem(
                     index: 2,
+                    child: const ContextMenuDivider(),
+                  ),
+                  _buildAnimatedItem(
+                    index: 3,
                     child: ContextMenuItem(
                       icon: widget.task.isFlagged ? PhosphorIcons.flag(PhosphorIconsStyle.fill) : PhosphorIcons.flag(),
                       label: widget.task.isFlagged ? 'Remove Flag' : 'Add Flag',
@@ -233,12 +282,11 @@ class _ContextMenuWidgetState extends State<ContextMenuWidget> with SingleTicker
                   ),
                 ],
               ),
-              ),
             ),
           ),
         ),
       ),
-    );
+      ));
   }
 
   // Staggers children in by delaying animations per index

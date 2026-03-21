@@ -12,6 +12,7 @@ class FocusProvider extends ChangeNotifier {
   
   // Session goals
   List<String> _sessionTaskIds = [];
+  String? _currentTaskId;
   
   // Break state
   int _breakTotalSeconds = 5 * 60;
@@ -19,12 +20,14 @@ class FocusProvider extends ChangeNotifier {
 
   int _completedSessions = 0;
   Timer? _timer;
+  bool _isProcessing = false;
 
   FocusState get state => _state;
   int get remainingSeconds => _remainingSeconds;
   int get breakRemainingSeconds => _breakRemainingSeconds;
   int get completedSessions => _completedSessions;
   List<String> get sessionTaskIds => List.unmodifiable(_sessionTaskIds);
+  String? get currentTaskId => _currentTaskId;
   
   bool get isRunning => _state == FocusState.running;
   bool get isActive => _state != FocusState.idle;
@@ -50,9 +53,11 @@ class FocusProvider extends ChangeNotifier {
 
   void startFocus({
     required List<String> taskIds,
+    String? currentTaskId,
     int durationMinutes = 25,
   }) {
     _sessionTaskIds = taskIds;
+    _currentTaskId = currentTaskId;
     _totalSeconds = durationMinutes * 60;
     _remainingSeconds = _totalSeconds;
     _state = FocusState.running;
@@ -76,6 +81,7 @@ class FocusProvider extends ChangeNotifier {
     _timer?.cancel();
     _state = FocusState.idle;
     _sessionTaskIds = [];
+    _currentTaskId = null;
     _remainingSeconds = _totalSeconds;
     notifyListeners();
   }
@@ -84,12 +90,15 @@ class FocusProvider extends ChangeNotifier {
     _timer?.cancel();
     _state = FocusState.idle;
     _sessionTaskIds = [];
+    _currentTaskId = null;
     notifyListeners();
   }
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) async {
+      if (_isProcessing) return;
+
       if (isBreakMode) {
         if (_breakRemainingSeconds > 0) {
           _breakRemainingSeconds--;
@@ -104,7 +113,9 @@ class FocusProvider extends ChangeNotifier {
           notifyListeners();
         } else {
           t.cancel();
-          _onSessionComplete();
+          _isProcessing = true;
+          await _onSessionComplete();
+          _isProcessing = false;
         }
       }
     });
@@ -120,7 +131,7 @@ class FocusProvider extends ChangeNotifier {
     await StorageService.instance.saveFocusSession(minutes);
 
     NotificationService.instance.showNotification(
-      id: 1000,
+      taskId: 'focus_session_complete',
       title: '🎉 Focus Session Complete!',
       body: 'Great work! Time for a 5-minute break.',
     );
@@ -132,7 +143,7 @@ class FocusProvider extends ChangeNotifier {
   void _onBreakComplete() {
     _state = FocusState.done;
     NotificationService.instance.showNotification(
-      id: 1001,
+      taskId: 'focus_break_complete',
       title: '☕ Break Over',
       body: 'Ready for another session?',
     );

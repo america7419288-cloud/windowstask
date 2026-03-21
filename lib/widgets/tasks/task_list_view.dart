@@ -12,18 +12,34 @@ import '../../data/app_stickers.dart';
 import 'task_card.dart';
 import 'quick_add_bar.dart';
 import 'group_header.dart';
+import 'filter_bar.dart';
 
 class TaskListView extends StatelessWidget {
   const TaskListView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<NavigationProvider, TaskProvider>(
-      builder: (context, nav, tasks, _) {
-        final navItem = nav.selectedNavItem;
-        final query = nav.searchQuery;
-        final taskList = tasks.getTasksForNav(navItem,
-            searchQuery: query.isEmpty ? null : query);
+    return Selector2<NavigationProvider, TaskProvider, Map<String, dynamic>>(
+      selector: (context, nav, tasks) => {
+        'navItem': nav.selectedNavItem,
+        'query': nav.searchQuery,
+        'filterMITs': nav.filterMITs,
+        'filterHighPriority': nav.filterHighPriority,
+        'filterOverdue': nav.filterOverdue,
+        'mitIds': nav.mitTaskIds,
+        'taskList': tasks.getTasksForNav(
+          nav.selectedNavItem,
+          searchQuery: nav.searchQuery.isEmpty ? null : nav.searchQuery,
+          filterMITs: nav.filterMITs,
+          filterHighPriority: nav.filterHighPriority,
+          filterOverdue: nav.filterOverdue,
+          mitIds: nav.mitTaskIds,
+        ),
+      },
+      builder: (context, data, _) {
+        final navItem = data['navItem'] as String;
+        final taskList = data['taskList'] as List<Task>;
+        final mitIds = data['mitIds'] as List<String>;
 
         if (taskList.isEmpty) {
           return Column(
@@ -50,8 +66,9 @@ class TaskListView extends StatelessWidget {
           content = Column(
             children: [
               QuickAddBar(),
-              if (navItem == AppConstants.navToday && nav.mitTaskIds.isNotEmpty)
-                _MITSection(mitIds: nav.mitTaskIds),
+              const FilterBar(),
+              if (navItem == AppConstants.navToday && mitIds.isNotEmpty)
+                _MITSection(mitIds: mitIds),
               Expanded(child: _GroupedList(tasks: taskList)),
             ],
           );
@@ -218,11 +235,14 @@ class _FlatList extends StatelessWidget {
       itemCount: tasks.length,
       itemBuilder: (ctx, i) {
         final task = tasks[i];
-        return _ReorderableTaskCard(
-          key: ValueKey(task.id),
-          task: task,
-          index: i,
-          isSelected: nav.selectedTaskId == task.id,
+        return Selector<NavigationProvider, bool>(
+          key: ValueKey('reorder_item_${task.id}'),
+          selector: (_, n) => n.selectedTaskId == task.id,
+          builder: (context, isSelected, _) => _ReorderableTaskCard(
+            task: task,
+            index: i,
+            isSelected: isSelected,
+          ),
         );
       },
       proxyDecorator: (child, index, animation) => AnimatedBuilder(
@@ -259,19 +279,9 @@ class _ReorderableTaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Expanded(child: TaskCard(task: task, isSelected: isSelected)),
-        ReorderableDragStartListener(
-          index: index,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Icon(Icons.drag_handle_rounded, size: 16,
-                color: colors.textTertiary.withValues(alpha: 0.4)),
-          ),
-        ),
-      ],
+    return ReorderableDragStartListener(
+      index: index,
+      child: TaskCard(task: task, isSelected: isSelected),
     );
   }
 }
@@ -315,10 +325,13 @@ class _GroupedListState extends State<_GroupedList> {
             firstChild: const SizedBox(width: double.infinity),
             secondChild: Column(
               mainAxisSize: MainAxisSize.min,
-              children: group.map<Widget>((task) => TaskCard(
-                key: ValueKey(task.id),
-                task: task,
-                isSelected: nav.selectedTaskId == task.id,
+              children: group.map<Widget>((task) => Selector<NavigationProvider, bool>(
+                selector: (_, n) => n.selectedTaskId == task.id,
+                builder: (context, isSelected, _) => TaskCard(
+                  key: ValueKey(task.id),
+                  task: task,
+                  isSelected: isSelected,
+                ),
               )).toList(),
             ),
           ),
@@ -330,6 +343,11 @@ class _GroupedListState extends State<_GroupedList> {
   Map<String, List<Task>> _groupTasks(List<Task> tasks) {
     final groups = <String, List<Task>>{};
     for (final task in tasks) {
+      if (context.read<NavigationProvider>().selectedNavItem == AppConstants.navAll && task.isCompleted) {
+        groups.putIfAbsent('Completed', () => []).add(task);
+        continue;
+      }
+
       String label;
       if (task.dueDate == null) {
         label = 'No Due Date';
@@ -340,7 +358,7 @@ class _GroupedListState extends State<_GroupedList> {
       }
       groups.putIfAbsent(label, () => []).add(task);
     }
-    const order = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'No Due Date'];
+    const order = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'No Due Date', 'Completed'];
     final sorted = <String, List<Task>>{};
     for (final key in order) {
       if (groups.containsKey(key)) sorted[key] = groups[key]!;

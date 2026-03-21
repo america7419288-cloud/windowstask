@@ -12,7 +12,6 @@ class ResizableSidebar extends StatefulWidget {
 
 class _ResizableSidebarState extends State<ResizableSidebar> {
   static const double minWidth = 180;
-  static const double maxWidth = 320;
   static const double handleWidth = 4;
 
   late double _width;
@@ -46,8 +45,10 @@ class _ResizableSidebarState extends State<ResizableSidebar> {
           onExit: (_) => setState(() => _showHandle = false),
           child: GestureDetector(
             onHorizontalDragUpdate: (details) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final dynamicMaxWidth = screenWidth * 0.4;
               setState(() {
-                _width = (_width + details.delta.dx).clamp(minWidth, maxWidth);
+                _width = (_width + details.delta.dx).clamp(minWidth, dynamicMaxWidth);
               });
             },
             onHorizontalDragEnd: (_) {

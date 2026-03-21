@@ -2,11 +2,11 @@ name: taski
 description: "A beautiful daily task manager for Windows and Web."
 publish_to: 'none'
 
-version: 1.1.0+1
+version: 1.5.0
 
 environment:
   sdk: ^3.5.0
-
+ 
 dependencies:
   flutter:
     sdk: flutter
@@ -33,6 +33,10 @@ dependencies:
   lottie: ^3.1.2
   win_toast: any
   flutter_secure_storage: ^9.2.2
+  tray_manager: ^0.2.4
+  hotkey_manager: ^0.2.3
+  flutter_acrylic: ^1.1.4
+  animations: ^2.1.1
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +58,6 @@ msix_config:
   # Note the new suffix from your error message:
   identity_name: APCore.17495A692FCFE_54v0cj34vpsda
   publisher: CN=EFA15552-1F74-4372-B18E-46FC1458CA8C
-  msix_version: 1.1.0.0
+  msix_version: 1.1.0
   store: true
 

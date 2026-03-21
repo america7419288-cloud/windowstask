@@ -3,13 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../providers/focus_provider.dart';
 import '../../providers/task_provider.dart';
+import '../../providers/navigation_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 import '../../data/app_stickers.dart';
 import '../shared/deco_sticker.dart';
-import '../../models/task.dart';
 import '../../utils/constants.dart';
 
 class SessionSetupDialog extends StatefulWidget {
@@ -33,7 +32,14 @@ class _SessionSetupDialogState extends State<SessionSetupDialog> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
-    final tasks = context.watch<TaskProvider>().getTasksForNav(AppConstants.navAll)
+    final nav = context.watch<NavigationProvider>();
+    final tasks = context.watch<TaskProvider>().getTasksForNav(
+      AppConstants.navAll,
+      filterMITs: nav.filterMITs,
+      filterHighPriority: nav.filterHighPriority,
+      filterOverdue: nav.filterOverdue,
+      mitIds: nav.mitTaskIds,
+    )
         .where((t) => !t.isCompleted)
         .toList();
 

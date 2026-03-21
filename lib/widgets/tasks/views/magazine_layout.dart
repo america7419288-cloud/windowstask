@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../models/task.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/navigation_provider.dart';
-import '../../../providers/tag_provider.dart';
 import '../../../providers/celebration_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
@@ -16,13 +15,17 @@ import '../../../data/app_stickers.dart';
 import '../../../data/sticker_packs.dart';
 import '../../shared/empty_state_widget.dart';
 import '../../../providers/list_provider.dart';
-import '../../../data/app_stickers.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-import '../../../models/sticker.dart';
 
 class MagazineLayout extends StatelessWidget {
   final List<Task> tasks;
-  const MagazineLayout({super.key, required this.tasks});
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  const MagazineLayout({
+    super.key,
+    required this.tasks,
+    this.shrinkWrap = false,
+    this.physics,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +40,8 @@ class MagazineLayout extends StatelessWidget {
     }
 
     return ListView.builder(
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       itemCount: tasks.length,
       itemBuilder: (context, index) => _MagazineCard(task: tasks[index]),
@@ -95,7 +100,7 @@ class _MagazineCardState extends State<_MagazineCard> {
               children: [
                 // HERO SECTION — Large sticker
                 Container(
-                  height: 180,
+                  height: 140,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -108,18 +113,18 @@ class _MagazineCardState extends State<_MagazineCard> {
                   ),
                   child: Center(
                     child: t.stickerId != null && t.stickerId!.isNotEmpty
-                      ? StickerWidget(
-                          sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.todayMorning,
-                          size: 130,
-                          animate: true,
-                        )
+                        ? StickerWidget(
+                            sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
+                            size: 100,
+                            animate: true,
+                          )
                       : Icon(Icons.auto_awesome_rounded, size: 80, color: colors.textQuaternary.withValues(alpha: 0.3)),
                   ),
                 ),
 
                 // CONTENT SECTION
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -163,9 +168,9 @@ class _MagazineCardState extends State<_MagazineCard> {
 
                       // SUBTASKS GRID (2 columns)
                       if (t.subtasks.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        const DashedDivider(),
                         const SizedBox(height: 16),
+                        const DashedDivider(),
+                        const SizedBox(height: 12),
                         GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),

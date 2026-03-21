@@ -39,91 +39,85 @@ class _SidebarItemState extends State<SidebarItem> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? accent.withValues(alpha: 0.12)
-                  : _hovered
-                      ? accent.withValues(alpha: 0.05)
-                      : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Stack(
+          children: [
+            // Background — surface shift
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.10)
+                    : _hovered
+                        ? AppColors.primary.withValues(alpha: 0.04)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 16,
+                    color: isSelected ? AppColors.primary : colors.textTertiary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontSize: 13.5,
+                        color: isSelected ? AppColors.primary : colors.textSecondary,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.visible,
+                      softWrap: false,
+                      maxLines: 1,
+                    ),
+                  ),
+                  // Badge
+                  if (widget.badge != null && widget.badge! > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.primary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${widget.badge}',
+                        style: AppTypography.micro.copyWith(
+                          color: isSelected ? Colors.white : AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  if (widget.trailingWidget != null) widget.trailingWidget!,
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.icon,
-                  size: 18,
-                  color: isSelected ? accent : colors.textPrimary.withValues(alpha: 0.60),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    widget.label,
-                    style: AppTypography.taskTitle.copyWith(
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color: isSelected ? accent : colors.textPrimary.withValues(alpha: 0.60),
+
+            // Left accent line — ONLY on selected
+            if (isSelected)
+              Positioned(
+                left: 0,
+                top: 3,
+                bottom: 3,
+                child: Container(
+                  width: 3,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(2),
+                      bottomRight: Radius.circular(2),
                     ),
                   ),
                 ),
-                if (widget.badge != null && widget.badge! > 0)
-                  _BadgePill(
-                    count: widget.badge!,
-                    isSelected: isSelected,
-                    accent: accent,
-                    colors: colors,
-                  ),
-                if (widget.trailingWidget != null) widget.trailingWidget!,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BadgePill extends StatelessWidget {
-  final int count;
-  final bool isSelected;
-  final Color accent;
-  final AppColorsExtension colors;
-
-  const _BadgePill({
-    required this.count,
-    required this.isSelected,
-    required this.accent,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        gradient: isSelected ? AppColors.gradientPrimary : null,
-        color: isSelected
-            ? null
-            : (colors.isDark
-                ? Colors.white.withValues(alpha: 0.10)
-                : Colors.black.withValues(alpha: 0.07)),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: isSelected
-            ? [BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 6)]
-            : [],
-      ),
-      child: Text(
-        '$count',
-        style: AppTypography.micro.copyWith(
-          color: isSelected ? Colors.white : colors.textSecondary,
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              ),
+          ],
         ),
       ),
     );

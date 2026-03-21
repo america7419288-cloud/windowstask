@@ -3,27 +3,38 @@ import '../../theme/app_theme.dart';
 import '../../theme/colors.dart';
 
 class ShimmerCard extends StatefulWidget {
-  const ShimmerCard({super.key});
+  final AnimationController? externalController;
+  const ShimmerCard({super.key, this.externalController});
 
   @override
   State<ShimmerCard> createState() => _ShimmerCardState();
 }
 
 class _ShimmerCardState extends State<ShimmerCard> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late AnimationController _internalController;
+  bool _usingExternal = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
+    if (widget.externalController != null) {
+      _usingExternal = true;
+    } else {
+      _internalController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1500),
+      )..repeat();
+    }
   }
+
+  AnimationController get _effectiveController => 
+      _usingExternal ? widget.externalController! : _internalController;
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (!_usingExternal) {
+      _internalController.dispose();
+    }
     super.dispose();
   }
 
@@ -44,7 +55,7 @@ class _ShimmerCardState extends State<ShimmerCard> with SingleTickerProviderStat
       child: ClipRRect(
         borderRadius: BorderRadius.circular(13.5),
         child: AnimatedBuilder(
-          animation: _controller,
+          animation: _effectiveController,
           builder: (context, child) {
             return ShaderMask(
               blendMode: BlendMode.srcATop,
@@ -54,8 +65,7 @@ class _ShimmerCardState extends State<ShimmerCard> with SingleTickerProviderStat
                   stops: const [0.0, 0.5, 1.0],
                   begin: const Alignment(-1.0, -0.3),
                   end: const Alignment(1.0, 0.3),
-                  // Animate the gradient transform to sweep across
-                  transform: _SlidingGradientTransform(_controller.value),
+                  transform: _SlidingGradientTransform(_effectiveController.value),
                 ).createShader(bounds);
               },
               child: Container(color: baseColor),

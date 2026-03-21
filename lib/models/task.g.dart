@@ -41,11 +41,11 @@ class TaskAdapter extends TypeAdapter<Task> {
       deletedAt: fields[21] as DateTime?,
       sortOrder: fields[22] as int,
       stickerId: fields[23] as String?,
-      hasReminder: fields[24] == null ? false : fields[24] as bool,
-      reminderMinutesBefore: fields[25] == null ? 0 : fields[25] as int,
+      hasReminder: fields[24] as bool,
+      reminderMinutesBefore: fields[25] as int,
       recurrenceJson: fields[26] as String?,
       recurringParentId: fields[27] as String?,
-      occurrenceIndex: fields[28] == null ? 0 : fields[28] as int,
+      occurrenceIndex: fields[28] as int,
     );
   }
 
@@ -83,6 +83,12 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..write(obj.isRecurringPlaceholder)
       ..writeByte(14)
       ..write(obj.recurrenceRulePlaceholder)
+      ..writeByte(26)
+      ..write(obj.recurrenceJson)
+      ..writeByte(27)
+      ..write(obj.recurringParentId)
+      ..writeByte(28)
+      ..write(obj.occurrenceIndex)
       ..writeByte(15)
       ..write(obj.estimatedMinutes)
       ..writeByte(16)
@@ -104,13 +110,7 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(24)
       ..write(obj.hasReminder)
       ..writeByte(25)
-      ..write(obj.reminderMinutesBefore)
-      ..writeByte(26)
-      ..write(obj.recurrenceJson)
-      ..writeByte(27)
-      ..write(obj.recurringParentId)
-      ..writeByte(28)
-      ..write(obj.occurrenceIndex);
+      ..write(obj.reminderMinutesBefore);
   }
 
   @override
