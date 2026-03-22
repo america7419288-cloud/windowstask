@@ -391,5 +391,17 @@ class StickerRegistry {
         sticker.id: sticker,
   };
 
+  static List<Sticker> get allStickers =>
+      packs.expand((p) => p.stickers).toList();
+
   static Sticker? findById(String id) => _idLookup[id];
+
+  static List<String> getStickerIdsByPackId(String packId) {
+    try {
+      final pack = packs.firstWhere((p) => p.id == packId);
+      return pack.stickers.map((s) => s.id).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 }

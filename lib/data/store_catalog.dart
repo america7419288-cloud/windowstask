@@ -5,22 +5,31 @@ class StoreCatalog {
   static const freePackId = 'pack_free';
 
   static const List<StoreItem> items = [
-    // ── FEATURED PACKS ──────────────────
+    // ── STARTER PACKS ──────────────────
+    StoreItem(
+      id: freePackId,
+      name: 'Starter Pack',
+      description: 'Your first set of stickers — absolutely free!',
+      emoji: '🎁',
+      xpCost: 0,
+      type: StoreItemType.pack,
+      packId: 'pack_misc',
+      stickerIds: [
+        'heart', 'laugh', 'task_completed', 'bear_happy', 'sun_happy_plain'
+      ],
+      isFeatured: true,
+    ),
+
     StoreItem(
       id: 'pack_work_purchase',
       name: 'Work Pack',
       description: '6 animated stickers for work & productivity',
       emoji: '💼',
-      xpCost: 200,
+      xpCost: 25000,
       type: StoreItemType.pack,
       packId: 'pack_work',
       stickerIds: [
-        'work_rocket',
-        'work_target',
-        'work_laptop',
-        'work_bulb',
-        'work_fire',
-        'work_star',
+        'work_rocket', 'work_target', 'work_laptop', 'work_bulb', 'work_fire', 'work_star',
       ],
       isFeatured: true,
     ),
@@ -30,16 +39,11 @@ class StoreCatalog {
       name: 'Premium Pack',
       description: 'Exclusive premium animated stickers',
       emoji: '💎',
-      xpCost: 500,
+      xpCost: 75000,
       type: StoreItemType.pack,
       packId: 'pack_premium',
       stickerIds: [
-        'premium_diamond',
-        'premium_crown',
-        'premium_trophy',
-        'premium_magic',
-        'premium_lightning',
-        'premium_infinity',
+        'premium_diamond', 'premium_crown', 'premium_trophy', 'premium_magic', 'premium_lightning', 'premium_infinity',
       ],
       isFeatured: true,
     ),
@@ -50,7 +54,7 @@ class StoreCatalog {
       name: 'Bears Pack',
       description: '15+ adorable animated bear stickers',
       emoji: '🐻',
-      xpCost: 350,
+      xpCost: 45000,
       type: StoreItemType.pack,
       packId: 'pack_bears',
       stickerIds: [
@@ -64,7 +68,7 @@ class StoreCatalog {
       name: 'Space Pack',
       description: 'Journey into the cosmos with 18 stickers',
       emoji: '👨‍🚀',
-      xpCost: 400,
+      xpCost: 60000,
       type: StoreItemType.pack,
       packId: 'pack_space',
       stickerIds: [
@@ -78,7 +82,7 @@ class StoreCatalog {
       name: 'Bees Pack',
       description: 'Buzzing with 13 happy bee stickers',
       emoji: '🐝',
-      xpCost: 250,
+      xpCost: 35000,
       type: StoreItemType.pack,
       packId: 'pack_bees',
       stickerIds: [
@@ -92,7 +96,7 @@ class StoreCatalog {
       name: 'Home Pack',
       description: 'Cozy living with 9 home appliance stickers',
       emoji: '🏠',
-      xpCost: 200,
+      xpCost: 20000,
       type: StoreItemType.pack,
       packId: 'pack_home',
       stickerIds: [
@@ -105,7 +109,7 @@ class StoreCatalog {
       name: 'Nature Pack',
       description: '14 calming flowers and plants',
       emoji: '🌵',
-      xpCost: 250,
+      xpCost: 30000,
       type: StoreItemType.pack,
       packId: 'pack_nature',
       stickerIds: [
@@ -118,7 +122,7 @@ class StoreCatalog {
       name: 'Weather Pack',
       description: '22 atmospheric weather stickers',
       emoji: '☁️',
-      xpCost: 300,
+      xpCost: 40000,
       type: StoreItemType.pack,
       packId: 'pack_weather',
       stickerIds: [
@@ -131,7 +135,7 @@ class StoreCatalog {
       name: 'Ducks Pack',
       description: 'Classic duck variety',
       emoji: '🦆',
-      xpCost: 150,
+      xpCost: 10000,
       type: StoreItemType.pack,
       packId: 'pack_ducks',
       stickerIds: [
@@ -144,7 +148,7 @@ class StoreCatalog {
       name: 'Peaches Pack',
       description: '25+ expressive peach character stickers',
       emoji: '🍑',
-      xpCost: 450,
+      xpCost: 80000,
       type: StoreItemType.pack,
       packId: 'pack_peaches',
       stickerIds: [
@@ -157,7 +161,7 @@ class StoreCatalog {
       name: 'Frogs Pack',
       description: '16 hilarious frog stickers',
       emoji: '🐸',
-      xpCost: 300,
+      xpCost: 45000,
       type: StoreItemType.pack,
       packId: 'pack_frogs',
       stickerIds: [
@@ -170,7 +174,7 @@ class StoreCatalog {
       name: 'Pigeons Pack',
       description: '20+ cool urban pigeon stickers',
       emoji: '🐦',
-      xpCost: 400,
+      xpCost: 60000,
       type: StoreItemType.pack,
       packId: 'pack_pigeons',
       stickerIds: [
@@ -183,7 +187,7 @@ class StoreCatalog {
       name: 'Puppies Pack',
       description: '16 cute dog stickers',
       emoji: '🐶',
-      xpCost: 350,
+      xpCost: 55000,
       type: StoreItemType.pack,
       packId: 'pack_puppies',
       stickerIds: [
@@ -192,13 +196,64 @@ class StoreCatalog {
       isFeatured: true,
     ),
 
-    // ── INDIVIDUALS ───────────────────
+    StoreItem(
+      id: 'pack_misc_purchase',
+      name: 'Misc Pack',
+      description: 'The ultimate collection of 70+ varied animated stickers',
+      emoji: '✨',
+      xpCost: 100000,
+      type: StoreItemType.pack,
+      packId: 'pack_misc',
+      stickerIds: [
+        'angry', 'sushi_cat_celebration', 'heart', 'laugh', 'task_completed'
+      ],
+      isFeatured: true,
+    ),
+
+    StoreItem(
+      id: 'pack_body_purchase',
+      name: 'Body Pack',
+      description: '10 anatomical but adorable organ stickers',
+      emoji: '🫁',
+      xpCost: 30000,
+      type: StoreItemType.pack,
+      packId: 'pack_body',
+      stickerIds: [
+        'intestine_bath', 'kidneys_friends', 'liver_drinking_wine', 'lungs_love'
+      ],
+    ),
+
+    StoreItem(
+      id: 'pack_jinx_purchase',
+      name: 'Jinx Pack',
+      description: '11 expressive cat stickers for every mood',
+      emoji: '🐱',
+      xpCost: 40000,
+      type: StoreItemType.pack,
+      packId: 'pack_jinx',
+      stickerIds: [
+        'jinx_smiling', 'jinx_wink_hands', 'jinx_tongue_out', 'jinx_sad_sitting'
+      ],
+    ),
+    
+    // ── MASTER UNLOCK ──────────────────
+    StoreItem(
+      id: 'all_stickers_unlock',
+      name: 'Legendary Master Key',
+      description: 'Unlock EVERY sticker pack and individual sticker instantly!',
+      emoji: '🗝️',
+      xpCost: 1000000,
+      type: StoreItemType.all,
+      stickerIds: [],
+      isFeatured: true,
+    ),
+
     StoreItem(
       id: 'ind_rocket',
       name: 'Rocket',
       description: 'Launch your tasks!',
       emoji: '🚀',
-      xpCost: 50,
+      xpCost: 3000,
       type: StoreItemType.individual,
       packId: 'pack_work',
       stickerIds: ['work_rocket'],
@@ -208,7 +263,7 @@ class StoreCatalog {
       name: 'Party',
       description: 'Celebrate!',
       emoji: '🎉',
-      xpCost: 50,
+      xpCost: 3000,
       type: StoreItemType.individual,
       packId: 'pack_home',
       stickerIds: ['speaker_party'],

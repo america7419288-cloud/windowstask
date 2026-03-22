@@ -1,4 +1,4 @@
-enum StoreItemType { pack, individual }
+enum StoreItemType { pack, individual, all }
 
 class StoreItem {
   final String id;

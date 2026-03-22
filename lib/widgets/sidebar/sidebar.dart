@@ -91,21 +91,22 @@ class _NavContent extends StatefulWidget {
 
 class _NavContentState extends State<_NavContent> {
   final ScrollController _scrollController = ScrollController();
+  NavigationProvider? _navProvider;
 
   @override
-  void initState() {
-    super.initState();
-    // Listen to navigation changes and scroll to top when primary categories change
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NavigationProvider>().addListener(_onNavChanged);
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_navProvider == null) {
+      _navProvider = context.read<NavigationProvider>();
+      _navProvider!.addListener(_onNavChanged);
+    }
   }
 
   void _onNavChanged() {
-    final nav = context.read<NavigationProvider>();
+    if (_navProvider == null) return;
     // If we switch to Today or Upcoming, scroll to top
-    if (nav.selectedNavItem == AppConstants.navToday || 
-        nav.selectedNavItem == AppConstants.navUpcoming) {
+    if (_navProvider!.selectedNavItem == AppConstants.navToday || 
+        _navProvider!.selectedNavItem == AppConstants.navUpcoming) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           0.0,
@@ -118,7 +119,7 @@ class _NavContentState extends State<_NavContent> {
 
   @override
   void dispose() {
-    context.read<NavigationProvider>().removeListener(_onNavChanged);
+    _navProvider?.removeListener(_onNavChanged);
     _scrollController.dispose();
     super.dispose();
   }

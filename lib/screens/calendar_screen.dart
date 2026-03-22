@@ -234,9 +234,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _selected != null
                   ? '${_dayFullName(_selected!.weekday)}, ${_selected!.day}'
                   : 'Select a day',
-              style: AppTypography.headlineSmall.copyWith(
+              style: AppTypography.displayMedium.copyWith(
                 color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(width: 10),

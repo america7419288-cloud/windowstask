@@ -286,6 +286,8 @@ class NavigationProvider extends ChangeNotifier {
         return 'Scheduled';
       case AppConstants.navFlagged:
         return 'Flagged';
+      case AppConstants.navCalendar:
+        return 'Calendar';
       case AppConstants.navInsights:
         return 'Insights';
       case AppConstants.navSettings:

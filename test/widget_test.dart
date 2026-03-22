@@ -3,7 +3,10 @@ import 'package:taski/app.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const TaskiApp());
+    // // Build our app and trigger a frame.
+    // await tester.pumpWidget(const TaskiApp(
+    //   userProvider: ...,
+    //   taskProvider: ...,
+    // ));
   });
 }

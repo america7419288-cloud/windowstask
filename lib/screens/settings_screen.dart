@@ -17,6 +17,7 @@ import '../services/wallpaper_image_service.dart';
 import '../models/sticker.dart';
 import '../data/app_stickers.dart';
 import '../widgets/shared/deco_sticker.dart';
+import 'xp_audit_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1414,12 +1415,23 @@ class _AboutSectionState extends State<_AboutSection> {
               )),
             ),
             _SettingsRow(
-              isLast: true,
               label: 'Built with',
               control: Text('Flutter 3 · Hive · Provider', style: AppTypography.body.copyWith(
                 color: colors.textSecondary,
                 fontSize: 13,
               )),
+            ),
+            _SettingsRow(
+              isLast: true,
+              label: 'XP History',
+              subtitle: 'View your transaction ledger',
+              control: IconButton(
+                icon: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: colors.textTertiary),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const XPAuditScreen()),
+                ),
+              ),
             ),
           ],
         ),

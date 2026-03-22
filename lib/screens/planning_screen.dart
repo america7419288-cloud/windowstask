@@ -39,7 +39,9 @@ class _PlanningScreenState extends State<PlanningScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<NavigationProvider>().enterPlanningMode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<NavigationProvider>().enterPlanningMode();
+    });
   }
 
   @override

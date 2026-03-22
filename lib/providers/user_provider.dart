@@ -1,10 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/sticker_packs.dart';
 import '../models/user_profile.dart';
 import '../models/achievement.dart';
 import '../models/task.dart';
 import '../models/store_item.dart';
+import '../models/xp_transaction.dart';
+import '../services/security/encryption_service.dart';
+import '../services/security/xp_cooldown_tracker.dart';
+import '../services/security/secure_xp_store.dart';
+import '../services/security/integrity_checker.dart';
 import '../services/storage_service.dart';
 
 class UserProvider extends ChangeNotifier {
@@ -31,44 +37,45 @@ class UserProvider extends ChangeNotifier {
   }
 
   bool hasUnlocked(String stickerId) =>
-      _profile?.unlockedStickerIds.contains(stickerId) ?? false;
+      SecureXPStore.instance.isStickerUnlocked(stickerId);
 
   bool hasPurchased(String itemId) =>
-      _profile?.purchasedItemIds.contains(itemId) ?? false;
+      SecureXPStore.instance.isItemPurchased(itemId);
 
   Future<PurchaseResult> purchase(StoreItem item) async {
     if (_profile == null) return PurchaseResult.noProfile;
-    if (_profile!.totalXP < item.xpCost) return PurchaseResult.insufficientXP;
+    if (totalXP < item.xpCost) return PurchaseResult.insufficientXP;
     if (hasPurchased(item.id)) return PurchaseResult.alreadyOwned;
 
-    // Deduct XP
-    final newXP = _profile!.totalXP - item.xpCost;
+    // Spend XP atomically
+    final spent = await SecureXPStore.instance.spendXP(item.xpCost);
+    if (!spent) return PurchaseResult.insufficientXP;
 
-    // Unlock all stickers in this item
-    final newUnlocked = {
-      ..._profile!.unlockedStickerIds,
-      ...item.stickerIds,
-    }.toList();
+    // Unlock stickers
+    await SecureXPStore.instance.unlockStickers(item.stickerIds);
 
-    final newPurchased = {
-      ..._profile!.purchasedItemIds,
-      item.id,
-    }.toList();
+    // If it's a pack, unlock EVERYTHING in that pack from the registry
+    if (item.type == StoreItemType.pack && item.packId != null) {
+      final allIds = StickerRegistry.getStickerIdsByPackId(item.packId!);
+      await SecureXPStore.instance.unlockStickers(allIds);
+    }
 
-    _profile = _profile!.copyWith(
-      totalXP: newXP,
-      unlockedStickerIds: newUnlocked,
-      purchasedItemIds: newPurchased,
-    );
+    // Master Unlock logic
+    if (item.type == StoreItemType.all) {
+      final allStickers = StickerRegistry.allStickers.map((s) => s.id).toList();
+      await SecureXPStore.instance.unlockStickers(allStickers);
+    }
 
-    await _persist();
+    // Record purchase
+    await SecureXPStore.instance.recordPurchase(item.id);
+
     notifyListeners();
     return PurchaseResult.success;
   }
 
   String get firstName => _profile?.firstName ?? 'Friend';
 
-  int get totalXP => _profile?.totalXP ?? 0;
+  int get totalXP => SecureXPStore.instance.totalXP;
   int get streak => _profile?.currentStreak ?? 0;
   int get streakShields => _profile?.streakShields ?? 0;
 
@@ -76,25 +83,69 @@ class UserProvider extends ChangeNotifier {
   int get level => (totalXP / 500).floor() + 1;
   double get levelProgress => (totalXP % 500) / 500;
 
-  Future<void> init() async {
-    final data = StorageService.instance.getProfile();
-    if (data != null) {
-      try {
-        _profile = UserProfile.fromJson(data);
-      } catch (_) {
-        // Corrupt data — ignore
-      }
-    }
+  // Obfuscated profile storage key
+  static const _profileKey = 'e7a3c9f2';
 
-    // BREAKING FOR TESTING: Add 10,000 XP once
+  Future<void> init([BuildContext? context]) async {
+    // 1. Init encryption first
+    await EncryptionService.instance.init();
+
+    // 2. Init cooldown tracker
+    await XPCooldownTracker.instance.init();
+
+    // 3. Init secure store
+    await SecureXPStore.instance.init();
+
+    // 4. Load user profile (name, avatar, streak)
+    // XP now comes from SecureXPStore
     final prefs = await SharedPreferences.getInstance();
-    if (_profile != null && !(prefs.getBool('test_xp_added') ?? false)) {
-      _profile = _profile!.copyWith(totalXP: _profile!.totalXP + 10000);
-      await prefs.setBool('test_xp_added', true);
-      await _persist();
+    String? profileJson = prefs.getString(_profileKey);
+    
+    if (profileJson == null) {
+      // ── MIGRATION FROM OLD STORAGE ──
+      final oldData = StorageService.instance.getProfile();
+      if (oldData != null) {
+        try {
+          _profile = UserProfile.fromJson(oldData);
+          // Migrate XP if ledger is empty
+          if (_profile!.totalXP > 0 && SecureXPStore.instance.totalXP == 0) {
+            await SecureXPStore.instance.addXP(
+              amount: _profile!.totalXP,
+              source: XPSource.migration,
+            );
+          }
+          // Migrate stickers/items
+          if (_profile!.unlockedStickerIds.isNotEmpty) {
+            await SecureXPStore.instance.unlockStickers(_profile!.unlockedStickerIds);
+          }
+          if (_profile!.purchasedItemIds.isNotEmpty) {
+            for (final id in _profile!.purchasedItemIds) {
+              await SecureXPStore.instance.recordPurchase(id);
+            }
+          }
+          // Save to new secure key
+          await _persist();
+        } catch (_) {}
+      }
+    } else {
+      try {
+        _profile = UserProfile.fromJson(jsonDecode(profileJson));
+      } catch (_) {}
     }
 
-    // Update streak on init
+    // ── NEW USER STARTER BONUS ──
+    if (_profile == null && SecureXPStore.instance.totalXP == 0) {
+      await SecureXPStore.instance.addXP(
+        amount: 1000,
+        source: XPSource.migration, // Using migration as a one-time grant label
+      );
+    }
+
+    // 5. Run integrity check
+    if (context != null) {
+      await IntegrityChecker.runOnStartup(context);
+    }
+
     await _updateDailyStreak();
     notifyListeners();
   }
@@ -105,12 +156,17 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addXP(int amount, {String? reason}) async {
+  Future<void> addXP(int amount, {
+    String? reason,
+    XPSource source = XPSource.taskCompletion,
+    String? taskId,
+  }) async {
     if (_profile == null) return;
-    _profile = _profile!.copyWith(
-      totalXP: _profile!.totalXP + amount,
+    await SecureXPStore.instance.addXP(
+      amount: amount,
+      source: source,
+      taskId: taskId,
     );
-    await _persist();
     notifyListeners();
   }
 
@@ -123,7 +179,11 @@ class UserProvider extends ChangeNotifier {
 
     final achievement = Achievements.findById(badgeId);
     if (achievement != null) {
-      await addXP(achievement.xpReward, reason: achievement.name);
+      await addXP(
+        achievement.xpReward, 
+        reason: achievement.name,
+        source: XPSource.achievementUnlock,
+      );
     }
     await _persist();
     notifyListeners();
@@ -160,7 +220,6 @@ class UserProvider extends ChangeNotifier {
       }
 
       // Check for milestone celebration
-      // (Actually checking the exact milestone values requested: 3, 7, 14, 30, 60, 100)
       if (const {3, 7, 14, 30, 60, 100}.contains(newStreak)) {
         _pendingMilestone = newStreak;
       }
@@ -172,6 +231,13 @@ class UserProvider extends ChangeNotifier {
       if (newStreak >= 30) {
         await earnBadge('streak_30');
       }
+
+      // Award streak bonus XP (signed transaction)
+      await addXP(
+        25, // Basic streak bonus
+        source: XPSource.streakBonus,
+      );
+
     } else if (diff > 1) {
       // Streak broken — check for shield
       if (_profile!.streakShields > 0) {
@@ -195,32 +261,55 @@ class UserProvider extends ChangeNotifier {
   Future<void> recordTaskCompletion(Task task) async {
     if (_profile == null) return;
 
-    // XP for completion based on priority
+    // ── COOLDOWN CHECK ────────────────
+    // Block if already earned XP for this task today
+    if (!XPCooldownTracker.instance.canEarnXP(task.id)) {
+      await _touchActiveDate();
+      return;
+    }
+
+    // ── CALCULATE XP ──────────────────
     int xp = XPValues.completeTask;
     if (task.priority == Priority.high) {
       xp = XPValues.completeHigh;
     } else if (task.priority == Priority.urgent) {
       xp = XPValues.completeUrgent;
     }
-    await addXP(xp);
 
-    // Early bird badge
+    // ── RECORD COOLDOWN ───────────────
+    await XPCooldownTracker.instance.recordXPEarned(task.id);
+
+    // ── AWARD XP ──────────────────────
+    await SecureXPStore.instance.addXP(
+      amount: xp,
+      source: XPSource.taskCompletion,
+      taskId: task.id,
+    );
+
+    // ── BADGES ────────────────────────
     if (DateTime.now().hour < 9) {
       await earnBadge('early_bird');
     }
 
-    // Update last active
+    await _touchActiveDate();
+    await _updateDailyStreak();
+    notifyListeners();
+  }
+
+  Future<void> _touchActiveDate() async {
+    if (_profile == null) return;
     _profile = _profile!.copyWith(
       lastActiveDate: DateTime.now(),
     );
-    await _updateDailyStreak();
     await _persist();
-    notifyListeners();
   }
 
   Future<void> recordFocusCompletion(int durationMinutes) async {
     if (_profile == null) return;
-    await addXP(XPValues.completeFocus);
+    await addXP(
+      XPValues.completeFocus,
+      source: XPSource.focusSession,
+    );
     if (durationMinutes >= 60) {
       await earnBadge('deep_work_master');
     }
@@ -228,7 +317,8 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> _persist() async {
     if (_profile == null) return;
-    await StorageService.instance.saveProfile(_profile!.toJson());
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_profileKey, jsonEncode(_profile!.toJson()));
   }
 }
 

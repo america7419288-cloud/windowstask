@@ -10,6 +10,9 @@ import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'providers/user_provider.dart';
 import 'providers/task_provider.dart';
+import 'services/security/encryption_service.dart';
+import 'services/security/xp_cooldown_tracker.dart';
+import 'services/security/secure_xp_store.dart';
 import 'app.dart';
 
 // Conditional window setup — only imported on native (dart:io) platforms
@@ -82,6 +85,11 @@ void main() async {
   if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(TaskListAdapter());
   if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(TagAdapter());
   if (!Hive.isAdapterRegistered(6)) Hive.registerAdapter(TaskTemplateAdapter());
+ 
+  // ── 1.1 Security Init ────────────────────────────────────────────────────
+  await EncryptionService.instance.init();
+  await XPCooldownTracker.instance.init();
+  await SecureXPStore.instance.init();
 
   // ── 2 & 3. Init Services in Parallel ─────────────────────────────────────
   await Future.wait([

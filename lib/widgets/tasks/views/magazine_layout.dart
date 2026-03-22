@@ -93,149 +93,187 @@ class _MagazineCardState extends State<_MagazineCard> {
                 ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, 5))]
                 : CardDesign.shadow(context),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(CardDesign.radius),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // HERO SECTION — Large sticker
-                Container(
-                  height: 140,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        getPriorityColor(t.priority).withValues(alpha: colors.isDark ? 0.25 : 0.12),
-                        getPriorityColor(t.priority).withValues(alpha: colors.isDark ? 0.08 : 0.02),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 280),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(CardDesign.radius),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // HERO SECTION — Large sticker
+                  Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          getPriorityColor(t.priority).withValues(alpha: colors.isDark ? 0.25 : 0.12),
+                          getPriorityColor(t.priority).withValues(alpha: colors.isDark ? 0.08 : 0.02),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              getPriorityColor(t.priority).withValues(alpha: 0.15),
+                              getPriorityColor(t.priority).withValues(alpha: 0.05),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: t.stickerId != null && t.stickerId!.isNotEmpty
+                              ? StickerWidget(
+                                  sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
+                                  size: 56,
+                                  animate: true,
+                                )
+                              : Text(
+                                  _priorityEmoji(t.priority),
+                                  style: const TextStyle(fontSize: 32),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // CONTENT SECTION
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Meta row
+                        Row(
+                          children: [
+                            PriorityBadgeInline(priority: t.priority),
+                            const SizedBox(width: 8),
+                            if (t.dueDate != null)
+                               CardTagPill(tagName: AppDateUtils.formatShortDate(t.dueDate!)),
+                            const Spacer(),
+                            if (t.isFlagged)
+                              const Icon(Icons.bookmark_rounded, color: AppColors.orange, size: 18),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Title
+                        Text(t.title,
+                          style: AppTypography.titleMedium.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
+                            decoration: t.isCompleted ? TextDecoration.lineThrough : null,
+                          )),
+                        
+                        // Note
+                        if (t.description.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(t.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: colors.textTertiary,
+                            )),
+                        ],
+
+                        // SUBTASKS GRID (2 columns)
+                        if (t.subtasks.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          const DashedDivider(),
+                          const SizedBox(height: 12),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisExtent: 28,
+                              crossAxisSpacing: 10,
+                            ),
+                            itemCount: t.subtasks.length,
+                            itemBuilder: (context, idx) => InlineSubtaskRow(sub: t.subtasks[idx], taskId: t.id),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  child: Center(
-                    child: t.stickerId != null && t.stickerId!.isNotEmpty
-                        ? StickerWidget(
-                            sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
-                            size: 100,
-                            animate: true,
-                          )
-                      : Icon(Icons.auto_awesome_rounded, size: 80, color: colors.textQuaternary.withValues(alpha: 0.3)),
-                  ),
-                ),
 
-                // CONTENT SECTION
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Meta row
-                      Row(
-                        children: [
-                          PriorityBadgeInline(priority: t.priority),
-                          const SizedBox(width: 8),
-                          if (t.dueDate != null)
-                             CardTagPill(tagName: AppDateUtils.formatShortDate(t.dueDate!)),
-                          const Spacer(),
-                          if (t.isFlagged)
-                            const Icon(Icons.bookmark_rounded, color: AppColors.orange, size: 18),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Title
-                      Text(t.title,
-                        style: AppTypography.headline.copyWith(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                          height: 1.2,
-                          color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
-                          decoration: t.isCompleted ? TextDecoration.lineThrough : null,
-                        )),
-                      
-                      // Note
-                      if (t.description.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Text(t.description,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.body.copyWith(
-                            fontSize: 15,
-                            color: colors.textSecondary,
-                            height: 1.5,
-                          )),
+                  // FOOTER
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: colors.isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
+                      border: Border(top: BorderSide(color: colors.divider, width: 0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        // Completion pill
+                        GestureDetector(
+                          onTap: () => context.read<TaskProvider>().toggleComplete(
+                            t.id,
+                            celebration: context.read<CelebrationProvider>(),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: t.isCompleted
+                                  ? AppColors.tertiary.withValues(alpha: 0.12)
+                                  : AppColors.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  t.isCompleted ? Icons.check_rounded : Icons.radio_button_unchecked,
+                                  size: 13,
+                                  color: t.isCompleted ? AppColors.tertiary : AppColors.primary,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  t.isCompleted ? 'Completed' : 'Mark complete',
+                                  style: AppTypography.labelMedium.copyWith(
+                                    color: t.isCompleted ? AppColors.tertiary : AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        // List name
+                        if (t.listId != null)
+                          Text(
+                            'in ${context.read<ListProvider>().getById(t.listId!)?.name ?? 'Inbox'}',
+                            style: AppTypography.caption.copyWith(color: colors.textTertiary),
+                          ),
                       ],
-
-                      // SUBTASKS GRID (2 columns)
-                      if (t.subtasks.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        const DashedDivider(),
-                        const SizedBox(height: 12),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisExtent: 28,
-                            crossAxisSpacing: 10,
-                          ),
-                          itemCount: t.subtasks.length,
-                          itemBuilder: (context, idx) => InlineSubtaskRow(sub: t.subtasks[idx], taskId: t.id),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-
-                // FOOTER
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: colors.isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
-                    border: Border(top: BorderSide(color: colors.divider, width: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      // Completion pill
-                      GestureDetector(
-                        onTap: () => context.read<TaskProvider>().toggleComplete(
-                          t.id,
-                          celebration: context.read<CelebrationProvider>(),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: t.isCompleted ? AppColors.green : accent,
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(color: (t.isCompleted ? AppColors.green : accent).withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(t.isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined, size: 16, color: Colors.white),
-                              const SizedBox(width: 8),
-                              Text(t.isCompleted ? 'Completed' : 'Mark complete',
-                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      // List name
-                      if (t.listId != null)
-                        Text(
-                          'in ${context.read<ListProvider>().getById(t.listId!)?.name ?? 'Inbox'}',
-                          style: AppTypography.caption.copyWith(color: colors.textTertiary),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _priorityEmoji(Priority p) {
+    switch (p) {
+      case Priority.urgent: return '🔴';
+      case Priority.high:   return '🟠';
+      case Priority.medium: return '🟡';
+      case Priority.low:    return '🟢';
+      case Priority.none:   return '📝';
+    }
   }
 }

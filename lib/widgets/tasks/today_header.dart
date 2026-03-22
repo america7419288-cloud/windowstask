@@ -8,6 +8,7 @@ import '../../data/app_stickers.dart';
 import '../shared/deco_sticker.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/task_provider.dart';
+import '../../screens/planning_screen.dart';
 
 class TodayHeader extends StatelessWidget {
   final int taskCount;
@@ -283,7 +284,7 @@ class _PlanningButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.read<NavigationProvider>().enterPlanningMode(),
+      onTap: () => PlanningScreen.show(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(

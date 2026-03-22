@@ -25,6 +25,7 @@ import 'settings_screen.dart';
 import 'insights_screen.dart';
 import 'dashboard_screen.dart';
 import 'store_screen.dart';
+import '../providers/user_provider.dart';
 
 import '../services/reminder_service.dart';
 import '../widgets/tasks/bulk_action_bar.dart';
@@ -44,9 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       ReminderService.instance.init(context);
       _checkDailyPlanning();
+      
+      // Run security integrity check on startup
+      if (mounted) {
+        await context.read<UserProvider>().init(context);
+      }
     });
   }
 
@@ -60,8 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (now.hour < 12) {
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) {
-          context.read<NavigationProvider>().enterPlanningMode();
           storage.saveLastPlanningDate(now);
+          PlanningScreen.show(context);
         }
       }
     }
@@ -150,8 +156,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   const BulkActionBar(),
                   if (context.watch<CelebrationProvider>().isCelebrating)
                     const TaskCompletedOverlay(),
-                  if (nav.isPlanningMode)
-                    const PlanningScreen(),
                 ],
               ),
             ); // Container return

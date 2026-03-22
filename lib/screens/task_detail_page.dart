@@ -18,6 +18,8 @@ import '../data/sticker_packs.dart';
 import '../data/app_stickers.dart';
 import '../widgets/shared/deco_sticker.dart';
 import '../widgets/tasks/save_template_dialog.dart';
+import '../widgets/shared/sticker_widget.dart';
+import '../painters/confetti_painter.dart';
 import '../widgets/shared/sticker_picker.dart';
 import '../widgets/shared/recurrence_picker.dart';
 import '../models/recurrence.dart';
@@ -47,6 +49,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     _subtaskCtrl = TextEditingController();
   }
 
+  bool _isInProgress = false;
   @override
   void didUpdateWidget(covariant TaskDetailPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -433,37 +436,60 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              _StatusChips(task: task),
+              _buildStatusControl(task),
               const SizedBox(height: 16),
 
               // Complete button
-              GestureDetector(
-                onTap: () => taskProvider.toggleComplete(
-                  task.id,
-                  celebration: context.read<CelebrationProvider>(),
-                ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: task.isCompleted ? null : AppColors.gradientPrimary,
-                    color: task.isCompleted
-                        ? (colors.isDark ? AppColors.surfaceContainerHighDk : AppColors.surfaceContainerHigh)
-                        : null,
-                    borderRadius: BorderRadius.circular(12),
-                    border: task.isCompleted ? Border.all(color: colors.border.withValues(alpha: 0.5)) : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      task.isCompleted ? '✓ Completed' : 'Complete Task',
-                      style: AppTypography.titleSmall.copyWith(
-                        color: task.isCompleted ? colors.textSecondary : Colors.white,
-                        fontWeight: FontWeight.w600,
+              Consumer<TaskProvider>(
+                builder: (context, tasks, _) {
+                  final currentTask = tasks.getById(task.id) ?? task;
+                  return GestureDetector(
+                    onTap: () => tasks.toggleComplete(
+                      task.id,
+                      celebration: context.read<CelebrationProvider>(),
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: currentTask.isCompleted ? null : AppColors.gradientPrimary,
+                        color: currentTask.isCompleted
+                            ? AppColors.tertiary.withValues(alpha: 0.12)
+                            : null,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: currentTask.isCompleted
+                            ? []
+                            : AppColors.ambientShadow(
+                                opacity: 0.20,
+                                blur: 16,
+                                offset: const Offset(0, 4)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            currentTask.isCompleted
+                                ? Icons.check_circle_rounded
+                                : Icons.circle_outlined,
+                            size: 16,
+                            color: currentTask.isCompleted
+                                ? AppColors.tertiary
+                                : Colors.white,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            currentTask.isCompleted ? 'Mark Incomplete' : 'Complete Task',
+                            style: AppTypography.titleSmall.copyWith(
+                              color: currentTask.isCompleted ? AppColors.tertiary : Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
 
               const SizedBox(height: 24),
@@ -766,6 +792,82 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       }
     });
   }
+  // ── Status Control ──────────────────────────────────────────────────────────
+  Widget _buildStatusControl(Task task) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          _StatusTab(
+            label: 'To Do',
+            isActive: !task.isCompleted && task.status != TaskStatus.inProgress,
+            onTap: () => context.read<TaskProvider>().updateTaskStatus(task.id, TaskStatus.todo),
+          ),
+          _StatusTab(
+            label: 'In Progress',
+            isActive: task.status == TaskStatus.inProgress,
+            onTap: () => context.read<TaskProvider>().updateTaskStatus(task.id, TaskStatus.inProgress),
+          ),
+          _StatusTab(
+            label: 'Done',
+            isActive: task.isCompleted,
+            onTap: () => context.read<TaskProvider>().toggleComplete(task.id),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusTab extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _StatusTab({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.surfaceContainerLowest : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: AppTypography.labelMedium.copyWith(
+                color: isActive ? AppColors.primary : context.appColors.textTertiary,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Toolbar Icon ─────────────────────────────────────────────────────────────
@@ -792,84 +894,29 @@ class _ToolbarIconState extends State<_ToolbarIcon> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Tooltip(
-      message: widget.tooltip,
+    Widget w = GestureDetector(
+      onTap: widget.onTap,
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: 32, height: 32,
-            margin: const EdgeInsets.only(left: 4),
-            decoration: BoxDecoration(
-              color: _hovered ? AppColors.surfaceContainerHigh : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              widget.icon, size: 16,
-              color: widget.color ?? colors.textSecondary,
-            ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 32, height: 32,
+          margin: const EdgeInsets.only(left: 4),
+          decoration: BoxDecoration(
+            color: _hovered ? colors.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            widget.icon,
+            size: 16,
+            color: widget.color ?? colors.textSecondary,
           ),
         ),
       ),
     );
-  }
-}
-
-// ── Status Chips ─────────────────────────────────────────────────────────────
-class _StatusChips extends StatelessWidget {
-  final Task task;
-  const _StatusChips({required this.task});
-
-  @override
-  Widget build(BuildContext context) {
-    final tp = context.read<TaskProvider>();
-    return Row(
-      children: TaskStatus.values.map((s) {
-        final isActive = task.status == s;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => tp.updateTaskStatus(task.id, s),
-            behavior: HitTestBehavior.opaque,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.primary.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: isActive ? null : Border.all(
-                  color: AppColors.outlineVariant,
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  _statusLabel(s),
-                  style: AppTypography.labelMedium.copyWith(
-                    color: isActive ? AppColors.primary : context.appColors.textTertiary,
-                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  String _statusLabel(TaskStatus s) {
-    switch (s) {
-      case TaskStatus.todo:       return 'To Do';
-      case TaskStatus.inProgress: return 'In Progress';
-      case TaskStatus.done:       return 'Done';
-    }
+    return Tooltip(message: widget.tooltip, child: w);
   }
 }
 
@@ -951,7 +998,7 @@ class _SubtaskRowState extends State<_SubtaskRow> {
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: _hovered ? AppColors.surfaceContainerLowest : Colors.transparent,
+          color: _hovered ? colors.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
