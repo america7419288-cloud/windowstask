@@ -134,10 +134,11 @@ class UserProvider extends ChangeNotifier {
     }
 
     // ── NEW USER STARTER BONUS ──
-    if (_profile == null && SecureXPStore.instance.totalXP == 0) {
+    // Grant if ledger is empty (existing users who didn't get it yet)
+    if (SecureXPStore.instance.totalXP == 0 && SecureXPStore.instance.auditLog.isEmpty) {
       await SecureXPStore.instance.addXP(
         amount: 1000,
-        source: XPSource.migration, // Using migration as a one-time grant label
+        source: XPSource.migration,
       );
     }
 
@@ -320,6 +321,8 @@ class UserProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_profileKey, jsonEncode(_profile!.toJson()));
   }
+
+  void refresh() => notifyListeners();
 }
 
 enum PurchaseResult {

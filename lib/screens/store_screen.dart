@@ -10,8 +10,8 @@ import '../theme/typography.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared/deco_sticker.dart';
 import '../widgets/shared/sticker_widget.dart';
-import '../painters/confetti_painter.dart';
 import '../data/app_stickers.dart';
+import 'redeem_screen.dart';
 
 class StoreScreen extends StatefulWidget {
   const StoreScreen({super.key});
@@ -155,6 +155,34 @@ class _StoreScreenState extends State<StoreScreen> with SingleTickerProviderStat
               ),
             ),
           ),
+          const SizedBox(width: 16),
+          // Redeem Code Button
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RedeemScreen()),
+            ),
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: colors.surfaceElevated,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.divider, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.redeem_rounded, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Text('Redeem',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      )),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(width: 24),
           // Tab Switcher
           Container(
@@ -276,7 +304,7 @@ class _FeaturedView extends StatelessWidget {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              itemCount: featured.take(3).length,
+              itemCount: featured.length, // Show all featured items
               itemBuilder: (context, idx) => _StorePackCard(
                 item: featured[idx],
                 isFeaturedLarge: true,
@@ -446,6 +474,16 @@ class _StorePackCardState extends State<_StorePackCard> {
   }
 
   Widget _buildMosaic(List<String> ids, bool isPurchased) {
+    if (ids.isEmpty) {
+      return Center(
+        child: Text(
+          '🗝️',
+          style: TextStyle(fontSize: 48, shadows: [
+            Shadow(color: AppColors.xpGold.withValues(alpha: 0.5), blurRadius: 20)
+          ]),
+        ),
+      );
+    }
     return GridView.count(
       crossAxisCount: 2,
       mainAxisSpacing: 8,

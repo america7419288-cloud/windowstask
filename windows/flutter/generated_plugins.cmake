@@ -3,12 +3,14 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
   bitsdojo_window_windows
   flutter_acrylic
   flutter_secure_storage_windows
   hotkey_manager_windows
   screen_retriever
   tray_manager
+  url_launcher_windows
   win_toast
   window_manager
 )

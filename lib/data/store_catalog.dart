@@ -5,6 +5,18 @@ class StoreCatalog {
   static const freePackId = 'pack_free';
 
   static const List<StoreItem> items = [
+    // ── MASTER UNLOCK ──────────────────
+    StoreItem(
+      id: 'all_stickers_unlock',
+      name: 'Legendary Master Key',
+      description: 'Unlock EVERY sticker pack and individual sticker instantly!',
+      emoji: '🗝️',
+      xpCost: 1000000,
+      type: StoreItemType.all,
+      stickerIds: [],
+      isFeatured: true,
+    ),
+
     // ── STARTER PACKS ──────────────────
     StoreItem(
       id: freePackId,
@@ -236,18 +248,6 @@ class StoreCatalog {
       ],
     ),
     
-    // ── MASTER UNLOCK ──────────────────
-    StoreItem(
-      id: 'all_stickers_unlock',
-      name: 'Legendary Master Key',
-      description: 'Unlock EVERY sticker pack and individual sticker instantly!',
-      emoji: '🗝️',
-      xpCost: 1000000,
-      type: StoreItemType.all,
-      stickerIds: [],
-      isFeatured: true,
-    ),
-
     StoreItem(
       id: 'ind_rocket',
       name: 'Rocket',

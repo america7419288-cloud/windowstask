@@ -13,6 +13,8 @@ import 'providers/task_provider.dart';
 import 'services/security/encryption_service.dart';
 import 'services/security/xp_cooldown_tracker.dart';
 import 'services/security/secure_xp_store.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 
 // Conditional window setup — only imported on native (dart:io) platforms
@@ -27,6 +29,22 @@ void main() async {
     
     // ── 0. Window setup (Await to prevent flicker) ──────────────────────────
     await setupWindow();
+
+    // ── 0.1 Load Environment & Init Supabase ────────────────────────────────
+    try {
+      await dotenv.load(fileName: ".env");
+      final url = dotenv.env['SUPABASE_URL'] ?? '';
+      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
+      if (url.isNotEmpty && anonKey.isNotEmpty) {
+        await Supabase.initialize(
+          url: url,
+          anonKey: anonKey,
+        );
+      }
+    } catch (e) {
+      debugPrint('Warning: Could not load .env file: $e');
+    }
 
     // Custom Error UI for Production
     ErrorWidget.builder = (FlutterErrorDetails details) {

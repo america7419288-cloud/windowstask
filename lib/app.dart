@@ -36,7 +36,10 @@ class TaskiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CelebrationProvider()),
         ChangeNotifierProvider(create: (_) => TemplateProvider()..init()),
         ChangeNotifierProvider.value(value: userProvider),
-        ChangeNotifierProvider.value(value: taskProvider),
+        ChangeNotifierProxyProvider<UserProvider, TaskProvider>(
+          create: (_) => taskProvider,
+          update: (_, user, tasks) => tasks!..userProvider = user,
+        ),
       ],
       child: Consumer2<SettingsProvider, UserProvider>(
         builder: (context, settings, user, _) {
@@ -57,3 +60,4 @@ class TaskiApp extends StatelessWidget {
     );
   }
 }
+

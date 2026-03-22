@@ -14,12 +14,16 @@ import '../models/sticker.dart';
 import '../services/reminder_service.dart';
 import '../services/notification_service.dart';
 import '../utils/sticker_suggester.dart';
+import 'user_provider.dart';
 
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
   final List<_UndoAction> _undoStack = [];
   static const _uuid = Uuid();
   SortOption _sortOption = SortOption.manual;
+  UserProvider? _userProvider;
+
+  set userProvider(UserProvider? up) => _userProvider = up;
 
   // Memoization cache
   final Map<String, List<Task>> _navCache = {};
@@ -326,6 +330,12 @@ class TaskProvider extends ChangeNotifier {
     }
 
     _isCacheDirty = true;
+
+    // Award XP
+    if (!wasCompleted && updated.isCompleted) {
+      _userProvider?.recordTaskCompletion(updated);
+    }
+
     notifyListeners();
 
     if (!wasCompleted && celebration != null) {
@@ -360,6 +370,12 @@ class TaskProvider extends ChangeNotifier {
     }
 
     _isCacheDirty = true;
+    
+    // Award XP
+    if (completed) {
+      _userProvider?.recordTaskCompletion(updated);
+    }
+
     notifyListeners();
   }
   Future<void> toggleFlag(String id) async {
@@ -480,6 +496,12 @@ class TaskProvider extends ChangeNotifier {
     }
 
     _isCacheDirty = true;
+
+    // Award XP
+    if (status == TaskStatus.done) {
+      _userProvider?.recordTaskCompletion(updated);
+    }
+
     notifyListeners();
   }
 

@@ -1,12 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../models/app_settings.dart';
 import '../providers/settings_provider.dart';
 import '../providers/template_provider.dart';
-import '../providers/list_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -18,6 +16,7 @@ import '../models/sticker.dart';
 import '../data/app_stickers.dart';
 import '../widgets/shared/deco_sticker.dart';
 import 'xp_audit_screen.dart';
+import 'redeem_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1420,6 +1419,17 @@ class _AboutSectionState extends State<_AboutSection> {
                 color: colors.textSecondary,
                 fontSize: 13,
               )),
+            ),
+            _SettingsRow(
+              label: 'Redeem Code',
+              subtitle: 'Unlock exclusive rewards',
+              control: IconButton(
+                icon: const Icon(Icons.redeem_rounded, size: 18, color: AppColors.primary),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RedeemScreen()),
+                ),
+              ),
             ),
             _SettingsRow(
               isLast: true,
