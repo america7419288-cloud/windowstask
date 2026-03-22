@@ -23,6 +23,7 @@ import '../../painters/confetti_painter.dart';
 import '../context_menu/context_menu_controller.dart';
 import '../../data/sticker_packs.dart';
 import '../shared/sticker_widget.dart';
+import '../../services/store_service.dart';
 import '../shared/deco_sticker.dart';
 import '../../data/app_stickers.dart';
 import 'package:flutter/services.dart';
@@ -293,10 +294,17 @@ class _TaskCardState extends State<TaskCard> {
                                   if (t.stickerId != null && t.stickerId!.isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(left: 8),
-                                      child: StickerWidget(
-                                        sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
-                                        size: 28,
-                                        animate: true,
+                                      child: Consumer<StoreService>(
+                                        builder: (context, store, _) {
+                                          final serverSticker = store.data?.stickerById(t.stickerId!);
+                                          final localSticker = StickerRegistry.findById(t.stickerId!);
+                                          return StickerWidget(
+                                            serverSticker: serverSticker,
+                                            localSticker: localSticker ?? AppStickers.detailDefault,
+                                            size: 28,
+                                            animate: true,
+                                          );
+                                        },
                                       ),
                                     ),
                                   
@@ -570,13 +578,19 @@ class _StickerBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sticker = StickerRegistry.findById(stickerId);
-    if (sticker == null) return const SizedBox.shrink();
+    return Consumer<StoreService>(
+      builder: (context, store, _) {
+        final serverSticker = store.data?.stickerById(stickerId);
+        final localSticker = StickerRegistry.findById(stickerId);
+        if (serverSticker == null && localSticker == null) return const SizedBox.shrink();
 
-    return StickerWidget(
-      sticker: sticker,
-      size: 34,
-      animate: true,
+        return StickerWidget(
+          serverSticker: serverSticker,
+          localSticker: localSticker,
+          size: 34,
+          animate: true,
+        );
+      },
     );
   }
 }
@@ -850,10 +864,18 @@ class _InlineSticker extends StatelessWidget {
         ],
       ),
       child: Center(
-        child: StickerWidget(
-          sticker: StickerRegistry.findById(stickerId) ?? AppStickers.detailDefault,
-          size: 24,
-          animate: true,
+        child: Consumer<StoreService>(
+          builder: (context, store, _) {
+            final serverSticker = store.data?.stickerById(stickerId);
+            final localSticker = StickerRegistry.findById(stickerId) ?? AppStickers.detailDefault;
+            
+            return StickerWidget(
+              serverSticker: serverSticker,
+              localSticker: localSticker,
+              size: 24,
+              animate: true,
+            );
+          },
         ),
       ),
     );

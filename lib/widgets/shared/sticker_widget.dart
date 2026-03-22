@@ -1,17 +1,24 @@
 import 'dart:typed_data';
+import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../../models/sticker.dart';
+import '../../models/server_sticker.dart';
 import '../../services/tgs_loader.dart';
+import '../../services/store_service.dart';
+import '../../theme/colors.dart';
 
 class StickerWidget extends StatefulWidget {
-  final Sticker sticker;
+  final ServerSticker? serverSticker;
+  final Sticker? localSticker;
   final double size;
-  final bool animate;         // true = looping, false = static first frame
+  final bool animate;
 
   const StickerWidget({
     super.key,
-    required this.sticker,
+    this.serverSticker,
+    this.localSticker,
     this.size = 40,
     this.animate = true,
   });
@@ -21,81 +28,129 @@ class StickerWidget extends StatefulWidget {
 }
 
 class _StickerWidgetState extends State<StickerWidget> {
-  LottieComposition? _composition;
-  bool _error = false;
+  Uint8List? _bytes;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadBytes();
   }
 
   @override
   void didUpdateWidget(StickerWidget old) {
     super.didUpdateWidget(old);
-    if (old.sticker.assetPath != widget.sticker.assetPath) {
-      setState(() { _composition = null; _error = false; });
-      _load();
+    if (old.serverSticker?.id != widget.serverSticker?.id ||
+        old.localSticker?.id != widget.localSticker?.id) {
+      _loadBytes();
     }
   }
 
-  Future<void> _load() async {
+  Future<void> _loadBytes() async {
+    final id = widget.serverSticker?.id ?? widget.localSticker?.id;
+    if (id == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _loading = true);
+
     try {
-      final composition = await TgsLoader.load(widget.sticker.assetPath);
-      if (mounted) {
-        if (composition != null) {
-          setState(() => _composition = composition);
-        } else {
-          // No asset file yet — show emoji fallback
-          setState(() => _error = true);
+      // Use StoreService for server stickers (explicit or derived from empty assetPath)
+      final useServer = widget.serverSticker != null || 
+                       (widget.localSticker != null && widget.localSticker!.assetPath.isEmpty);
+
+      if (useServer) {
+        final bytes = await StoreService.instance.getStickerBytes(id);
+        if (bytes != null && mounted) {
+          try {
+            final decompressed = GZipCodec().decode(bytes);
+            setState(() {
+              _bytes = Uint8List.fromList(decompressed);
+              _loading = false;
+            });
+          } catch (e) {
+            print('[StickerWidget] Decompression error for $id: $e');
+            setState(() {
+              _bytes = bytes; // Fallback to raw if not gzipped (unlikely for TGS)
+              _loading = false;
+            });
+          }
+        } else if (mounted) {
+          setState(() => _loading = false);
+        }
+        return;
+      }
+
+      // Fall back to existing TgsLoader logic for bundled stickers
+      // We need the raw bytes for Lottie.memory
+      if (widget.localSticker != null && widget.localSticker!.assetPath.isNotEmpty) {
+        final byteData = await rootBundle.load(widget.localSticker!.assetPath);
+        final compressed = byteData.buffer.asUint8List();
+        final decompressed = GZipCodec().decode(compressed);
+        if (mounted) {
+          setState(() {
+            _bytes = Uint8List.fromList(decompressed);
+            _loading = false;
+          });
         }
       }
     } catch (_) {
-      if (mounted) setState(() => _error = true);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get emoji fallback
+    final emoji = widget.serverSticker?.emoji ?? widget.localSticker?.emoji ?? '✨';
     final size = widget.size;
 
-    // Error or not loaded yet: show emoji fallback
-    if (_error) {
+    if (_loading) {
+      return _StickerShimmer(size: size);
+    }
+
+    if (_bytes == null) {
       return SizedBox(
-        width: size, height: size,
+        width: size,
+        height: size,
         child: Center(
-          child: Text(widget.sticker.emoji,
-            style: TextStyle(fontSize: size * 0.65)),
+          child: Text(emoji, style: TextStyle(fontSize: size * 0.7)),
         ),
       );
     }
 
-    // Loading: show subtle shimmer placeholder
-    if (_composition == null) {
-      return SizedBox(
-        width: size, height: size,
-        child: Center(
-          child: SizedBox(
-            width: size * 0.4, height: size * 0.4,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: Theme.of(context).colorScheme.primary
-                  .withValues(alpha: 0.3),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Loaded: play Lottie animation
     return SizedBox(
-      width: size, height: size,
-      child: Lottie(
-        composition: _composition!,
+      width: size,
+      height: size,
+      child: Lottie.memory(
+        _bytes!,
         width: size,
         height: size,
         fit: BoxFit.contain,
         repeat: widget.animate,
+        errorBuilder: (_, __, ___) => Center(
+          child: Text(emoji, style: TextStyle(fontSize: size * 0.7)),
+        ),
+      ),
+    );
+  }
+}
+
+class _StickerShimmer extends StatelessWidget {
+  final double size;
+  const _StickerShimmer({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
       ),
     );
   }

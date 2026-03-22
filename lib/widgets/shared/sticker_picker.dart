@@ -10,6 +10,9 @@ import '../../providers/user_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/constants.dart';
 import '../../data/store_catalog.dart';
+import '../../data/app_stickers.dart';
+import '../../models/server_sticker.dart';
+import '../../services/store_service.dart';
 
 class StickerPicker extends StatefulWidget {
   final String? currentStickerId;
@@ -32,23 +35,16 @@ class StickerPicker extends StatefulWidget {
   State<StickerPicker> createState() => _StickerPickerState();
 }
 
-class _StickerPickerState extends State<StickerPicker>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _StickerPickerState extends State<StickerPicker> {
   String? _hoveredId;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: StickerRegistry.packs.length,
-      vsync: this,
-    );
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -56,28 +52,42 @@ class _StickerPickerState extends State<StickerPicker>
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
-    final packs = StickerRegistry.packs;
+    final user = context.watch<UserProvider>();
+    final store = context.watch<StoreService>();
+
+    // 1. Get default stickers
+    final defaultStickers = AppStickers.allStickers;
+
+    // 2. Get purchased stickers from store
+    final purchasedStickers = (store.data?.stickers ?? [])
+        .where((s) => user.hasUnlocked(s.id))
+        .map((s) => s.toSticker())
+        .toList();
+
+    // 3. Combine and remove duplicates (by id)
+    final Map<String, Sticker> uniqueMap = {};
+    for (final s in defaultStickers) {
+      uniqueMap[s.id] = s;
+    }
+    for (final s in purchasedStickers) {
+      uniqueMap[s.id] = s;
+    }
+
+    final allStickers = uniqueMap.values.toList();
 
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
         width: 380,
-        height: 460,
+        height: 520, // Increased height
         decoration: BoxDecoration(
-          color: colors.isDark
-              ? const Color(0xFF2A2725)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: colors.isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.07),
-            width: 0.75,
-          ),
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colors.divider, width: 0.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
+              color: Colors.black.withOpacity(0.2),
               blurRadius: 40,
               offset: const Offset(0, 12),
             ),
@@ -87,203 +97,120 @@ class _StickerPickerState extends State<StickerPicker>
           children: [
             // ── Header ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  Text('Choose Sticker',
-                    style: AppTypography.headline.copyWith(
+                  Text('My Stickers',
+                    style: AppTypography.headlineSmall.copyWith(
                       color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     )),
                   const Spacer(),
-                  // Remove sticker button
                   if (widget.currentStickerId != null)
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context, ''),
-                      // '' means remove sticker
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.red.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: AppColors.red.withValues(alpha: 0.2)),
-                        ),
-                        child: Text('Remove',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.red,
-                            fontWeight: FontWeight.w600,
-                          )),
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, ''),
+                      child: Text('Clear', style: TextStyle(color: AppColors.red)),
                     ),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => Navigator.pop(context, null),
-                    child: Icon(Icons.close_rounded,
-                        size: 20, color: colors.textSecondary),
+                    child: Icon(Icons.close_rounded, color: colors.textSecondary),
                   ),
                 ],
               ),
             ),
 
-            // ── Pack tabs ────────────────────────────────────────
-            const SizedBox(height: 12),
-            TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              indicatorColor: accent,
-              indicatorWeight: 2,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelColor: accent,
-              unselectedLabelColor: colors.textTertiary,
-              dividerColor: colors.divider,
-              tabs: packs.map((pack) => Tab(
-                child: Row(
-                  children: [
-                    Text(pack.emoji, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 5),
-                    Text(pack.name,
-                      style: AppTypography.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      )),
-                  ],
-                ),
-              )).toList(),
-            ),
+            const Divider(height: 1),
 
             // ── Sticker grid ─────────────────────────────────────
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: packs.map((pack) {
-                  return Consumer<UserProvider>(
-                    builder: (context, user, _) {
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 5,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 1,
-                          ),
-                        itemCount: pack.stickers.length,
-                        itemBuilder: (context, index) {
-                          final sticker = pack.stickers[index];
-                          final isSelected =
-                              sticker.id == widget.currentStickerId;
-                          final isHovered = _hoveredId == sticker.id;
-                          
-                          final isUnlocked =
-                              sticker.packId == 'pack_free' ||
-                              sticker.packId == 'decorative' ||
-                              user.hasUnlocked(sticker.id);
+              child: allStickers.isEmpty 
+                ? _buildEmptyState(colors)
+                : GridView.builder(
+                    padding: const EdgeInsets.all(20),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: allStickers.length,
+                    itemBuilder: (context, index) {
+                      final sticker = allStickers[index];
+                      final isSelected = sticker.id == widget.currentStickerId;
+                      final isHovered = _hoveredId == sticker.id;
 
-                          return Tooltip(
-                            message: isUnlocked ? sticker.name : 'Unlock in Store',
-                            waitDuration: const Duration(milliseconds: 400),
-                            child: MouseRegion(
-                              onEnter: (_) => setState(() => _hoveredId = sticker.id),
-                              onExit: (_) => setState(() => _hoveredId = null),
-                              cursor: SystemMouseCursors.click,
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (isUnlocked) {
-                                    Navigator.pop(context, sticker.id);
-                                  } else {
-                                    // Feedback: Unlock first
-                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('Unlock the sticker first!'),
-                                        backgroundColor: AppColors.primary,
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: const Duration(seconds: 2),
-                                        width: 240,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        action: SnackBarAction(
-                                          label: 'Visit Store',
-                                          textColor: Colors.white,
-                                          onPressed: () {
-                                            Navigator.pop(context, null);
-                                            context.read<NavigationProvider>().selectNav(AppConstants.navStore);
-                                          },
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? accent.withValues(alpha: 0.12)
-                                        : isHovered
-                                            ? (colors.isDark
-                                                ? Colors.white.withValues(alpha: 0.06)
-                                                : Colors.black.withValues(alpha: 0.04))
-                                            : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? accent.withValues(alpha: 0.5)
-                                          : Colors.transparent,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: isUnlocked
-                                        ? StickerWidget(
-                                            sticker: sticker,
-                                            size: 48,
-                                            animate: isHovered || isSelected,
-                                          )
-                                        : Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              Opacity(
-                                                opacity: 0.3,
-                                                child: StickerWidget(
-                                                  sticker: sticker,
-                                                  size: 48,
-                                                  animate: false,
-                                                ),
-                                              ),
-                                              Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(Icons.lock_rounded,
-                                                      size: 14,
-                                                      color: colors.textTertiary),
-                                                  Text(
-                                                    'Unlock',
-                                                    style: AppTypography.micro.copyWith(
-                                                      color: colors.textTertiary,
-                                                      fontSize: 8,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                  ),
-                                ),
+                      return MouseRegion(
+                        onEnter: (_) => setState(() => _hoveredId = sticker.id),
+                        onExit: (_) => setState(() => _hoveredId = null),
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context, sticker.id),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? accent.withOpacity(0.12)
+                                  : isHovered
+                                      ? colors.surfaceElevated
+                                      : Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected ? accent : Colors.transparent,
+                                width: 2,
                               ),
                             ),
-                          );
-                        },
+                            child: Center(
+                              child: StickerWidget(
+                                localSticker: sticker.assetPath.isNotEmpty ? sticker : null,
+                                serverSticker: sticker.assetPath.isEmpty ? store.data?.stickerById(sticker.id) : null,
+                                size: 64,
+                                animate: isHovered || isSelected,
+                              ),
+                            ),
+                          ),
+                        ),
                       );
                     },
-                  );
-                }).toList(),
+                  ),
+            ),
+
+            // ── Footer / Store Link ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context, null);
+                  context.read<NavigationProvider>().selectNav(AppConstants.navStore);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.surfaceElevated,
+                  foregroundColor: accent,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Unlock more in the Store'),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AppColorsExtension colors) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 48, color: colors.textQuaternary),
+          const SizedBox(height: 16),
+          Text(
+            'No stickers yet',
+            style: AppTypography.titleMedium.copyWith(color: colors.textTertiary),
+          ),
+        ],
       ),
     );
   }

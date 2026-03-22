@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/sticker_packs.dart';
 import '../../shared/sticker_widget.dart';
-import '../../../providers/settings_provider.dart';
 import '../../../models/app_settings.dart';
+import '../../../services/store_service.dart';
 
 class StickerBadge extends StatelessWidget {
   final String stickerId;
@@ -11,8 +11,11 @@ class StickerBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sticker = StickerRegistry.findById(stickerId);
-    if (sticker == null) return const SizedBox.shrink();
+    final store = context.watch<StoreService>();
+    final serverSticker = store.data?.stickerById(stickerId);
+    final localSticker = StickerRegistry.findById(stickerId);
+    
+    if (serverSticker == null && localSticker == null) return const SizedBox.shrink();
 
     final stickerSizeEnum = context.watch<SettingsProvider>().stickerSize;
     double scale;
@@ -51,7 +54,8 @@ class StickerBadge extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(4 * scale),
           child: StickerWidget(
-            sticker: sticker,
+            serverSticker: serverSticker,
+            localSticker: localSticker,
             size: innerSize,
             animate: true,
           ),

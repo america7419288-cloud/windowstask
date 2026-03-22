@@ -11,6 +11,7 @@ import 'providers/template_provider.dart';
 import 'providers/user_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'services/store_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/layout/density_scaled_app.dart';
 
@@ -40,6 +41,7 @@ class TaskiApp extends StatelessWidget {
           create: (_) => taskProvider,
           update: (_, user, tasks) => tasks!..userProvider = user,
         ),
+        ChangeNotifierProvider(create: (_) => StoreService.instance..fetchStore()),
       ],
       child: Consumer2<SettingsProvider, UserProvider>(
         builder: (context, settings, user, _) {

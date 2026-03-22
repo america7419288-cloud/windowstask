@@ -15,6 +15,7 @@ import '../../../data/app_stickers.dart';
 import '../../../data/sticker_packs.dart';
 import '../../shared/empty_state_widget.dart';
 import '../../../providers/list_provider.dart';
+import '../../../services/store_service.dart';
 
 class MagazineLayout extends StatelessWidget {
   final List<Task> tasks;
@@ -130,10 +131,17 @@ class _MagazineCardState extends State<_MagazineCard> {
                         ),
                         child: Center(
                           child: t.stickerId != null && t.stickerId!.isNotEmpty
-                              ? StickerWidget(
-                                  sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
-                                  size: 56,
-                                  animate: true,
+                              ? Consumer<StoreService>(
+                                  builder: (context, store, _) {
+                                    final serverSticker = store.data?.stickerById(t.stickerId!);
+                                    final localSticker = StickerRegistry.findById(t.stickerId!);
+                                    return StickerWidget(
+                                      serverSticker: serverSticker,
+                                      localSticker: localSticker ?? AppStickers.detailDefault,
+                                      size: 56,
+                                      animate: true,
+                                    );
+                                  },
                                 )
                               : Text(
                                   _priorityEmoji(t.priority),

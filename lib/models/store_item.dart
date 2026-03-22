@@ -12,6 +12,7 @@ class StoreItem {
   final List<String> stickerIds;
   // All stickers in this pack/item
   final bool isFeatured;
+  final List<String> previewUrls;
 
   const StoreItem({
     required this.id,
@@ -23,5 +24,6 @@ class StoreItem {
     this.packId,
     required this.stickerIds,
     this.isFeatured = false,
+    this.previewUrls = const [],
   });
 }

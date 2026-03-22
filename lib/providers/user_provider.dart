@@ -12,6 +12,7 @@ import '../services/security/xp_cooldown_tracker.dart';
 import '../services/security/secure_xp_store.dart';
 import '../services/security/integrity_checker.dart';
 import '../services/storage_service.dart';
+import '../services/store_service.dart';
 
 class UserProvider extends ChangeNotifier {
   UserProfile? _profile;
@@ -68,6 +69,9 @@ class UserProvider extends ChangeNotifier {
 
     // Record purchase
     await SecureXPStore.instance.recordPurchase(item.id);
+
+    // Prefetch stickers for offline use
+    StoreService.instance.prefetchStickers(item.stickerIds);
 
     notifyListeners();
     return PurchaseResult.success;

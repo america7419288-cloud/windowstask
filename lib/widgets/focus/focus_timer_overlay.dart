@@ -464,7 +464,7 @@ class _MascotBadgeState extends State<_MascotBadge> {
         ],
       ),
       child: StickerWidget(
-        sticker: mascot,
+        localSticker: mascot,
         size: 110,
         animate: true,
       ),

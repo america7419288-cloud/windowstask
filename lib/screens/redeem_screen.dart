@@ -592,7 +592,7 @@ class _RewardRow extends StatelessWidget {
           child: sticker != null
               ? Center(
                   child: StickerWidget(
-                    sticker: sticker,
+                    localSticker: sticker,
                     size: 32,
                     animate: true,
                   ),

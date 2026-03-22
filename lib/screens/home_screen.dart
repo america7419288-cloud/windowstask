@@ -9,6 +9,8 @@ import '../theme/app_theme.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../utils/constants.dart';
+import '../utils/date_utils.dart';
+import '../services/store_service.dart';
 import '../widgets/sidebar/sidebar.dart';
 import '../widgets/tasks/multi_layout_task_view.dart';
 import 'task_detail_page.dart';
@@ -32,7 +34,9 @@ import '../widgets/tasks/bulk_action_bar.dart';
 import '../widgets/focus/break_screen.dart';
 import '../screens/planning_screen.dart';
 import '../services/storage_service.dart';
-import '../utils/date_utils.dart';
+import '../services/store_service.dart';
+import '../services/security/device_fingerprint.dart';
+import '../services/security/secure_xp_store.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,6 +56,22 @@ class _HomeScreenState extends State<HomeScreen> {
       // Run security integrity check on startup
       if (mounted) {
         await context.read<UserProvider>().init(context);
+        
+        // Fetch store data from server
+        final storeService = context.read<StoreService>();
+        await storeService.fetchStore();
+
+        // Ping user stats (fire and forget)
+        final user = context.read<UserProvider>();
+        final fingerprint = await DeviceFingerprint.get();
+        final tasks = context.read<TaskProvider>();
+        
+        storeService.pingUserStats(
+          userId: fingerprint,
+          xpTotal: user.totalXP,
+          tasksCompleted: tasks.allTasks.where((t) => t.isCompleted).length,
+          packsOwned: SecureXPStore.instance.purchasedItemIds,
+        );
       }
     });
   }

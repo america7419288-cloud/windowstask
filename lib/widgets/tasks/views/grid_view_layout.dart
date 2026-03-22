@@ -16,6 +16,7 @@ import '../../shared/deco_sticker.dart';
 import '../../../data/app_stickers.dart';
 import '../../../data/sticker_packs.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../../services/store_service.dart';
 
 class GridViewLayout extends StatelessWidget {
   final List<Task> tasks;
@@ -214,10 +215,17 @@ class _GridCover extends StatelessWidget {
           // Centered sticker — HERO element
           Center(
             child: t.stickerId != null && t.stickerId!.isNotEmpty
-                ? StickerWidget(
-                    sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
-                    size: 72,
-                    animate: true,
+                ? Consumer<StoreService>(
+                    builder: (context, store, _) {
+                      final serverSticker = store.data?.stickerById(t.stickerId!);
+                      final localSticker = StickerRegistry.findById(t.stickerId!);
+                      return StickerWidget(
+                        serverSticker: serverSticker,
+                        localSticker: localSticker ?? AppStickers.detailDefault,
+                        size: 72,
+                        animate: true,
+                      );
+                    },
                   )
                 : Opacity(
                     opacity: 0.3,

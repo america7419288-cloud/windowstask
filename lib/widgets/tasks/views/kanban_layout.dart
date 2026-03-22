@@ -14,9 +14,9 @@ import '../../shared/sticker_widget.dart';
 import '../../shared/deco_sticker.dart';
 import '../../../data/app_stickers.dart';
 import '../../../data/sticker_packs.dart';
-import '../../../data/app_stickers.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../models/sticker.dart';
+import '../../../services/store_service.dart';
 
 enum KanbanColumn { todo, inProgress, done }
 
@@ -384,10 +384,17 @@ class _KanbanCardState extends State<_KanbanCard> {
                   if (t.stickerId != null && t.stickerId!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(right: 10, top: 2),
-                      child: StickerWidget(
-                        sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
-                        size: 48,
-                        animate: true,
+                      child: Consumer<StoreService>(
+                        builder: (context, store, _) {
+                          final serverSticker = store.data?.stickerById(t.stickerId!);
+                          final localSticker = StickerRegistry.findById(t.stickerId!);
+                          return StickerWidget(
+                            serverSticker: serverSticker,
+                            localSticker: localSticker ?? AppStickers.detailDefault,
+                            size: 48,
+                            animate: true,
+                          );
+                        },
                       ),
                     ),
 

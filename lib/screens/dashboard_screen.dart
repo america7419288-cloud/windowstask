@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/celebration_provider.dart';
+import '../services/store_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -1340,14 +1342,22 @@ class _InlineSticker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sticker = StickerRegistry.findById(stickerId);
-    if (sticker == null) {
-      return const SizedBox.shrink();
-    }
-    return StickerWidget(
-      sticker: sticker,
-      size: 24,
-      animate: true,
+    return Consumer<StoreService>(
+      builder: (context, store, _) {
+        final serverSticker = store.data?.stickerById(stickerId);
+        final localSticker = StickerRegistry.findById(stickerId);
+        
+        if (serverSticker == null && localSticker == null) {
+          return const SizedBox.shrink();
+        }
+        
+        return StickerWidget(
+          serverSticker: serverSticker,
+          localSticker: localSticker,
+          size: 24,
+          animate: true,
+        );
+      },
     );
   }
 }

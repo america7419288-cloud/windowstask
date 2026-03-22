@@ -141,7 +141,7 @@ class _TaskCompletedOverlayState extends State<TaskCompletedOverlay> with Single
                 child: Transform.scale(
                   scale: currentScale,
                   child: StickerWidget(
-                    sticker: sticker,
+                    localSticker: sticker,
                     size: 160,
                     animate: true,
                   ),

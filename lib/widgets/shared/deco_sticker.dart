@@ -17,7 +17,7 @@ class DecoSticker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StickerWidget(
-      sticker: sticker,
+      localSticker: sticker,
       size: size,
       animate: animate,
     );

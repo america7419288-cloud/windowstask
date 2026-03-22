@@ -12,6 +12,10 @@ import '../widgets/shared/deco_sticker.dart';
 import '../widgets/shared/sticker_widget.dart';
 import '../data/app_stickers.dart';
 import 'redeem_screen.dart';
+import '../services/store_service.dart';
+import '../models/server_sticker_pack.dart';
+import '../models/server_sticker.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class StoreScreen extends StatefulWidget {
   const StoreScreen({super.key});
@@ -20,20 +24,17 @@ class StoreScreen extends StatefulWidget {
   State<StoreScreen> createState() => _StoreScreenState();
 }
 
-class _StoreScreenState extends State<StoreScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _StoreScreenState extends State<StoreScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -42,11 +43,20 @@ class _StoreScreenState extends State<StoreScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final user = context.watch<UserProvider>();
+    final store = context.watch<StoreService>();
+
+    // Loading state
+    if (store.isLoading && !store.hasData) {
+      return _buildLoadingState(colors);
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
         children: [
+          // Offline warning banner
+          if (store.error != null) _OfflineBanner(message: store.error!),
+
           // PREMIUM HEADER
           _buildPremiumHeader(colors, user),
 
@@ -55,13 +65,38 @@ class _StoreScreenState extends State<StoreScreen> with SingleTickerProviderStat
 
           // MAIN CONTENT
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
+            child: Stack(
               children: [
-                _FeaturedView(searchQuery: _searchQuery),
-                _CategoryView(type: StoreItemType.pack, searchQuery: _searchQuery),
-                _CategoryView(type: StoreItemType.individual, searchQuery: _searchQuery),
+                _UnifiedStoreView(searchQuery: _searchQuery),
+                if (_celebratingItem != null)
+                  _CelebrationOverlay(
+                    item: _celebratingItem!,
+                    onClose: () => setState(() => _celebratingItem = null),
+                  ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  StoreItem? _celebratingItem;
+
+  Widget _buildLoadingState(AppColorsExtension colors) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Loading store...',
+            style: AppTypography.bodyMedium.copyWith(
+              color: colors.textTertiary,
             ),
           ),
         ],
@@ -183,33 +218,30 @@ class _StoreScreenState extends State<StoreScreen> with SingleTickerProviderStat
               ),
             ),
           ),
-          const SizedBox(width: 24),
-          // Tab Switcher
+          // Announcement Banner
           Container(
             height: 44,
             width: 320,
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: colors.surfaceElevated,
+              color: AppColors.primary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
             ),
-            child: TabBar(
-              controller: _tabController,
-              dividerColor: Colors.transparent,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: AppColors.ambientShadow(opacity: 0.08, blur: 8, offset: const Offset(0, 2)),
-              ),
-              labelColor: AppColors.primary,
-              unselectedLabelColor: colors.textTertiary,
-              labelStyle: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w700),
-              unselectedLabelStyle: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w500),
-              tabs: const [
-                Tab(text: 'Featured'),
-                Tab(text: 'Packs'),
-                Tab(text: 'Single'),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'All stickers are now available as single items!',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -275,50 +307,40 @@ class _XPBalanceCard extends StatelessWidget {
   }
 }
 
-class _FeaturedView extends StatelessWidget {
+class _UnifiedStoreView extends StatelessWidget {
   final String searchQuery;
-  const _FeaturedView({required this.searchQuery});
+  const _UnifiedStoreView({required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
-    final featured = StoreCatalog.featured.where((i) => 
-      i.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-      i.description.toLowerCase().contains(searchQuery.toLowerCase())
+    final store = context.watch<StoreService>();
+    final stickers = (store.data?.stickers ?? []).where((s) =>
+        s.name.toLowerCase().contains(searchQuery.toLowerCase())
     ).toList();
+
+    if (stickers.isEmpty && searchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 64, color: context.appColors.textQuaternary),
+            const SizedBox(height: 16),
+            Text('No stickers found for "$searchQuery"',
+              style: AppTypography.bodyLarge.copyWith(color: context.appColors.textTertiary)),
+          ],
+        ),
+      );
+    }
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 24),
       children: [
-        // BIG FEATURED CAROUSEL (Simulated)
-        if (searchQuery.isEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              'Highlights',
-              style: AppTypography.displayMedium.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 280,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              itemCount: featured.length, // Show all featured items
-              itemBuilder: (context, idx) => _StorePackCard(
-                item: featured[idx],
-                isFeaturedLarge: true,
-              ),
-            ),
-          ),
-          const SizedBox(height: 48),
-        ],
-
-        // ALL PACKS GRID
+        // HIGHLIGHTS (Individual stickers that are marked featured)
+        // For now, we show all since we only have single category
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            searchQuery.isEmpty ? 'All Sticker Packs' : 'Search Results',
+            searchQuery.isEmpty ? 'Sticker Gallery' : 'Search Results',
             style: AppTypography.displayMedium.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
@@ -329,13 +351,13 @@ class _FeaturedView extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+              crossAxisCount: 5, // More compact for singles
               mainAxisSpacing: 24,
               crossAxisSpacing: 24,
               mainAxisExtent: 180,
             ),
-            itemCount: StoreCatalog.packs.length,
-            itemBuilder: (context, idx) => _StorePackCard(item: StoreCatalog.packs[idx]),
+            itemCount: stickers.length,
+            itemBuilder: (context, idx) => _StoreStickerCard(serverSticker: stickers[idx]),
           ),
         ),
         const SizedBox(height: 48),
@@ -351,31 +373,48 @@ class _CategoryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = (type == StoreItemType.pack ? StoreCatalog.packs : StoreCatalog.individuals)
-        .where((i) => 
-          i.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          i.description.toLowerCase().contains(searchQuery.toLowerCase())
-        ).toList();
+    final store = context.watch<StoreService>();
+    final packs = store.data?.packs ?? [];
+    
+    // For individuals, we currently filter from the pack's stickers if they matches individual type
+    // or if the server response has separate stickers.
+    // In part 2 prompt, user mentions type = StoreItemType.pack or individual.
+    // I'll filter packs if type is pack, or stickers if type is individual.
+    
+    final items = type == StoreItemType.pack 
+        ? packs.where((p) => 
+            p.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+            p.description.toLowerCase().contains(searchQuery.toLowerCase())
+          ).toList()
+        : store.data?.stickers.where((s) =>
+            s.name.toLowerCase().contains(searchQuery.toLowerCase())
+          ).toList() ?? [];
 
     return GridView.builder(
       padding: const EdgeInsets.all(32),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: type == StoreItemType.pack ? 2 : 3,
+        crossAxisCount: type == StoreItemType.pack ? 2 : 4,
         mainAxisSpacing: 24,
         crossAxisSpacing: 24,
-        mainAxisExtent: type == StoreItemType.pack ? 180 : 220,
+        mainAxisExtent: type == StoreItemType.pack ? 180 : 160,
       ),
       itemCount: items.length,
-      itemBuilder: (context, idx) => _StorePackCard(item: items[idx]),
+      itemBuilder: (context, idx) {
+        if (type == StoreItemType.pack) {
+          return _StorePackCard(serverPack: items[idx] as ServerStickerPack);
+        } else {
+          return _StoreStickerCard(serverSticker: items[idx] as ServerSticker);
+        }
+      },
     );
   }
 }
 
 class _StorePackCard extends StatefulWidget {
-  final StoreItem item;
+  final ServerStickerPack serverPack;
   final bool isFeaturedLarge;
 
-  const _StorePackCard({required this.item, this.isFeaturedLarge = false});
+  const _StorePackCard({required this.serverPack, this.isFeaturedLarge = false});
 
   @override
   State<_StorePackCard> createState() => _StorePackCardState();
@@ -388,14 +427,14 @@ class _StorePackCardState extends State<_StorePackCard> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final user = context.watch<UserProvider>();
-    final isPurchased = user.hasPurchased(widget.item.id);
+    final isPurchased = user.hasPurchased(widget.serverPack.id);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => _showPackDetail(context, widget.item),
+        onTap: () => _showPackDetail(context, widget.serverPack),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: widget.isFeaturedLarge ? 420 : null,
@@ -422,7 +461,7 @@ class _StorePackCardState extends State<_StorePackCard> {
                   color: colors.surfaceElevated,
                   borderRadius: const BorderRadius.horizontal(left: Radius.circular(23)),
                 ),
-                child: _buildMosaic(widget.item.stickerIds, isPurchased),
+                child: _buildMosaic(widget.serverPack, isPurchased),
               ),
               // CONTENT
               Expanded(
@@ -431,7 +470,7 @@ class _StorePackCardState extends State<_StorePackCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.item.isFeatured && !widget.isFeaturedLarge)
+                      if (widget.serverPack.isFeatured && !widget.isFeaturedLarge)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           margin: const EdgeInsets.only(bottom: 8),
@@ -442,7 +481,7 @@ class _StorePackCardState extends State<_StorePackCard> {
                           child: Text('FEATURED', style: AppTypography.micro.copyWith(color: AppColors.xpGold, fontWeight: FontWeight.w800)),
                         ),
                       Text(
-                        widget.item.name,
+                        widget.serverPack.name,
                         style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w800),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -450,7 +489,7 @@ class _StorePackCardState extends State<_StorePackCard> {
                       const SizedBox(height: 4),
                       Expanded(
                         child: Text(
-                          widget.item.description,
+                          widget.serverPack.description,
                           style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -458,7 +497,7 @@ class _StorePackCardState extends State<_StorePackCard> {
                       ),
                       const SizedBox(height: 12),
                       _PriceBadge(
-                        cost: widget.item.xpCost,
+                        cost: widget.serverPack.xpCost,
                         isPurchased: isPurchased,
                         isLarge: widget.isFeaturedLarge,
                       ),
@@ -473,25 +512,38 @@ class _StorePackCardState extends State<_StorePackCard> {
     );
   }
 
-  Widget _buildMosaic(List<String> ids, bool isPurchased) {
+  Widget _buildMosaic(ServerStickerPack pack, bool isPurchased) {
+    if (pack.previewUrls.isNotEmpty) {
+      return GridView.count(
+        crossAxisCount: 2,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        physics: const NeverScrollableScrollPhysics(),
+        children: pack.previewUrls.take(4).map((url) => _NetworkPreview(url: url, size: 32)).toList(),
+      );
+    }
+
+    final ids = pack.stickerIds;
     if (ids.isEmpty) {
       return Center(
         child: Text(
-          '🗝️',
+          pack.emoji,
           style: TextStyle(fontSize: 48, shadows: [
             Shadow(color: AppColors.xpGold.withValues(alpha: 0.5), blurRadius: 20)
           ]),
         ),
       );
     }
+    
     return GridView.count(
       crossAxisCount: 2,
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
       physics: const NeverScrollableScrollPhysics(),
       children: ids.take(4).map((id) {
-        final sticker = StickerRegistry.findById(id);
-        if (sticker == null) return const SizedBox.shrink();
+        final store = context.read<StoreService>();
+        final serverSticker = store.data?.stickerById(id);
+        
         return Container(
           decoration: BoxDecoration(
             color: context.appColors.surface,
@@ -500,7 +552,7 @@ class _StorePackCardState extends State<_StorePackCard> {
           child: Opacity(
             opacity: isPurchased ? 1.0 : 0.4,
             child: StickerWidget(
-              sticker: sticker,
+              serverSticker: serverSticker,
               size: 32,
               animate: _hovered && isPurchased,
             ),
@@ -510,12 +562,134 @@ class _StorePackCardState extends State<_StorePackCard> {
     );
   }
 
-  void _showPackDetail(BuildContext context, StoreItem item) {
+  void _showPackDetail(BuildContext context, ServerStickerPack pack) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _PackDetailSheet(item: item),
+      builder: (_) => _PackDetailSheet(item: pack.toStoreItem()),
+    );
+  }
+}
+
+class _StoreStickerCard extends StatefulWidget {
+  final ServerSticker serverSticker;
+  const _StoreStickerCard({required this.serverSticker});
+
+  @override
+  State<_StoreStickerCard> createState() => _StoreStickerCardState();
+}
+
+class _StoreStickerCardState extends State<_StoreStickerCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final user = context.watch<UserProvider>();
+    final isPurchased = user.hasPurchased(widget.serverSticker.id);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _showStickerDetail(context, widget.serverSticker),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _hovered ? AppColors.primary.withValues(alpha: 0.3) : colors.divider,
+              width: _hovered ? 2 : 1,
+            ),
+            boxShadow: _hovered 
+              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8))]
+              : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Center(
+                  child: StickerWidget(
+                    serverSticker: widget.serverSticker,
+                    size: 64,
+                    animate: _hovered || isPurchased,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
+                  children: [
+                    Text(
+                      widget.serverSticker.name,
+                      style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    _PriceBadge(
+                      cost: widget.serverSticker.xpCost,
+                      isPurchased: isPurchased,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStickerDetail(BuildContext context, ServerSticker sticker) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _PackDetailSheet(item: sticker.toStoreItem()),
+    );
+  }
+}
+
+class _NetworkPreview extends StatelessWidget {
+  final String? url;
+  final double size;
+  const _NetworkPreview({this.url, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url == null) {
+      return Center(child: Text('✨', style: TextStyle(fontSize: size * 0.6)));
+    }
+    return Image.network(
+      url!,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Center(child: Text('✨', style: TextStyle(fontSize: size * 0.6))),
+      loadingBuilder: (_, child, progress) => progress == null ? child : _StickerShimmer(size: size),
+    );
+  }
+}
+
+class _StickerShimmer extends StatelessWidget {
+  final double size;
+  const _StickerShimmer({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
+      ),
     );
   }
 }
@@ -650,8 +824,14 @@ class _PackDetailSheet extends StatelessWidget {
               ),
               itemCount: item.stickerIds.length,
               itemBuilder: (context, idx) {
-                final sticker = StickerRegistry.findById(item.stickerIds[idx]);
-                if (sticker == null) return const SizedBox.shrink();
+                final id = item.stickerIds[idx];
+                final store = context.read<StoreService>();
+                final serverSticker = store.data?.stickerById(id);
+                // Fallback to registry for bundled ones
+                final localSticker = StickerRegistry.findById(id);
+
+                if (serverSticker == null && localSticker == null) return const SizedBox.shrink();
+                
                 return Container(
                   decoration: BoxDecoration(
                     color: colors.surfaceElevated,
@@ -659,7 +839,8 @@ class _PackDetailSheet extends StatelessWidget {
                   ),
                   child: Center(
                     child: StickerWidget(
-                      sticker: sticker,
+                      serverSticker: serverSticker,
+                      localSticker: localSticker,
                       size: 64,
                       animate: isPurchased,
                     ),
@@ -684,7 +865,8 @@ class _PackDetailSheet extends StatelessWidget {
       final result = await user.purchase(item);
       if (result == PurchaseResult.success) {
         Navigator.pop(context); // Close sheet
-        _showSuccess(context, item);
+        final state = context.findAncestorStateOfType<_StoreScreenState>();
+        state?.setState(() => state._celebratingItem = item);
       }
     }
   }
@@ -775,6 +957,167 @@ class _ConfirmPurchaseDialog extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CelebrationOverlay extends StatelessWidget {
+  final StoreItem item;
+  final VoidCallback onClose;
+
+  const _CelebrationOverlay({required this.item, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final store = context.read<StoreService>();
+    final serverSticker = store.data?.stickerById(item.id);
+    final localSticker = StickerRegistry.findById(item.id);
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutQuart,
+      builder: (context, value, child) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10 * value, sigmaY: 10 * value),
+          child: Container(
+            color: Colors.black.withOpacity(0.6 * value),
+            child: child,
+          ),
+        );
+      },
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Floating Sticker
+            Container(
+              padding: const EdgeInsets.all(48),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.primary.withOpacity(0.3),
+                    AppColors.primary.withOpacity(0.0),
+                  ],
+                ),
+              ),
+              child: StickerWidget(
+                serverSticker: serverSticker,
+                localSticker: localSticker,
+                size: 240,
+                animate: true,
+              ),
+            ).animate()
+              .scale(
+                begin: const Offset(0.3, 0.3),
+                end: const Offset(1.0, 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.elasticOut,
+              )
+              .shake(hz: 2, curve: Curves.easeInOut, duration: const Duration(seconds: 2)),
+
+            const SizedBox(height: 48),
+
+            // Text
+            Text(
+              'NEW STICKER UNLOCKED!',
+              style: AppTypography.displayMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
+              ),
+            ).animate()
+              .fadeIn(delay: const Duration(milliseconds: 400))
+              .moveY(begin: 20, end: 0, curve: Curves.easeOutBack),
+
+            const SizedBox(height: 12),
+
+            Text(
+              item.name.toUpperCase(),
+              style: AppTypography.headlineSmall.copyWith(
+                color: AppColors.xpGold,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2,
+              ),
+            ).animate()
+              .fadeIn(delay: const Duration(milliseconds: 600))
+              .moveY(begin: 10, end: 0),
+
+            const SizedBox(height: 64),
+
+            // Continue Button
+            GestureDetector(
+              onTap: onClose,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.white.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'AWESOME!',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ).animate()
+              .fadeIn(delay: const Duration(seconds: 1))
+              .scale(begin: const Offset(0.8, 0.8), duration: const Duration(milliseconds: 400), curve: Curves.easeOutBack),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class _OfflineBanner extends StatelessWidget {
+  final String message;
+  const _OfflineBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppColors.warning.withOpacity(0.10),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 14, color: AppColors.warning),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.warning,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => context.read<StoreService>().fetchStore(),
+            child: Text(
+              'Retry',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

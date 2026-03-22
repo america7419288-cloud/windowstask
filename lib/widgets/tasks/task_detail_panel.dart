@@ -29,6 +29,7 @@ import '../../data/sticker_packs.dart';
 import '../../models/sticker.dart';
 import '../../data/app_stickers.dart';
 import '../shared/sticker_widget.dart';
+import '../../services/store_service.dart';
 import '../shared/deco_sticker.dart';
 import '../shared/sticker_picker.dart';
 import 'subtask_item.dart';
@@ -373,9 +374,7 @@ class _PanelHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final sticker = task.stickerId != null 
-        ? StickerRegistry.findById(task.stickerId!) 
-        : null;
+    final stickerId = task.stickerId;
 
     return Container(
       height: 120,
@@ -408,12 +407,19 @@ class _PanelHeader extends StatelessWidget {
               color: Colors.white,
             ),
           ),
-          // Sticker
           Center(
-            child: DecoSticker(
-              sticker: sticker ?? AppStickers.detailDefault,
-              size: 80,
-              animate: true,
+            child: Consumer<StoreService>(
+              builder: (context, store, _) {
+                final serverSticker = stickerId != null ? store.data?.stickerById(stickerId) : null;
+                final localSticker = stickerId != null ? StickerRegistry.findById(stickerId) : null;
+                
+                return StickerWidget(
+                  serverSticker: serverSticker,
+                  localSticker: localSticker ?? AppStickers.detailDefault,
+                  size: 80,
+                  animate: true,
+                );
+              },
             ),
           ),
         ],
@@ -865,9 +871,7 @@ class _StickerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
-    final sticker = task.stickerId != null
-        ? StickerRegistry.findById(task.stickerId!)
-        : null;
+    final stickerId = task.stickerId;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -882,7 +886,7 @@ class _StickerRow extends StatelessWidget {
                 color: colors.textPrimary)),
           const Spacer(),
 
-          if (sticker != null) ...[
+          if (stickerId != null) ...[
             // Large animated sticker preview
             GestureDetector(
               onTap: () => _openPicker(context),
@@ -898,10 +902,17 @@ class _StickerRow extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(6),
-                  child: StickerWidget(
-                    sticker: sticker,
-                    size: 44,
-                    animate: true,
+                  child: Consumer<StoreService>(
+                    builder: (context, store, _) {
+                      final serverSticker = store.data?.stickerById(stickerId);
+                      final localSticker = StickerRegistry.findById(stickerId);
+                      return StickerWidget(
+                        serverSticker: serverSticker,
+                        localSticker: localSticker ?? AppStickers.detailDefault,
+                        size: 44,
+                        animate: true,
+                      );
+                    },
                   ),
                 ),
               ),

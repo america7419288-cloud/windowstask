@@ -18,6 +18,7 @@ import '../../shared/empty_state_widget.dart';
 import '../shared/custom_checkbox.dart';
 import '../../../data/app_stickers.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../../services/store_service.dart';
 
 class CompactLayout extends StatelessWidget {
   final List<Task> tasks;
@@ -136,10 +137,17 @@ class _CompactRowState extends State<_CompactRow> {
                       child: Stack(
                         children: [
                           t.stickerId != null && t.stickerId!.isNotEmpty
-                            ? StickerWidget(
-                                sticker: StickerRegistry.findById(t.stickerId!) ?? AppStickers.detailDefault,
-                                size: 32,
-                                animate: !t.isCompleted,
+                            ? Consumer<StoreService>(
+                                builder: (context, store, _) {
+                                  final serverSticker = store.data?.stickerById(t.stickerId!);
+                                  final localSticker = StickerRegistry.findById(t.stickerId!);
+                                  return StickerWidget(
+                                    serverSticker: serverSticker,
+                                    localSticker: localSticker ?? AppStickers.detailDefault,
+                                    size: 32,
+                                    animate: !t.isCompleted,
+                                  );
+                                },
                               )
                             : CustomCheckbox(
                                 value: t.isCompleted,
