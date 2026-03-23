@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/user_provider.dart';
-import '../providers/celebration_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/store_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/colors.dart';
@@ -12,39 +12,48 @@ import '../utils/constants.dart';
 import '../utils/date_utils.dart';
 import '../models/task.dart';
 import '../models/achievement.dart';
-import '../models/sticker.dart';
-import '../data/sticker_packs.dart';
 import '../data/app_stickers.dart';
 import '../widgets/shared/sticker_widget.dart';
-import '../widgets/shared/deco_sticker.dart';
+import '../widgets/shared/section_label.dart';
 import '../widgets/tasks/task_card.dart';
-import '../models/app_settings.dart';
-import '../providers/settings_provider.dart';
 import '../widgets/tasks/views/view_toggle_bar.dart';
-import '../widgets/tasks/views/grid_view_layout.dart';
-import '../widgets/tasks/views/magazine_layout.dart';
-import '../widgets/tasks/views/kanban_layout.dart';
-import '../widgets/tasks/views/compact_layout.dart';
 import 'planning_screen.dart';
 import '../widgets/shared/milestone_celebration.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.read<UserProvider>();
+    if (user.pendingMilestone != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final streak = user.pendingMilestone!;
+        await MilestoneCelebration.show(context, streak);
+        user.clearPendingMilestone();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return const Row(
       children: [
-        // Left — 60%
-        const Expanded(
-          flex: 6,
-          child: _DashboardLeft(),
+        // Left 62%
+        Expanded(
+          flex: 62,
+          child: _DashLeft(),
         ),
-        // Right — 40%
-        const SizedBox(
-          width: 340,
-          child: _DashboardRight(),
+        // Right 38% — fixed width
+        SizedBox(
+          width: 310,
+          child: _DashRight(),
         ),
       ],
     );
@@ -55,302 +64,181 @@ class DashboardScreen extends StatelessWidget {
 // LEFT PANEL
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-class _DashboardLeft extends StatefulWidget {
-  const _DashboardLeft();
+class _DashLeft extends StatefulWidget {
+  const _DashLeft();
 
   @override
-  State<_DashboardLeft> createState() => _DashboardLeftState();
+  State<_DashLeft> createState() => _DashLeftState();
 }
 
-class _DashboardLeftState extends State<_DashboardLeft> {
+class _DashLeftState extends State<_DashLeft> {
   final _ctrl = TextEditingController();
+  final _focusNode = FocusNode();
   bool _focused = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final user = context.read<UserProvider>();
-    
-    // Check for pending milestone
-    if (user.pendingMilestone != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final streak = user.pendingMilestone!;
-        await MilestoneCelebration.show(context, streak);
-        user.clearPendingMilestone();
-        // Award XP (if not already awarded by earnBadge)
-        // Note: earnBadge already awards XP for 7 and 30 day milestones.
-        // For others (3, 14, 60, 100), we can add here if they don't have badges.
-        if (const {3, 14, 60, 100}.contains(streak)) {
-          await user.addXP(streak * 10, reason: '$streak-day streak milestone');
-        }
-      });
-    }
-
-    // Check for shield used
-    if (user.pendingShieldUsed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.shield_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                const Text('Streak Shield used! Your momentum is preserved.'),
-              ],
-            ),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        user.clearPendingShieldUsed();
-      });
-    }
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() => _focused = _focusNode.hasFocus);
+    });
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   void _submit(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-
-    final now = DateTime.now();
     context.read<TaskProvider>().createTask(
       title: trimmed,
-      dueDate: DateTime(now.year, now.month, now.day),
+      dueDate: DateTime.now(),
     );
     _ctrl.clear();
-    setState(() => _focused = false);
+    _focusNode.unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final navItem = context.select<NavigationProvider, String>((n) => n.selectedNavItem);
-    final hasMITs = context.select<NavigationProvider, bool>((n) => n.mitTaskIds.isNotEmpty);
-    final showPlanning = context.select<NavigationProvider, bool>((n) => n.shouldShowPlanningPrompt);
+    final nav = context.watch<NavigationProvider>();
+    final tasks = context.watch<TaskProvider>();
+    final user = context.watch<UserProvider>();
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        // 1. Greeting header
-        const _DashboardGreeting(),
+    final todayTasks = tasks.getTasksForNav(
+      AppConstants.navToday,
+      filterMITs: nav.filterMITs,
+      filterHighPriority: nav.filterHighPriority,
+      filterOverdue: nav.filterOverdue,
+      mitIds: nav.mitTaskIds,
+    );
 
-        // 2. Quick capture bar
-        _DashboardQuickCapture(colors: colors),
+    final totalToday = todayTasks.length;
+    final completedToday = todayTasks.where((t) => t.isCompleted).length;
 
-        const SizedBox(height: 12),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _GreetingBand(
+            user: user,
+            totalCount: totalToday,
+            completedCount: completedToday,
+            colors: colors,
+          ),
+          _CaptureBar(
+            ctrl: _ctrl,
+            focusNode: _focusNode,
+            focused: _focused,
+            submit: _submit,
+            colors: colors,
+          ),
+          if (nav.mitTaskIds.isNotEmpty)
+            _MITSection(nav: nav, tasks: tasks, colors: colors),
 
-        // MIT Section
-        if (hasMITs)
-          const _MITSection(),
+          _TodayHeader(totalCount: totalToday, nav: nav, colors: colors),
 
-        // 3. Today's Priorities header
-        const _DashboardTaskListHeader(),
+          ...todayTasks.map((t) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            child: TaskCard(
+              task: t,
+              isSelected: nav.selectedTaskId == t.id,
+            ),
+          )),
 
-        // 4. Task list
-        const _DashboardTasksContent(),
+          if (DateTime.now().hour < 12 && nav.mitTaskIds.isEmpty && todayTasks.isNotEmpty)
+            _PlanMyDayButton(onTap: () => PlanningScreen.show(context)),
 
-        // Empty state
-        Selector2<NavigationProvider, TaskProvider, bool>(
-          selector: (context, nav, tasks) => tasks.getTasksForNav(
-            AppConstants.navToday,
-            filterMITs: nav.filterMITs,
-            filterHighPriority: nav.filterHighPriority,
-            filterOverdue: nav.filterOverdue,
-            mitIds: nav.mitTaskIds,
-          ).isEmpty,
-          builder: (context, isEmpty, _) {
-            if (!isEmpty) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline_rounded,
-                    size: 48,
-                    color: colors.textTertiary.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Nothing scheduled for today',
-                    style: AppTypography.bodyLarge.copyWith(
-                      color: colors.textTertiary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Use the capture bar above to add a task',
-                    style: AppTypography.caption.copyWith(
-                      color: colors.textQuaternary,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+}
+
+class _GreetingBand extends StatelessWidget {
+  final UserProvider user;
+  final int totalCount;
+  final int completedCount;
+  final AppColorsExtension colors;
+
+  const _GreetingBand({
+    required this.user,
+    required this.totalCount,
+    required this.completedCount,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.indigo.withValues(alpha: .06),
+            AppColors.indigoL.withValues(alpha: .03),
+            Colors.transparent,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-}
-
-class _DashboardTasksContent extends StatelessWidget {
-  const _DashboardTasksContent();
-
-  @override
-  Widget build(BuildContext context) {
-    return Selector2<NavigationProvider, TaskProvider, Map<String, dynamic>>(
-      selector: (context, nav, tasks) {
-        final list = tasks.getTasksForNav(
-          AppConstants.navToday,
-          filterMITs: nav.filterMITs,
-          filterHighPriority: nav.filterHighPriority,
-          filterOverdue: nav.filterOverdue,
-          mitIds: nav.mitTaskIds,
-        );
-        final layout = nav.layoutForCurrentSection(context.read<SettingsProvider>().currentLayout);
-        final selectedId = nav.selectedTaskId;
-        return {
-          'tasks': list,
-          'layout': layout,
-          'selectedTaskId': selectedId,
-        };
-      },
-      builder: (context, data, _) {
-        final todayTasks = data['tasks'] as List<Task>;
-        final layout = data['layout'] as TaskViewLayout;
-        final selectedTaskId = data['selectedTaskId'] as String?;
-
-        if (todayTasks.isEmpty) return const SizedBox.shrink();
-        
-        switch (layout) {
-          case TaskViewLayout.list:
-            return Column(
-              children: todayTasks.map((task) => TaskCard(
-                key: ValueKey(task.id),
-                task: task,
-                isSelected: selectedTaskId == task.id,
-              )).toList(),
-            );
-          case TaskViewLayout.grid:
-            return GridViewLayout(tasks: todayTasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
-          case TaskViewLayout.kanban:
-            return KanbanLayout(tasks: todayTasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
-          case TaskViewLayout.compact:
-            return CompactLayout(tasks: todayTasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
-          case TaskViewLayout.magazine:
-            return MagazineLayout(tasks: todayTasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
-        }
-      },
-    );
-  }
-}
-
-class _DashboardGreeting extends StatelessWidget {
-  const _DashboardGreeting();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final now = DateTime.now();
-    return Selector3<UserProvider, TaskProvider, NavigationProvider, Map<String, dynamic>>(
-      selector: (context, user, tasks, nav) {
-        final todayTasks = tasks.getTasksForNav(AppConstants.navToday, mitIds: nav.mitTaskIds);
-        final taskCount = todayTasks.where((t) => !t.isCompleted).length;
-        final completedCount = tasks.completedToday;
-        return {
-          'firstName': user.firstName,
-          'taskCount': taskCount,
-          'completedCount': completedCount,
-          'showPlanning': nav.shouldShowPlanningPrompt,
-        };
-      },
-      builder: (context, data, _) {
-        final firstName = data['firstName'];
-        final taskCount = data['taskCount'];
-        final completedCount = data['completedCount'];
-        final showPlanning = data['showPlanning'];
-        
-        return Container(
-          padding: const EdgeInsets.fromLTRB(32, 28, 24, 16),
-          color: Colors.transparent,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          AppStickerWidget(
+            assetPath: AppStickers.greetingPath(
+              allDone: completedCount == totalCount && totalCount > 0,
+              hour: DateTime.now().hour,
+            ),
+            size: 64,
+            animate: true,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_greeting()}, ${user.firstName}',
+                  style: AppTypography.displayLG.copyWith(color: colors.textPrimary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _subtitle(totalCount, completedCount),
+                  style: AppTypography.bodyMD.copyWith(color: colors.textTertiary),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  DecoSticker(
-                    sticker: AppStickers.todayHeaderSticker(
-                      allDone: completedCount == taskCount && taskCount > 0,
-                    ),
-                    size: 48,
-                    animate: true,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${_greeting()}, $firstName',
-                          style: AppTypography.displayLarge.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _subtitle(taskCount, completedCount),
-                          style: AppTypography.bodyLarge.copyWith(
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                        if (showPlanning)
-                          GestureDetector(
-                            onTap: () => PlanningScreen.show(context),
-                            child: Container(
-                              margin: const EdgeInsets.only(top: 12),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppColors.xpGold.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.sunny_snowing, size: 14, color: AppColors.xpGold),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Plan my day',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: AppColors.xpGold,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.arrow_forward_rounded, size: 12, color: AppColors.xpGold),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _DateDisplay(now: now),
-                ],
+              Text(
+                '${DateTime.now().day}',
+                style: AppTypography.displayXL.copyWith(
+                  color: AppColors.indigo,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                _dayName(DateTime.now().weekday).toUpperCase(),
+                style: AppTypography.micro.copyWith(
+                  color: colors.textQuaternary,
+                  letterSpacing: 2,
+                ),
               ),
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -362,156 +250,183 @@ class _DashboardGreeting extends StatelessWidget {
   }
 
   String _subtitle(int total, int done) {
-    if (total == 0) return 'Nothing scheduled — enjoy your day.';
-    if (done >= total && total > 0) return 'All $total tasks done! You crushed it.';
-    return 'You have $total tasks to complete today. Stay focused.';
-  }
-}
-
-class _DateDisplay extends StatelessWidget {
-  final DateTime now;
-  const _DateDisplay({required this.now});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          '${now.day}',
-          style: AppTypography.displayMedium.copyWith(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        Text(
-          _dayName(now.weekday).toUpperCase(),
-          style: AppTypography.labelSmall.copyWith(
-            color: context.appColors.textTertiary,
-            letterSpacing: 2,
-          ),
-        ),
-      ],
-    );
+    if (total == 0) return 'Your canvas is clear for today.';
+    if (done >= total) return 'Day complete! You\'ve handled everything.';
+    return 'You have $total tasks on the agenda.';
   }
 
   String _dayName(int weekday) {
-    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return names[weekday - 1];
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][weekday - 1];
   }
 }
 
-class _DashboardQuickCapture extends StatefulWidget {
+class _CaptureBar extends StatelessWidget {
+  final TextEditingController ctrl;
+  final FocusNode focusNode;
+  final bool focused;
+  final Function(String) submit;
   final AppColorsExtension colors;
-  const _DashboardQuickCapture({required this.colors});
 
-  @override
-  State<_DashboardQuickCapture> createState() => _DashboardQuickCaptureState();
-}
-
-class _DashboardQuickCaptureState extends State<_DashboardQuickCapture> {
-  final _ctrl = TextEditingController();
-  bool _focused = false;
-
-  void _submit(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
-    context.read<TaskProvider>().createTask(
-      title: trimmed,
-      dueDate: DateTime.now().copyWith(hour: 0, minute: 0, second: 0, millisecond: 0),
-    );
-    _ctrl.clear();
-    setState(() => _focused = false);
-  }
+  const _CaptureBar({
+    required this.ctrl,
+    required this.focusNode,
+    required this.focused,
+    required this.submit,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      onFocusChange: (f) => setState(() => _focused = f),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(32, 0, 24, 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppColors.ambientShadow(
-            opacity: 0.04, blur: 20, offset: const Offset(0, 4),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.bolt_rounded, size: 20, color: AppColors.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextField(
-                controller: _ctrl,
-                style: AppTypography.bodyMedium.copyWith(color: widget.colors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: "What's on your mind? Press Enter to quick capture...",
-                  hintStyle: AppTypography.bodyMedium.copyWith(color: widget.colors.textTertiary),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  isDense: true,
-                ),
-                onSubmitted: _submit,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.shadowSM(isDark: colors.isDark),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          const Icon(Icons.bolt_rounded, size: 17, color: AppColors.indigo),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: ctrl,
+              focusNode: focusNode,
+              style: AppTypography.titleMD.copyWith(color: colors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'What\'s on your mind? Press Enter to capture...',
+                hintStyle: AppTypography.bodyMD.copyWith(color: colors.textTertiary),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                isDense: true,
               ),
+              onSubmitted: submit,
             ),
-            if (_focused)
-              GestureDetector(
-                onTap: () => _submit(_ctrl.text),
+          ),
+          if (focused)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: GestureDetector(
+                onTap: () => submit(ctrl.text),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerHigh,
+                    color: AppColors.indigoDim,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('Capture', style: AppTypography.labelMedium.copyWith(color: widget.colors.textPrimary)),
+                  child: Text('Capture',
+                      style: AppTypography.labelMD.copyWith(color: AppColors.indigo)),
                 ),
               ),
-          ],
-        ),
+            )
+          else
+            const SizedBox(width: 12),
+        ],
       ),
     );
   }
 }
 
-class _DashboardTaskListHeader extends StatelessWidget {
-  const _DashboardTaskListHeader();
+class _MITSection extends StatelessWidget {
+  final NavigationProvider nav;
+  final TaskProvider tasks;
+  final AppColorsExtension colors;
+
+  const _MITSection({required this.nav, required this.tasks, required this.colors});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final mitTasks = tasks.allTasks.where((t) => nav.mitTaskIds.contains(t.id)).toList();
+    if (mitTasks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
+          child: SectionLabel(text: 'Most Important Tasks'),
+        ),
+        ...mitTasks.map((t) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: TaskCard(task: t, isSelected: nav.selectedTaskId == t.id),
+        )),
+      ],
+    );
+  }
+}
+
+class _TodayHeader extends StatelessWidget {
+  final int totalCount;
+  final NavigationProvider nav;
+  final AppColorsExtension colors;
+
+  const _TodayHeader({required this.totalCount, required this.nav, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 8, 24, 8),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Row(
         children: [
-          Text("Today's Priorities", style: AppTypography.headlineSmall.copyWith(color: colors.textPrimary)),
-          const SizedBox(width: 10),
-          Selector2<NavigationProvider, TaskProvider, int>(
-            selector: (context, nav, tasks) => tasks.getTasksForNav(
-              AppConstants.navToday,
-              filterMITs: nav.filterMITs,
-              filterHighPriority: nav.filterHighPriority,
-              filterOverdue: nav.filterOverdue,
-              mitIds: nav.mitTaskIds,
-            ).where((t) => !t.isCompleted).length,
-            builder: (context, count, _) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text('$count', style: AppTypography.labelMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+          const SectionLabel(text: 'Today\'s Priorities'),
+          Container(
+            margin: const EdgeInsets.only(left: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.indigoDim,
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: Text('$totalCount',
+                style: AppTypography.micro.copyWith(color: AppColors.indigo, letterSpacing: 0)),
           ),
           const Spacer(),
           GestureDetector(
-            onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navAll),
-            child: Text('View All →', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+            onTap: () => nav.selectNav(AppConstants.navAll),
+            child: Text('View All →',
+                style: AppTypography.labelMD.copyWith(color: AppColors.indigo)),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           const ViewToggleBar(),
         ],
+      ),
+    );
+  }
+}
+
+class _PlanMyDayButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _PlanMyDayButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.indigoDim,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.indigo.withValues(alpha: .15),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wb_sunny_outlined, size: 15, color: AppColors.indigo),
+              const SizedBox(width: 8),
+              Text('Plan my day',
+                  style: AppTypography.labelMD.copyWith(
+                    color: AppColors.indigo,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -521,764 +436,148 @@ class _DashboardTaskListHeader extends StatelessWidget {
 // RIGHT PANEL
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-class _DashboardRight extends StatelessWidget {
-  const _DashboardRight();
+class _DashRight extends StatelessWidget {
+  const _DashRight();
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final nav = context.read<NavigationProvider>();
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        // 1. Daily Momentum card
-        const _DashboardMomentumCard(),
-
-        // 2. Upcoming Planning
-        const _DashboardUpcomingSection(),
-
-        // 3. Achievement badges
-        const _DashboardBadges(),
-
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-}
-
-class _DashboardMomentumCard extends StatelessWidget {
-  const _DashboardMomentumCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Selector2<UserProvider, TaskProvider, Map<String, dynamic>>(
-      selector: (context, user, tasks) {
-        final allTodayTasks = tasks.allTasks.where((t) =>
-            !t.isDeleted && t.dueDate != null && AppDateUtils.isToday(t.dueDate!)
-        ).toList();
-        final totalCount = allTodayTasks.length;
-        final completedCount = allTodayTasks.where((t) => t.isCompleted).length;
-        final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
-        
-        return {
-          'streak': user.streak,
-          'streakShields': user.streakShields,
-          'progress': progress,
-          'completedCount': completedCount,
-          'totalCount': totalCount,
-        };
-      },
-      builder: (context, data, _) {
-        final streak = data['streak'];
-        final streakShields = data['streakShields'];
-        final progress = data['progress'];
-        final completedCount = data['completedCount'];
-        final totalCount = data['totalCount'];
-
-        return Container(
-          margin: const EdgeInsets.fromLTRB(0, 28, 24, 16),
-          decoration: BoxDecoration(
-            gradient: AppColors.gradientMomentum,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: AppColors.ambientShadow(
-              opacity: 0.15, blur: 30, offset: const Offset(0, 10),
-            ),
-          ),
-          child: InkWell(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder: (_) => const _StreakDetailSheet(),
-              );
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Daily Momentum',
-                            style: AppTypography.titleMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (streakShields > 0) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.shield_rounded, size: 12, color: Colors.white70),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$streakShields Shields active',
-                                  style: AppTypography.micro.copyWith(
-                                    color: Colors.white70,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                      DecoSticker(
-                        sticker: streak >= 7 ? AppStickers.celebration : AppStickers.todayAfternoon,
-                        size: 32,
-                        animate: true,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 84,
-                        height: 84,
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.0, end: (progress as double).clamp(0.0, 1.0)),
-                          duration: const Duration(milliseconds: 1200),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, child) {
-                            return Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                SizedBox.expand(
-                                  child: CircularProgressIndicator(
-                                    value: value,
-                                    strokeWidth: 8,
-                                    strokeCap: StrokeCap.round,
-                                    color: Colors.white,
-                                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: FittedBox(
-                                    fit: BoxFit.contain,
-                                    child: Text(
-                                      '${(value * 100).round()}%',
-                                      style: AppTypography.titleMedium.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$completedCount / $totalCount',
-                              style: AppTypography.headlineSmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              'Tasks Completed',
-                              style: AppTypography.caption.copyWith(color: Colors.white.withValues(alpha: 0.7)),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'CURRENT STREAK',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Text(
-                                  '$streak Days 🔥',
-                                  style: AppTypography.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                                ),
-                                const Spacer(),
-                                DecoSticker(sticker: AppStickers.celebration, size: 36, animate: (streak as int) > 0),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _DashboardUpcomingSection extends StatelessWidget {
-  const _DashboardUpcomingSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Selector<TaskProvider, List<Task>>(
-      selector: (context, tasks) => tasks.getTasksForNav(AppConstants.navUpcoming),
-      builder: (context, upcomingTasks, _) => Container(
-        margin: const EdgeInsets.fromLTRB(0, 0, 24, 16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.ambientShadow(opacity: 0.04, blur: 20, offset: const Offset(0, 4)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('UPCOMING PLANNING', style: AppTypography.labelSmall.copyWith(color: colors.textTertiary, letterSpacing: 2)),
-            const SizedBox(height: 16),
-            ...upcomingTasks.take(3).map((task) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3, height: 42,
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
-                  ),
-                  const SizedBox(width: 12),
-                  if (task.stickerId != null && task.stickerId!.isNotEmpty) ...[
-                    _InlineSticker(stickerId: task.stickerId!),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.dueDate != null ? AppDateUtils.formatDate(task.dueDate!).toUpperCase() : 'NO DATE',
-                          style: AppTypography.labelSmall.copyWith(color: colors.textTertiary, letterSpacing: 1),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          task.title,
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: AppTypography.titleSmall.copyWith(color: colors.textPrimary, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )),
-            if (upcomingTasks.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('No upcoming tasks this week', style: AppTypography.caption.copyWith(color: colors.textTertiary)),
-              ),
-            const SizedBox(height: 4),
-            GestureDetector(
-              onTap: () => context.read<NavigationProvider>().selectNav(AppConstants.navUpcoming),
-              child: Container(
-                width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(color: colors.surfaceElevated, borderRadius: BorderRadius.circular(10)),
-                child: Center(child: Text('Open Calendar →', style: AppTypography.labelMedium.copyWith(color: colors.textSecondary))),
-              ),
-            ),
-          ],
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(0, 20, 20, 20),
+      child: Column(
+        children: [
+          const _MomentumCard(),
+          const SizedBox(height: 12),
+          const _UpcomingCard(),
+          const SizedBox(height: 12),
+          const _AchievementsCard(),
+          const SizedBox(height: 12),
+          const _QuickStatsCard(),
+        ],
       ),
     );
   }
 }
 
-class _DashboardBadges extends StatelessWidget {
-  const _DashboardBadges();
+class _MomentumCard extends StatelessWidget {
+  const _MomentumCard();
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Selector<UserProvider, List<String>>(
-      selector: (context, user) => user.profile?.earnedBadgeIds ?? [],
-      builder: (context, badgeIds, _) {
-        if (badgeIds.isEmpty) return const SizedBox.shrink();
-        return Container(
-          margin: const EdgeInsets.fromLTRB(0, 0, 24, 0),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: AppColors.ambientShadow(opacity: 0.04, blur: 20, offset: const Offset(0, 4)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('ACHIEVEMENTS', style: AppTypography.labelSmall.copyWith(color: colors.textTertiary, letterSpacing: 2)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8, runSpacing: 8,
-                children: badgeIds.map((id) {
-                  final badge = Achievements.findById(id);
-                  if (badge == null) return const SizedBox.shrink();
-                  final isGold = badge.tier == AchievementTier.gold;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: isGold ? AppColors.gradientSuccess : null,
-                      color: isGold ? null : AppColors.tertiaryContainer.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(badge.emoji, style: const TextStyle(fontSize: 12)),
-                        const SizedBox(width: 5),
-                        Text(
-                          badge.name.toUpperCase(),
-                          style: AppTypography.micro.copyWith(
-                            color: isGold ? AppColors.onTertiary : AppColors.tertiary,
-                            fontWeight: FontWeight.w700, letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
+    final user = context.watch<UserProvider>();
+    final tasks = context.watch<TaskProvider>();
+    
+    final todayTasks = tasks.allTasks.where((t) => 
+      !t.isDeleted && t.dueDate != null && AppDateUtils.isToday(t.dueDate!)
+    ).toList();
+    final totalCount = todayTasks.length;
+    final completedCount = todayTasks.where((t) => t.isCompleted).length;
+    final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
 
-  Widget _buildMomentumCard(
-    BuildContext context,
-    AppColorsExtension colors,
-    UserProvider user,
-    double progress,
-    int completedCount,
-    int totalCount,
-  ) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(0, 28, 24, 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: AppColors.gradientMomentum,
+        gradient: AppColors.gradMomentum,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: AppColors.ambientShadow(
-          opacity: 0.15,
-          blur: 30,
-          offset: const Offset(0, 10),
-        ),
+        boxShadow: AppColors.shadowPrimary(),
       ),
-      child: InkWell(
-        onTap: () {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (_) => const _StreakDetailSheet(),
-          );
-        },
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+      child: Column(
+        children: [
+          Row(
             children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Daily Momentum',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (user.streakShields > 0) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.shield_rounded, size: 12, color: Colors.white70),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${user.streakShields} Shields active',
-                              style: AppTypography.micro.copyWith(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-              DecoSticker(
-                sticker: user.streak >= 7
-                    ? AppStickers.celebration
-                    : AppStickers.todayAfternoon,
-                size: 32,
+              Text('Daily Momentum',
+                  style: AppTypography.titleMD.copyWith(
+                    color: Colors.white.withValues(alpha: .85),
+                    fontWeight: FontWeight.w700,
+                  )),
+              const Spacer(),
+              AppStickerWidget(
+                assetPath: progress >= 1.0
+                    ? AppStickers.celebrationPath
+                    : AppStickers.greetingMorningPath,
+                size: 30,
                 animate: true,
               ),
             ],
           ),
-          const SizedBox(height: 20),
-
-          // Progress ring + stats
+          const SizedBox(height: 16),
           Row(
             children: [
-              // Ring
               SizedBox(
-                width: 84,
-                height: 84,
+                width: 72,
+                height: 72,
                 child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: progress.clamp(0.0, 1.0)),
+                  tween: Tween(begin: 0, end: progress),
                   duration: const Duration(milliseconds: 1200),
                   curve: Curves.easeOutCubic,
-                  builder: (context, value, child) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox.expand(
-                          child: CircularProgressIndicator(
-                            value: value,
-                            strokeWidth: 8,
-                            strokeCap: StrokeCap.round,
-                            color: Colors.white,
-                            backgroundColor: Colors.white.withValues(alpha: 0.15),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            child: Text(
-                              '${(value * 100).round()}%',
-                              style: AppTypography.titleMedium.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 20),
-
-              // Stats
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$completedCount / $totalCount',
-                      style: AppTypography.headlineSmall.copyWith(
+                  builder: (_, v, __) => Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: v,
+                        strokeWidth: 6,
+                        strokeCap: StrokeCap.round,
                         color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                        backgroundColor: Colors.white.withValues(alpha: .15),
                       ),
-                    ),
-                    Text(
-                      'Tasks Completed',
-                      style: AppTypography.caption.copyWith(
-                        color: Colors.white.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'CURRENT STREAK',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          '${user.streak} Days 🔥',
-                          style: AppTypography.titleMedium.copyWith(
+                      Text('${(v * 100).round()}%',
+                          style: AppTypography.labelLG.copyWith(
                             color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Spacer(),
-                        DecoSticker(
-                          sticker: AppStickers.celebration,
-                          size: 36,
-                          animate: user.streak > 0,
-                        ),
-                      ],
-                    ),
-                  ],
+                            fontWeight: FontWeight.w800,
+                          )),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
-        ]),
-      ),
-    ),
-    );}
-
-
-class _MITSection extends StatelessWidget {
-  const _MITSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final nav = context.read<NavigationProvider>();
-    return Selector<TaskProvider, List<Task>>(
-      selector: (context, tasks) => nav.mitTaskIds
-          .map((id) => tasks.getById(id))
-          .whereType<Task>()
-          .where((t) => !t.isCompleted)
-          .toList(),
-      builder: (context, mitTasks, _) {
-        if (mitTasks.isEmpty) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.star_rounded, size: 14, color: AppColors.xpGold),
-                    const SizedBox(width: 8),
-                    Text(
-                      'TOP PRIORITIES',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.xpGold,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.xpGold.withValues(alpha: 0.4),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // MIT task cards
-              ...mitTasks.map((t) => TaskCard(
-                key: ValueKey(t.id),
-                task: t,
-                isSelected: nav.selectedTaskId == t.id,
-              )),
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _StreakDetailSheet extends StatelessWidget {
-  const _StreakDetailSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final user = context.watch<UserProvider>();
-    final streak = user.streak;
-    final longest = user.profile?.longestStreak ?? 0;
-    
-    // Find next milestone
-    final milestones = [3, 7, 14, 30, 60, 100];
-    final nextMilestone = milestones.firstWhere((m) => m > streak, orElse: () => 0);
-    final progressToNext = nextMilestone > 0 ? streak / nextMilestone : 1.0;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colors.textQuaternary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Header
-          Row(
-            children: [
-              const DecoSticker(sticker: AppStickers.celebration, size: 60, animate: true),
-              const SizedBox(width: 20),
+              const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Your Streak',
-                    style: AppTypography.headlineSmall.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    'Building habits, one day at a time',
-                    style: AppTypography.caption.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
+                  Text('$completedCount / $totalCount',
+                      style: AppTypography.displayLG.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      )),
+                  Text('Tasks Completed',
+                      style: AppTypography.caption.copyWith(
+                        color: Colors.white.withValues(alpha: .6),
+                      )),
+                  const SizedBox(height: 10),
+                  Text('${user.streak} Days 🔥',
+                      style: AppTypography.titleSM.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      )),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 32),
-
-          // Stats Grid
+          const SizedBox(height: 14),
           Row(
-            children: [
-              _StatCard(
-                label: 'CURRENT',
-                value: '$streak',
-                unit: 'Days',
-                icon: Icons.local_fire_department_rounded,
-                color: AppColors.priorityHigh,
-              ),
-              const SizedBox(width: 16),
-              _StatCard(
-                label: 'LONGEST',
-                value: '$longest',
-                unit: 'Days',
-                icon: Icons.emoji_events_rounded,
-                color: AppColors.xpGold,
-              ),
-              const SizedBox(width: 16),
-              _StatCard(
-                label: 'SHIELDS',
-                value: '${user.streakShields}',
-                unit: 'Active',
-                icon: Icons.shield_rounded,
-                color: AppColors.primary,
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-
-          // Next Milestone
-          if (nextMilestone > 0) ...[
-            Text(
-              'NEXT MILESTONE',
-              style: AppTypography.labelSmall.copyWith(
-                color: colors.textTertiary,
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: colors.surfaceElevated,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '$streak / $nextMilestone days',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        '${nextMilestone - streak} more to go!',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.xpGold,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progressToNext,
-                      minHeight: 8,
-                      backgroundColor: colors.textQuaternary.withValues(alpha: 0.1),
-                      valueColor: const AlwaysStoppedAnimation(AppColors.xpGold),
+            children: List.generate(7, (i) {
+              final day = DateTime.now().subtract(Duration(days: 6 - i));
+              final isToday = i == 6;
+              final hasActivity = tasks.allTasks.any((t) => 
+                t.isCompleted && t.completedAt != null && AppDateUtils.isSameDay(t.completedAt!, day)
+              );
+              return Expanded(
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: isToday ? 10 : 7,
+                    height: isToday ? 10 : 7,
+                    decoration: BoxDecoration(
+                      color: isToday
+                          ? AppColors.gold
+                          : hasActivity
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: .15),
+                      shape: BoxShape.circle,
+                      boxShadow: isToday ? AppColors.shadowGold() : [],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
-
-          // Shield Explanation
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline_rounded, size: 20, color: AppColors.primary),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    'Shields protect your streak if you miss a day. Earn more at 7 and 30 day milestones!',
-                    style: AppTypography.caption.copyWith(color: colors.textSecondary),
                   ),
                 ),
-              ],
-            ),
+              );
+            }),
           ),
         ],
       ),
@@ -1286,49 +585,234 @@ class _StreakDetailSheet extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String unit;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.unit,
-    required this.icon,
-    required this.color,
-  });
+class _UpcomingCard extends StatelessWidget {
+  const _UpcomingCard();
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final nav = context.watch<NavigationProvider>();
+    final upcomingTasks = context.watch<TaskProvider>().getTasksForNav(AppConstants.navUpcoming);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.shadowSM(isDark: colors.isDark),
+      ),
+      child: Column(
+        children: [
+          const SectionLabel(text: 'Upcoming'),
+          const SizedBox(height: 12),
+          if (upcomingTasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('No upcoming tasks this week',
+                  style: AppTypography.caption.copyWith(color: colors.textTertiary)),
+            )
+          else
+            ...upcomingTasks.take(3).map((t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.indigo,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      if (t.stickerId != null) ...[
+                        AppStickerWidget(
+                          serverSticker: StoreService.instance.data?.stickerById(t.stickerId!),
+                          size: 22,
+                          animate: false,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_dateLabel(t.dueDate!),
+                                style: AppTypography.caption.copyWith(
+                                  color: colors.textQuaternary,
+                                  letterSpacing: 0.5,
+                                  fontWeight: FontWeight.w700,
+                                )),
+                            Text(t.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleSM.copyWith(
+                                  color: colors.textPrimary,
+                                )),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          GestureDetector(
+            onTap: () => nav.selectNav('calendar'),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: colors.surfaceElevated,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text('Open Calendar →',
+                    style: AppTypography.labelMD.copyWith(color: colors.textSecondary)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _dateLabel(DateTime date) {
+    if (AppDateUtils.isToday(date)) return 'Today';
+    if (AppDateUtils.isTomorrow(date)) return 'Tomorrow';
+    return AppDateUtils.formatDate(date);
+  }
+}
+
+class _AchievementsCard extends StatelessWidget {
+  const _AchievementsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final user = context.watch<UserProvider>();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.shadowSM(isDark: colors.isDark),
+      ),
+      child: Column(
+        children: [
+          const SectionLabel(text: 'Achievements'),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: Achievements.all.take(6).map((a) {
+              final earned = user.profile?.earnedBadgeIds.contains(a.id) ?? false;
+              return AnimatedOpacity(
+                opacity: earned ? 1.0 : 0.35,
+                duration: const Duration(milliseconds: 300),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: earned ? AppColors.indigoDim : colors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(earned ? a.emoji : '🔒', style: const TextStyle(fontSize: 11)),
+                      const SizedBox(width: 5),
+                      Text(a.name.toUpperCase(),
+                          style: AppTypography.micro.copyWith(
+                            color: earned ? AppColors.indigo : colors.textQuaternary,
+                            letterSpacing: 0.5,
+                          )),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickStatsCard extends StatelessWidget {
+  const _QuickStatsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final user = context.watch<UserProvider>();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.shadowSM(isDark: colors.isDark),
+      ),
+      child: Row(
+        children: [
+          _QuickStat(
+            icon: '⚡',
+            value: _formatXP(user.totalXP),
+            label: 'Total XP',
+            colors: colors,
+          ),
+          _StatDivider(colors: colors),
+          _QuickStat(
+            icon: '🔥',
+            value: '${user.profile?.longestStreak ?? 0}d',
+            label: 'Best Streak',
+            colors: colors,
+          ),
+          _StatDivider(colors: colors),
+          _QuickStat(
+            icon: '🏅',
+            value: '${user.profile?.earnedBadgeIds.length ?? 0}',
+            label: 'Badges',
+            colors: colors,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatXP(int xp) {
+    if (xp >= 1000) return '${(xp / 1000).toStringAsFixed(1)}k';
+    return '$xp';
+  }
+}
+
+class _QuickStat extends StatelessWidget {
+  final String icon;
+  final String value;
+  final String label;
+  final AppColorsExtension colors;
+
+  const _QuickStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surfaceElevated,
-          borderRadius: BorderRadius.circular(16),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: AppTypography.headlineSmall.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              unit,
-              style: AppTypography.micro.copyWith(
-                color: colors.textTertiary,
-              ),
-            ),
+            Text(icon, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 5),
+            Text(value,
+                style: AppTypography.headlineSM.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                )),
+            Text(label, style: AppTypography.caption.copyWith(color: colors.textTertiary)),
           ],
         ),
       ),
@@ -1336,29 +820,16 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _InlineSticker extends StatelessWidget {
-  final String stickerId;
-  const _InlineSticker({required this.stickerId});
+class _StatDivider extends StatelessWidget {
+  final AppColorsExtension colors;
+  const _StatDivider({required this.colors});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<StoreService>(
-      builder: (context, store, _) {
-        final serverSticker = store.data?.stickerById(stickerId);
-        final localSticker = StickerRegistry.findById(stickerId);
-        
-        if (serverSticker == null && localSticker == null) {
-          return const SizedBox.shrink();
-        }
-        
-        return StickerWidget(
-          serverSticker: serverSticker,
-          localSticker: localSticker,
-          size: 24,
-          animate: true,
-        );
-      },
+    return Container(
+      width: 1,
+      height: 40,
+      color: colors.divider,
     );
   }
 }
-
