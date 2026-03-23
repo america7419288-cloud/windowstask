@@ -44,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return const Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Left 62%
         Expanded(
