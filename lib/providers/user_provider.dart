@@ -47,7 +47,11 @@ class UserProvider extends ChangeNotifier {
     if (_profile == null) return PurchaseResult.noProfile;
     if (totalXP < item.xpCost) return PurchaseResult.insufficientXP;
     if (hasPurchased(item.id)) return PurchaseResult.alreadyOwned;
-
+    
+    // Connectivity Check
+    final isOnline = await StoreService.instance.checkConnectivity();
+    if (!isOnline) return PurchaseResult.offline;
+    
     // Spend XP atomically
     final spent = await SecureXPStore.instance.spendXP(item.xpCost);
     if (!spent) return PurchaseResult.insufficientXP;
@@ -334,4 +338,5 @@ enum PurchaseResult {
   insufficientXP,
   alreadyOwned,
   noProfile,
+  offline,
 }

@@ -867,6 +867,22 @@ class _PackDetailSheet extends StatelessWidget {
         Navigator.pop(context); // Close sheet
         final state = context.findAncestorStateOfType<_StoreScreenState>();
         state?.setState(() => state._celebratingItem = item);
+      } else if (result == PurchaseResult.offline) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Offline: Connect to internet to purchase stickers.'),
+            backgroundColor: AppColors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (result == PurchaseResult.insufficientXP) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Not enough XP to unlock this item.'),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }

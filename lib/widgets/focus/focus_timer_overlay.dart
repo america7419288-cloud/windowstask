@@ -11,6 +11,7 @@ import '../../theme/typography.dart';
 import '../../theme/colors.dart';
 import '../../widgets/shared/sticker_widget.dart';
 import '../../data/sticker_packs.dart';
+import '../../data/app_stickers.dart';
 import '../../models/sticker.dart';
 
 class FocusTimerOverlay extends StatefulWidget {
@@ -439,10 +440,8 @@ class _MascotBadgeState extends State<_MascotBadge> {
   }
 
   void _pickRandomMascot() {
-    final focusPacks = ['Space', 'Bees', 'Frogs', 'Bears'];
-    final randomPack = focusPacks[DateTime.now().millisecond % focusPacks.length];
-    final pack = StickerRegistry.packs.firstWhere((p) => p.name == randomPack);
-    mascot = pack.stickers[DateTime.now().second % pack.stickers.length];
+    // Use local celebration stickers as a safe and cute fallback mascot
+    mascot = AppStickers.randomCelebration();
   }
 
   @override

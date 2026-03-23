@@ -153,63 +153,65 @@ class _MagazineCardState extends State<_MagazineCard> {
                   ),
 
                   // CONTENT SECTION
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Meta row
-                        Row(
-                          children: [
-                            PriorityBadgeInline(priority: t.priority),
-                            const SizedBox(width: 8),
-                            if (t.dueDate != null)
-                               CardTagPill(tagName: AppDateUtils.formatShortDate(t.dueDate!)),
-                            const Spacer(),
-                            if (t.isFlagged)
-                              const Icon(Icons.bookmark_rounded, color: AppColors.orange, size: 18),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Title
-                        Text(t.title,
-                          style: AppTypography.titleMedium.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
-                            decoration: t.isCompleted ? TextDecoration.lineThrough : null,
-                          )),
-                        
-                        // Note
-                        if (t.description.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(t.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: colors.textTertiary,
-                            )),
-                        ],
-
-                        // SUBTASKS GRID (2 columns)
-                        if (t.subtasks.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          const DashedDivider(),
-                          const SizedBox(height: 12),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisExtent: 28,
-                              crossAxisSpacing: 10,
-                            ),
-                            itemCount: t.subtasks.length,
-                            itemBuilder: (context, idx) => InlineSubtaskRow(sub: t.subtasks[idx], taskId: t.id),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Meta row
+                          Row(
+                            children: [
+                              PriorityBadgeInline(priority: t.priority),
+                              const SizedBox(width: 8),
+                              if (t.dueDate != null)
+                                 CardTagPill(tagName: AppDateUtils.formatShortDate(t.dueDate!)),
+                              const Spacer(),
+                              if (t.isFlagged)
+                                const Icon(Icons.bookmark_rounded, color: AppColors.orange, size: 18),
+                            ],
                           ),
+                          const SizedBox(height: 14),
+
+                          // Title
+                          Text(t.title,
+                            style: AppTypography.titleMedium.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
+                              decoration: t.isCompleted ? TextDecoration.lineThrough : null,
+                            )),
+                          
+                          // Note
+                          if (t.description.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Text(t.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: colors.textTertiary,
+                              )),
+                          ],
+
+                          // SUBTASKS GRID (2 columns)
+                          if (t.subtasks.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            const DashedDivider(),
+                            const SizedBox(height: 12),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisExtent: 28,
+                                crossAxisSpacing: 10,
+                              ),
+                              itemCount: t.subtasks.length,
+                              itemBuilder: (context, idx) => InlineSubtaskRow(sub: t.subtasks[idx], taskId: t.id),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
 
