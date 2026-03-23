@@ -3,27 +3,20 @@ import 'package:provider/provider.dart';
 import '../../../models/task.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/navigation_provider.dart';
-import '../../../providers/tag_provider.dart';
-import '../../../providers/celebration_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
 import '../../../utils/date_utils.dart';
-import '../shared/card_helpers.dart';
 import '../../shared/sticker_widget.dart';
-import '../../shared/deco_sticker.dart';
 import '../../../data/app_stickers.dart';
-import '../../../data/sticker_packs.dart';
 import '../../shared/empty_state_widget.dart';
-import '../shared/custom_checkbox.dart';
-import '../../../data/app_stickers.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../services/store_service.dart';
 
 class CompactLayout extends StatelessWidget {
   final List<Task> tasks;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
+
   const CompactLayout({
     super.key,
     required this.tasks,
@@ -33,7 +26,6 @@ class CompactLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     if (tasks.isEmpty) {
       return EmptyStateWidget(
         config: EmptyStateConfig(
@@ -44,27 +36,23 @@ class CompactLayout extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
+    return ListView.builder(
       shrinkWrap: shrinkWrap,
       physics: physics,
       padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: tasks.length,
-      separatorBuilder: (_, __) => Divider(
-        height: 1,
-        thickness: 0.5,
-        indent: 16,
-        endIndent: 16,
-        color: colors.isDark 
-            ? Colors.white.withValues(alpha: 0.08) 
-            : Colors.black.withValues(alpha: 0.06),
-      ),
       itemBuilder: (context, index) => _CompactRow(task: tasks[index]),
     );
   }
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// COMPACT ROW
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 class _CompactRow extends StatefulWidget {
   final Task task;
+
   const _CompactRow({required this.task});
 
   @override
@@ -72,168 +60,211 @@ class _CompactRow extends StatefulWidget {
 }
 
 class _CompactRowState extends State<_CompactRow> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final t = widget.task;
     final nav = context.watch<NavigationProvider>();
-    final isSelected = nav.selectedTaskId == t.id || nav.isTaskSelected(t.id);
-    final priorityColor = getPriorityColor(t.priority);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: () {
-          if (nav.isSelectionMode) {
-            nav.toggleTaskSelection(t.id);
-          } else {
-            nav.selectTask(t.id);
-          }
-        },
-        onLongPress: () => nav.enterSelectionMode(t.id),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-                : _hovered ? colors.surface.withValues(alpha: 0.5) : Colors.transparent,
-            border: Border(
-              left: BorderSide(color: priorityColor, width: 3),
-              bottom: BorderSide(color: colors.border.withValues(alpha: 0.4), width: 0.5),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            children: [
-              // STICKER OR SELECTION
-              SizedBox(
-                width: 32, height: 32,
-                child: nav.isSelectionMode
-                  ? Center(
-                      child: Container(
-                        width: 20, height: 20,
-                        decoration: BoxDecoration(
-                          color: nav.isTaskSelected(t.id) ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: nav.isTaskSelected(t.id) ? Theme.of(context).colorScheme.primary : colors.textQuaternary,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: nav.isTaskSelected(t.id)
-                            ? const Icon(Icons.check, size: 12, color: Colors.white)
-                            : null,
-                      ),
-                    )
-                  : GestureDetector(
-                      onTap: () => context.read<TaskProvider>().toggleComplete(
-                        t.id,
-                        celebration: context.read<CelebrationProvider>(),
-                      ),
-                      child: Stack(
-                        children: [
-                          t.stickerId != null && t.stickerId!.isNotEmpty
-                            ? Consumer<StoreService>(
-                                builder: (context, store, _) {
-                                  final serverSticker = store.data?.stickerById(t.stickerId!);
-                                  final localSticker = StickerRegistry.findById(t.stickerId!);
-                                  return StickerWidget(
-                                    serverSticker: serverSticker,
-                                    localSticker: localSticker ?? AppStickers.detailDefault,
-                                    size: 32,
-                                    animate: !t.isCompleted,
-                                  );
-                                },
-                              )
-                            : CustomCheckbox(
-                                value: t.isCompleted,
-                                onChanged: (_) => context.read<TaskProvider>().toggleComplete(t.id),
-                                activeColor: AppColors.primary,
-                                size: 18,
-                              ),
-                          if (t.stickerId != null && t.stickerId!.isNotEmpty && t.isCompleted)
-                            Positioned(
-                              bottom: 0, right: 0,
-                              child: Container(
-                                width: 14, height: 14,
-                                decoration: BoxDecoration(
-                                  color: AppColors.tertiary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: colors.background, width: 1.5),
-                                ),
-                                child: const Icon(Icons.check_rounded, size: 9, color: Colors.white),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-              ),
-              const SizedBox(width: 12),
-
-              // CONTENT
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodySemibold.copyWith(
-                        fontSize: 14,
-                        color: t.isCompleted ? colors.textTertiary : colors.textPrimary,
-                        decoration: t.isCompleted ? TextDecoration.lineThrough : null,
-                      )),
-                    
-                    // Metadata inline
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        if (t.priority != Priority.none)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: PriorityBadgeInline(priority: t.priority),
-                          ),
-                        if (t.dueDate != null)
-                          Row(children: [
-                            Icon(Icons.schedule_rounded, size: 10, color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary),
-                            const SizedBox(width: 3),
-                            Text(AppDateUtils.formatShortDate(t.dueDate!),
-                              style: AppTypography.micro.copyWith(
-                                color: t.isOverdue && !t.isCompleted ? AppColors.red : colors.textQuaternary,
-                              )),
-                            const SizedBox(width: 8),
-                          ]),
-                        if (t.subtasks.isNotEmpty)
-                          Row(children: [
-                            Icon(Icons.check_box_outlined, size: 10, color: colors.textQuaternary),
-                            const SizedBox(width: 3),
-                            Text('${t.subtasks.where((s)=>s.isCompleted).length}/${t.subtasks.length}',
-                              style: AppTypography.micro.copyWith(color: colors.textQuaternary)),
-                            const SizedBox(width: 8),
-                          ]),
-                        // Tags
-                        ...t.tags.take(1).map((tagId) {
-                          final tag = context.read<TagProvider>().getById(tagId);
-                          if (tag == null) return const SizedBox.shrink();
-                          return CardTagPill(tagName: tag.name);
-                        }),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // FLAG
-              if (t.isFlagged)
-                const Icon(Icons.bookmark_rounded, size: 14, color: AppColors.orange),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: t.priority == Priority.none
+                ? Colors.transparent
+                : AppColors.priorityColor(t.priority).withValues(
+                    alpha: t.priority == Priority.urgent ||
+                            t.priority == Priority.high
+                        ? 0.9
+                        : 0.45,
+                  ),
+            width: 2,
           ),
         ),
       ),
+      child: Row(
+        children: [
+          // Sticker as tap target OR checkbox
+          GestureDetector(
+            onTap: () => context.read<TaskProvider>().toggleComplete(t.id),
+            child: t.stickerId != null && t.stickerId!.isNotEmpty
+                ? Stack(
+                    children: [
+                      AppStickerWidget(
+                        serverSticker: StoreService.instance.data
+                            ?.stickerById(t.stickerId!),
+                        size: 30,
+                        animate: !t.isCompleted,
+                      ),
+                      if (t.isCompleted)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: AppColors.success,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: colors.background,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              size: 8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  )
+                : _TaskCheckbox(
+                    value: t.isCompleted,
+                    priority: t.priority,
+                    onChanged: (_) =>
+                        context.read<TaskProvider>().toggleComplete(t.id),
+                  ),
+          ),
+
+          const SizedBox(width: 10),
+
+          // Title + meta
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    t.title,
+                    style: AppTypography.titleSM.copyWith(
+                      color: t.isCompleted
+                          ? colors.textQuaternary
+                          : colors.textPrimary,
+                      decoration: t.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (t.dueDate != null)
+                  _MetaChip(
+                    icon: Icons.calendar_today_outlined,
+                    label: _dateLabel(t.dueDate!),
+                    isOverdue: _isOverdue(t),
+                  ),
+              ],
+            ),
+          ),
+
+          // Arrow to detail
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 16,
+            color: colors.textQuaternary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _dateLabel(DateTime date) {
+    if (AppDateUtils.isToday(date)) return 'Today';
+    if (AppDateUtils.isTomorrow(date)) return 'Tomorrow';
+    return AppDateUtils.formatDate(date);
+  }
+
+  bool _isOverdue(Task t) {
+    if (t.dueDate == null || t.isCompleted) return false;
+    return t.dueDate!.isBefore(DateTime.now());
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CUSTOM CHECKBOX
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class _TaskCheckbox extends StatelessWidget {
+  final bool value;
+  final Priority priority;
+  final Function(bool) onChanged;
+
+  const _TaskCheckbox({
+    required this.value,
+    required this.priority,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = value
+        ? AppColors.success
+        : AppColors.priorityColor(priority);
+
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: value ? color : color.withValues(alpha: 0.10),
+          border: Border.all(
+            color: value ? color : color.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: value
+            ? Icon(
+                Icons.check_rounded,
+                size: 11,
+                color: Colors.white,
+              )
+            : null,
+      ),
+    );
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// META CHIP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isOverdue;
+
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+    this.isOverdue = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 10,
+          color: isOverdue ? AppColors.danger : colors.textTertiary,
+        ),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(
+            color: isOverdue ? AppColors.danger : colors.textTertiary,
+            fontWeight: isOverdue ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
