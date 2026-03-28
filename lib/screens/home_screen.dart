@@ -12,8 +12,10 @@ import '../utils/constants.dart';
 import '../utils/date_utils.dart';
 import '../services/store_service.dart';
 import '../widgets/sidebar/sidebar.dart';
+import '../widgets/shared/taski_button.dart';
 import '../widgets/tasks/multi_layout_task_view.dart';
 import 'task_detail_page.dart';
+import '../widgets/tasks/task_detail_panel.dart';
 import 'calendar_screen.dart';
 import '../widgets/shared/traffic_light_buttons.dart';
 import '../widgets/focus/focus_timer_overlay.dart';
@@ -26,9 +28,8 @@ import '../widgets/layout/app_background.dart';
 import 'settings_screen.dart';
 import 'insights_screen.dart';
 import 'dashboard_screen.dart';
-import 'store_screen.dart';
+import 'sticker_store_screen.dart';
 import '../providers/user_provider.dart';
-
 import '../services/reminder_service.dart';
 import '../widgets/tasks/bulk_action_bar.dart';
 import '../widgets/focus/break_screen.dart';
@@ -119,24 +120,34 @@ class _HomeScreenState extends State<HomeScreen> {
               case AppConstants.navCalendar:
                 mainContent = const CalendarScreen();
                 break;
-              case AppConstants.navStore:
-                mainContent = const StoreScreen();
+               case AppConstants.navStore:
+                mainContent = const StickerStoreScreen();
                 break;
               default:
-                mainContent = const MultiLayoutTaskView();
+                mainContent = MultiLayoutTaskView();
             }
 
-            // Full-page detail replaces main content
+
+
+
+
+
+            // Dual-panel logic: Selected task appears in the detail panel slot
+
+
+
+
+            bool showDetail = false;
+            Widget? detailPanel;
             if (nav.isDetailOpen && nav.selectedTaskId != null) {
               final task = context.watch<TaskProvider>().getById(nav.selectedTaskId!);
               if (task != null) {
-                mainContent = TaskDetailPage(task: task);
+                showDetail = true;
+                detailPanel = TaskDetailPanel(task: task);
               }
             }
 
-            // Detail panel is removed — full page replaces it
-            const showDetail = false;
-            Widget? detailPanel;
+
 
             return Container(
               color: colors.background,
@@ -160,9 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                               },
                               child: KeyedSubtree(
-                                key: ValueKey(nav.selectedNavItem + (nav.isDetailOpen ? '_detail' : '')),
+                                key: ValueKey(nav.selectedNavItem),
                                 child: mainContent,
                               ),
+
+
                             ),
                           ),
                         ],
@@ -193,11 +206,10 @@ class _ContentHeader extends StatelessWidget {
     final nav = context.watch<NavigationProvider>();
 
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
         color: colors.background,
-        // Surface shift separator — NO border
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -209,7 +221,7 @@ class _ContentHeader extends StatelessWidget {
               children: [
                 Text(
                   nav.pageTitle,
-                  style: AppTypography.headlineSmall.copyWith(
+                  style: AppTypography.headlineSM.copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
@@ -250,7 +262,12 @@ class _ContentHeader extends StatelessWidget {
             ),
           const SizedBox(width: 8),
           if (!nav.isSearchOpen && _showNewTask(nav.selectedNavItem))
-            _NewTaskButton(),
+            TaskiButton(
+              label: 'New Task',
+              icon: Icons.add_rounded,
+              isSmall: true,
+              onTap: () => nav.openQuickAdd(),
+            ),
           const SizedBox(width: 8),
           const _WindowCaptionButtons(),
         ],

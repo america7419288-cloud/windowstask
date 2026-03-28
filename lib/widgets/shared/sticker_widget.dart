@@ -9,25 +9,29 @@ import '../../services/tgs_loader.dart';
 import '../../services/store_service.dart';
 import '../../theme/colors.dart';
 
-class StickerWidget extends StatefulWidget {
+class AppStickerWidget extends StatefulWidget {
   final ServerSticker? serverSticker;
   final Sticker? localSticker;
+  final String? assetPath; // Added for explicit asset path support in redesign
   final double size;
   final bool animate;
 
-  const StickerWidget({
+  const AppStickerWidget({
     super.key,
     this.serverSticker,
     this.localSticker,
+    this.assetPath,
     this.size = 40,
     this.animate = true,
   });
 
   @override
-  State<StickerWidget> createState() => _StickerWidgetState();
+  State<AppStickerWidget> createState() => _AppStickerWidgetState();
 }
 
-class _StickerWidgetState extends State<StickerWidget> {
+typedef StickerWidget = AppStickerWidget;
+
+class _AppStickerWidgetState extends State<AppStickerWidget> {
   Uint8List? _bytes;
   bool _loading = true;
 
@@ -47,8 +51,10 @@ class _StickerWidgetState extends State<StickerWidget> {
   }
 
   Future<void> _loadBytes() async {
+    final assetPath = widget.assetPath ?? widget.localSticker?.assetPath;
     final id = widget.serverSticker?.id ?? widget.localSticker?.id;
-    if (id == null) {
+    
+    if (assetPath == null && id == null) {
       if (mounted) setState(() => _loading = false);
       return;
     }
@@ -57,36 +63,9 @@ class _StickerWidgetState extends State<StickerWidget> {
     setState(() => _loading = true);
 
     try {
-      // Use StoreService for server stickers (explicit or derived from empty assetPath)
-      final useServer = widget.serverSticker != null || 
-                       (widget.localSticker != null && widget.localSticker!.assetPath.isEmpty);
-
-      if (useServer) {
-        final bytes = await StoreService.instance.getStickerBytes(id);
-        if (bytes != null && mounted) {
-          try {
-            final decompressed = GZipCodec().decode(bytes);
-            setState(() {
-              _bytes = Uint8List.fromList(decompressed);
-              _loading = false;
-            });
-          } catch (e) {
-            print('[StickerWidget] Decompression error for $id: $e');
-            setState(() {
-              _bytes = bytes; // Fallback to raw if not gzipped (unlikely for TGS)
-              _loading = false;
-            });
-          }
-        } else if (mounted) {
-          setState(() => _loading = false);
-        }
-        return;
-      }
-
-      // Fall back to existing TgsLoader logic for bundled stickers
-      // We need the raw bytes for Lottie.memory
-      if (widget.localSticker != null && widget.localSticker!.assetPath.isNotEmpty) {
-        final byteData = await rootBundle.load(widget.localSticker!.assetPath);
+      // 1. Direct Asset Path Support (High Priority for Redesign)
+      if (assetPath != null && assetPath.isNotEmpty) {
+        final byteData = await rootBundle.load(assetPath);
         final compressed = byteData.buffer.asUint8List();
         final decompressed = GZipCodec().decode(compressed);
         if (mounted) {
@@ -95,8 +74,34 @@ class _StickerWidgetState extends State<StickerWidget> {
             _loading = false;
           });
         }
+        return;
       }
-    } catch (_) {
+
+      // 2. Server Sticker Support
+      if (widget.serverSticker != null || (widget.localSticker != null && widget.localSticker!.assetPath.isEmpty)) {
+        final stickerId = id!;
+        final bytes = await StoreService.instance.getStickerBytes(stickerId);
+        if (bytes != null && mounted) {
+          try {
+            final decompressed = GZipCodec().decode(bytes);
+            setState(() {
+              _bytes = Uint8List.fromList(decompressed);
+              _loading = false;
+            });
+          } catch (e) {
+            print('[AppStickerWidget] Decompression error for $stickerId: $e');
+            setState(() {
+              _bytes = bytes; 
+              _loading = false;
+            });
+          }
+        } else if (mounted) {
+          setState(() => _loading = false);
+        }
+        return;
+      }
+    } catch (e) {
+      print('[AppStickerWidget] Error loading sticker: $e');
       if (mounted) setState(() => _loading = false);
     }
   }

@@ -43,12 +43,6 @@ class StickerBadge extends StatelessWidget {
             offset: Offset(0, 2 * scale),
           ),
         ],
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.06),
-          width: 0.75,
-        ),
       ),
       child: ClipOval(
         child: Padding(

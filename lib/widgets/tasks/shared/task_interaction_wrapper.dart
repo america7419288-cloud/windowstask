@@ -119,7 +119,6 @@ class _HoverActionBar extends StatelessWidget {
               ? Colors.black.withValues(alpha: 0.55)
               : Colors.white.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.border, width: 0.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.12),

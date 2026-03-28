@@ -12,8 +12,11 @@ import '../../../data/app_stickers.dart';
 import '../../shared/empty_state_widget.dart';
 import '../../../services/store_service.dart';
 import '../../shared/priority_pill.dart';
+import '../../../data/sticker_packs.dart';
 
 class MagazineLayout extends StatelessWidget {
+
+
   final List<Task> tasks;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
@@ -30,12 +33,13 @@ class MagazineLayout extends StatelessWidget {
     if (tasks.isEmpty) {
       return EmptyStateWidget(
         config: EmptyStateConfig(
-          sticker: AppStickers.allTasksEmpty,
+          stickerPath: AppStickers.emptyAllTasksPath,
           headline: 'No tasks',
           subline: 'Tasks will appear here once added.',
         ),
       );
     }
+
 
     return ListView.builder(
       shrinkWrap: shrinkWrap,
@@ -92,12 +96,15 @@ class _MagazineCardState extends State<_MagazineCard> {
               child: Center(
                 child: t.stickerId != null && t.stickerId!.isNotEmpty
                     ? AppStickerWidget(
-                        serverSticker: StoreService.instance.data
-                            ?.stickerById(t.stickerId!),
+                        serverSticker: StoreService.instance.data?.stickerById(t.stickerId!),
+                        localSticker: StickerRegistry.findById(t.stickerId!),
                         size: 52,
                         animate: true,
                       )
                     : Text(
+
+
+
                         _priorityEmoji(t.priority),
                         style: const TextStyle(fontSize: 32),
                       ),

@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -9,9 +11,14 @@ import '../providers/user_provider.dart';
 import '../models/redeem_result.dart';
 import '../services/redeem_service.dart';
 import '../widgets/shared/sticker_widget.dart';
+import '../widgets/shared/taski_button.dart';
+import '../widgets/shared/section_label.dart';
 import '../data/sticker_packs.dart';
+import '../data/app_stickers.dart';
+import '../utils/date_utils.dart';
 
 enum _RedeemState { input, loading, success }
+
 
 class RedeemScreen extends StatefulWidget {
   const RedeemScreen({super.key});
@@ -26,6 +33,7 @@ class _RedeemScreenState extends State<RedeemScreen> with TickerProviderStateMix
   final _focusNode = FocusNode();
   String? _errorMessage;
   RedeemResult? _result;
+  List<_RecentCode> _recentCodes = [];
 
   // Animation controllers
   late AnimationController _shakeCtrl;
@@ -63,6 +71,26 @@ class _RedeemScreenState extends State<RedeemScreen> with TickerProviderStateMix
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _focusNode.requestFocus();
     });
+    _loadRecentCodes();
+  }
+
+  Future<void> _loadRecentCodes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('recent_redeem_codes') ?? [];
+    if (mounted) {
+      setState(() {
+        _recentCodes = list.map((e) => _RecentCode.fromJson(jsonDecode(e))).toList();
+      });
+    }
+  }
+
+  Future<void> _saveRecentCode(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    final newCode = _RecentCode(code, DateTime.now());
+    _recentCodes.insert(0, newCode);
+    if (_recentCodes.length > 3) _recentCodes.removeLast();
+    await prefs.setStringList('recent_redeem_codes', _recentCodes.map((e) => jsonEncode(e.toJson())).toList());
+    if (mounted) setState(() {});
   }
 
   @override
@@ -101,6 +129,8 @@ class _RedeemScreenState extends State<RedeemScreen> with TickerProviderStateMix
           _result = result;
           _state = _RedeemState.success;
         });
+        
+        await _saveRecentCode(result.codeDescription ?? code);
 
         // Trigger success animation
         _successCtrl.forward();
@@ -140,193 +170,239 @@ class _RedeemScreenState extends State<RedeemScreen> with TickerProviderStateMix
     }
   }
 
+  String _timeAgo(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'Just now';
+  }
+
   Widget _buildInput(BuildContext context) {
     final colors = context.appColors;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Header illustration
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: AppColors.gradientPrimary,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: AppColors.ambientShadow(
-                opacity: 0.25,
-                blur: 24,
-                offset: const Offset(0, 8),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: SizedBox(
+          width: 480,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Gift sticker
+              AppStickerWidget(
+                assetPath: AppStickers.celebrationPath,
+                size: 100,
+                animate: true,
               ),
-            ),
-            child: const Center(
-              child: Text('🎁', style: TextStyle(fontSize: 48)),
-            ),
-          ),
-          const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-          // Title
-          Text('Redeem a Code',
-              style: AppTypography.displayMedium.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.textPrimary,
-              ),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-
-          Text('Enter your code to unlock exclusive stickers, XP, and more',
-              style: AppTypography.bodyLarge.copyWith(
-                color: colors.textTertiary,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 40),
-
-          // Code input field
-          AnimatedBuilder(
-            animation: _shakeCtrl,
-            builder: (_, child) {
-              final shake = sin(_shakeCtrl.value * pi * 8) * 8;
-              return Transform.translate(
-                offset: Offset(shake, 0),
-                child: child,
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.isDark ? AppColors.surfaceContainerDk : AppColors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: _errorMessage != null
-                    ? [
-                        BoxShadow(
-                          color: AppColors.error.withValues(alpha: 0.20),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        )
-                      ]
-                    : AppColors.ambientShadow(opacity: 0.06, blur: 16, offset: const Offset(0, 4)),
-                border: _errorMessage != null
-                    ? Border.all(
-                        color: AppColors.error.withValues(alpha: 0.4),
-                        width: 1.5,
-                      )
-                    : null,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: TextField(
-                controller: _ctrl,
-                focusNode: _focusNode,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
+              // Title
+              Text('Redeem a Code',
+                style: AppTypography.displayLG.copyWith(
                   color: colors.textPrimary,
-                  letterSpacing: 2,
+                  fontWeight: FontWeight.w800,
                 ),
-                decoration: InputDecoration(
-                  hintText: 'TASKI-XXXX-XXXX',
-                  hintStyle: GoogleFonts.jetBrainsMono(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w400,
-                    color: colors.textQuaternary,
-                    letterSpacing: 2,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                onChanged: (v) {
-                  final formatted = RedeemService.formatInput(v);
-                  if (formatted != v) {
-                    _ctrl.value = TextEditingValue(
-                      text: formatted,
-                      selection: TextSelection.collapsed(
-                        offset: formatted.length,
-                      ),
-                    );
-                  }
-                  setState(() => _errorMessage = null);
-                },
-                onSubmitted: (_) => _submit(),
-                maxLength: 17,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-              ),
-            ),
-          ),
+                textAlign: TextAlign.center),
+              const SizedBox(height: 8),
 
-          // Error message
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _errorMessage != null
-                ? Padding(
-                    key: ValueKey(_errorMessage),
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 14,
-                          color: AppColors.error,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(_errorMessage!,
-                            style: AppTypography.labelMedium.copyWith(
+              Text(
+                'Enter your code to unlock'
+                ' exclusive stickers, XP,'
+                ' and more',
+                style: AppTypography.bodyMD.copyWith(
+                  color: colors.textTertiary,
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center),
+              const SizedBox(height: 36),
+
+              // Code input (shake on error)
+              AnimatedBuilder(
+                animation: _shakeCtrl,
+                builder: (_, child) =>
+                  Transform.translate(
+                    offset: Offset(
+                      sin(_shakeCtrl.value * pi * 8) * 8, 0),
+                    child: child),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: _errorMessage != null
+                      ? [BoxShadow(
+                          color: AppColors.error.withValues(alpha: .25),
+                          blurRadius: 16,
+                        )]
+                      : AppColors.shadowMD(isDark: colors.isDark),
+                    border: _errorMessage != null
+                        ? Border.all(
+                            color: AppColors.error.withValues(alpha: .4),
+                            width: 1.5)
+                        : null,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: TextField(
+                    controller: _ctrl,
+                    focusNode: _focusNode,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.mono.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'TASKI-XXXX-XXXX',
+                      hintStyle: AppTypography.mono.copyWith(
+                        color: colors.textQuaternary,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                    ),
+                    onChanged: (v) {
+                      final formatted = RedeemService.formatInput(v);
+                      if (formatted != v) {
+                        _ctrl.value = TextEditingValue(
+                          text: formatted,
+                          selection: TextSelection.collapsed(
+                            offset: formatted.length,
+                          ),
+                        );
+                      }
+                      setState(() => _errorMessage = null);
+                    },
+                    onSubmitted: (_) => _submit(),
+                    maxLength: 17,
+                    buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                  ),
+                ),
+              ),
+
+              // Error message
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _errorMessage != null
+                  ? Padding(
+                      key: ValueKey(_errorMessage),
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline,
+                              size: 14,
+                              color: AppColors.error),
+                          const SizedBox(width: 6),
+                          Text(_errorMessage!,
+                            style: AppTypography.labelMD.copyWith(
                               color: AppColors.error,
                             )),
-                      ],
+                        ]))
+                  : const SizedBox(height: 10),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Submit button (centered, NOT full width)
+              TaskiButton(
+                label: 'Redeem Code',
+                icon: Icons.redeem_rounded,
+                onTap: _submit,
+              ),
+
+              const SizedBox(height: 40),
+
+              // What codes unlock
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(children: [
+                  Text('What can codes unlock?',
+                    style: AppTypography.labelMD.copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    )),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                    _UnlockChip(emoji: '🎭', label: 'Stickers', colors: colors),
+                    const SizedBox(width: 10),
+                    _UnlockChip(emoji: '⚡', label: 'XP Bonus', colors: colors),
+                    const SizedBox(width: 10),
+                    _UnlockChip(emoji: '✨', label: 'Premium', colors: colors),
+                  ]),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Follow @taski on Twitter'
+                    ' for exclusive drop codes',
+                    style: AppTypography.caption.copyWith(
+                      color: colors.textQuaternary,
                     ),
-                  )
-                : const SizedBox(key: ValueKey('empty'), height: 12),
-          ),
-          const SizedBox(height: 32),
-
-          // Submit button
-          GestureDetector(
-            onTap: _submit,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                gradient: AppColors.gradientPrimary,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: AppColors.ambientShadow(
-                  opacity: 0.25,
-                  blur: 20,
-                  offset: const Offset(0, 6),
-                ),
+                    textAlign: TextAlign.center),
+                ]),
               ),
-              child: const Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.redeem_rounded, size: 18, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text('Redeem Code',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
+
+              // Recent redemptions
+              if (_recentCodes.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const SectionLabel(text: 'Recently Redeemed'),
+                const SizedBox(height: 10),
+                ..._recentCodes.map((r) =>
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [
+                      const Icon(Icons.check_circle,
+                          size: 13,
+                          color: AppColors.success),
+                      const SizedBox(width: 8),
+                      Text(r.codeUsed, // Assuming codeUsed is the field name
+                        style: AppTypography.mono.copyWith(
+                          fontSize: 12,
+                          color: colors.textSecondary,
                         )),
-                  ],
-                ),
-              ),
-            ),
+                      const Spacer(),
+                      Text(_timeAgo(r.claimedAt),
+                        style: AppTypography.caption.copyWith(
+                          color: colors.textTertiary,
+                        )),
+                    ]),
+                  )),
+              ],
+            ],
           ),
-          const SizedBox(height: 20),
+        ),
+      ),
+    );
+  }
 
-          Text(
-              'Codes are case-insensitive. Each code can only be redeemed once per device.',
-              style: AppTypography.caption.copyWith(
-                color: colors.textQuaternary,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center),
+  Widget _UnlockChip({
+    required String emoji,
+    required String label,
+    required AppColorsExtension colors,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surfaceElevated,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 6),
+          Text(label,
+              style: AppTypography.labelMD.copyWith(
+                color: colors.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              )),
         ],
       ),
     );
   }
+
 
   Widget _buildLoading(BuildContext context) {
     final colors = context.appColors;
@@ -427,7 +503,7 @@ class _RedeemScreenState extends State<RedeemScreen> with TickerProviderStateMix
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: colors.isDark ? AppColors.surfaceContainerDk : AppColors.surfaceContainerLowest,
+                  color: colors.surfaceElevated,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: AppColors.ambientShadow(
                     opacity: 0.06,
@@ -526,6 +602,7 @@ class _RedeemScreenState extends State<RedeemScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
@@ -621,4 +698,20 @@ class _RewardRow extends StatelessWidget {
       ]),
     );
   }
+}
+
+class _RecentCode {
+  final String codeUsed;
+  final DateTime claimedAt;
+  _RecentCode(this.codeUsed, this.claimedAt);
+
+  Map<String, dynamic> toJson() => {
+    'code': codeUsed,
+    'date': claimedAt.toIso8601String(),
+  };
+
+  factory _RecentCode.fromJson(Map<String, dynamic> json) => _RecentCode(
+    json['code'] as String,
+    DateTime.parse(json['date'] as String),
+  );
 }

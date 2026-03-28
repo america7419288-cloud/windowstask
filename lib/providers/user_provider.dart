@@ -195,85 +195,25 @@ class UserProvider extends ChangeNotifier {
       );
     }
     await _persist();
-    notifyListeners();
-  }
-
-  Future<void> _updateDailyStreak() async {
-    if (_profile == null) return;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final last = _profile!.lastActiveDate;
-
-    if (last == null) return;
-
-    final lastDay = DateTime(last.year, last.month, last.day);
-    final diff = today.difference(lastDay).inDays;
-
-    if (diff == 1) {
-      // Consecutive day — increment streak
-      final newStreak = _profile!.currentStreak + 1;
-      _profile = _profile!.copyWith(
-        currentStreak: newStreak,
-        longestStreak: newStreak > _profile!.longestStreak
-            ? newStreak
-            : _profile!.longestStreak,
-        lastActiveDate: now,
-      );
-      
-      // Award shields at milestones
-      if (newStreak == 7) {
-        _profile = _profile!.copyWith(streakShields: _profile!.streakShields + 1);
-      }
-      if (newStreak == 30) {
-        _profile = _profile!.copyWith(streakShields: _profile!.streakShields + 2);
-      }
-
-      // Check for milestone celebration
-      if (const {3, 7, 14, 30, 60, 100}.contains(newStreak)) {
-        _pendingMilestone = newStreak;
-      }
-
-      // Check streak achievements
-      if (newStreak >= 7) {
-        await earnBadge('streak_7');
-      }
-      if (newStreak >= 30) {
-        await earnBadge('streak_30');
-      }
-
-      // Award streak bonus XP (signed transaction)
-      await addXP(
-        25, // Basic streak bonus
-        source: XPSource.streakBonus,
-      );
-
-    } else if (diff > 1) {
-      // Streak broken — check for shield
-      if (_profile!.streakShields > 0) {
-        // Use shield
-        _profile = _profile!.copyWith(
-          streakShields: _profile!.streakShields - 1,
-          lastActiveDate: now,
-        );
-        _pendingShieldUsed = true;
-      } else {
-        // Streak broken
-        _profile = _profile!.copyWith(
-          currentStreak: 0,
-          lastActiveDate: now,
-        );
-      }
-    }
+    notifyListe    }
     await _persist();
+    _checkAutoAchievements(); // Check if any new ones unlocked
   }
 
   Future<void> recordTaskCompletion(Task task) async {
     if (_profile == null) return;
 
+    // Increment total count regardless of XP cooldown
+    _profile = _profile!.copyWith(
+      totalTasksCompleted: _profile!.totalTasksCompleted + 1,
+    );
+
     // ── COOLDOWN CHECK ────────────────
     // Block if already earned XP for this task today
     if (!XPCooldownTracker.instance.canEarnXP(task.id)) {
       await _touchActiveDate();
+      await _persist();
+      _checkAutoAchievements();
       return;
     }
 
@@ -301,7 +241,17 @@ class UserProvider extends ChangeNotifier {
     }
 
     await _touchActiveDate();
-    await _updateDailyStreak();
+    await _updateDailyStreak(isActivity: true);
+    _checkAutoAchievements();
+    notifyListeners();
+  }
+��────────────
+    if (DateTime.now().hour < 9) {
+      await earnBadge('early_bird');
+    }
+
+    await _touchActiveDate();
+    await _updateDailyStreak(isActivity: true);
     notifyListeners();
   }
 
@@ -315,6 +265,14 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> recordFocusCompletion(int durationMinutes) async {
     if (_profile == null) return;
+    
+    // Increment count if it was a significant session
+    if (durationMinutes >= 10) {
+      _profile = _profile!.copyWith(
+        totalFocusSessions: _profile!.totalFocusSessions + 1,
+      );
+    }
+
     await addXP(
       XPValues.completeFocus,
       source: XPSource.focusSession,
@@ -322,12 +280,80 @@ class UserProvider extends ChangeNotifier {
     if (durationMinutes >= 60) {
       await earnBadge('deep_work_master');
     }
+    await _touchActiveDate();
+    await _updateDailyStreak(isActivity: true);
+    _checkAutoAchievements();
+    notifyListeners();
+  }
+
+  Future<void> recordPlanningSession() async {
+    if (_profile == null) return;
+    _profile = _profile!.copyWith(
+      totalPlanningSessions: _profile!.totalPlanningSessions + 1,
+    );
+    await _persist();
+    _checkAutoAchievements();
+    notifyListeners();
+  }
+
+  // ── ACHIEVEMENT HELPERS ─────────────────────────
+
+  double getAchievementProgress(Achievement a) {
+    if (_profile == null) return 0;
+    if (_profile!.earnedBadgeIds.contains(a.id)) return 1.0;
+
+    switch (a.category) {
+      case AchievementCategory.streak:
+        return (_profile!.currentStreak / a.targetValue).clamp(0.0, 1.0);
+      case AchievementCategory.taskCount:
+        return (_profile!.totalTasksCompleted / a.targetValue).clamp(0.0, 1.0);
+      case AchievementCategory.focusTime:
+        return (_profile!.totalFocusSessions / a.targetValue).clamp(0.0, 1.0);
+      case AchievementCategory.planning:
+        return (_profile!.totalPlanningSessions / a.targetValue).clamp(0.0, 1.0);
+      default:
+        return 0.0;
+    }
+  }
+
+  void _checkAutoAchievements() {
+    if (_profile == null) return;
+    
+    for (final a in Achievements.all) {
+      if (_profile!.earnedBadgeIds.contains(a.id)) continue;
+      
+      bool shouldUnlock = false;
+      switch (a.category) {
+        case AchievementCategory.streak:
+          if (_profile!.currentStreak >= a.targetValue) shouldUnlock = true;
+          break;
+        case AchievementCategory.taskCount:
+          if (_profile!.totalTasksCompleted >= a.targetValue) shouldUnlock = true;
+          break;
+        case AchievementCategory.focusTime:
+          if (_profile!.totalFocusSessions >= a.targetValue) shouldUnlock = true;
+          break;
+        case AchievementCategory.planning:
+          if (_profile!.totalPlanningSessions >= a.targetValue) shouldUnlock = true;
+          break;
+        default:
+          break;
+      }
+      
+      if (shouldUnlock) {
+        earnBadge(a.id);
+      }
+    }
   }
 
   Future<void> _persist() async {
     if (_profile == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profileKey, jsonEncode(_profile!.toJson()));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_profileKey, jsonEncode(_profile!.toJson()));
+    } catch (e) {
+      debugPrint('❌ USER_PROVIDER: Failed to persist profile: $e');
+    }
   }
 
   void refresh() => notifyListeners();

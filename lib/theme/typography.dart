@@ -4,120 +4,149 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTypography {
   AppTypography._();
 
-  static TextStyle get _base => GoogleFonts.inter();
+  static TextStyle get _base =>
+      GoogleFonts.nunito();
 
-  // ── DISPLAY — daily headers, hero text ───────────
-  static TextStyle get displayLarge => _base.copyWith(
-    fontSize: 36,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -0.02 * 36,
-    height: 1.1,
-  );
+  // ── DISPLAY ──────────────────────────
+  // Hero numbers, greeting headline
+  static TextStyle get displayXL =>
+      _base.copyWith(
+        fontSize: 32,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.8,
+        height: 1.1,
+      );
 
-  static TextStyle get displayMedium => _base.copyWith(
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.02 * 28,
-    height: 1.15,
-  );
+  static TextStyle get displayLG =>
+      _base.copyWith(
+        fontSize: 26,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.5,
+        height: 1.15,
+      );
 
-  // ── HEADLINE — section titles ────────────────────
-  static TextStyle get headlineSmall => _base.copyWith(
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    letterSpacing: -0.01 * 20,
-    height: 1.2,
-  );
+  // ── HEADLINE ─────────────────────────
+  // Section titles, card headers
+  static TextStyle get headlineMD =>
+      _base.copyWith(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        height: 1.3,
+      );
 
-  // ── TITLE — task names (workhorse) ───────────────
-  static TextStyle get titleMedium => _base.copyWith(
-    fontSize: 15,
-    fontWeight: FontWeight.w500,
-    letterSpacing: -0.01 * 15,
-    height: 1.4,
-  );
+  static TextStyle get headlineSM =>
+      _base.copyWith(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+        height: 1.35,
+      );
 
-  static TextStyle get titleSmall => _base.copyWith(
-    fontSize: 13,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0,
-    height: 1.4,
-  );
+  // ── TITLE ────────────────────────────
+  // Task names, list items
+  static TextStyle get titleMD =>
+      _base.copyWith(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+        height: 1.4,
+      );
 
-  // ── BODY — descriptions, notes ───────────────────
-  static TextStyle get bodyLarge => _base.copyWith(
-    fontSize: 15,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0,
-    height: 1.6,
-  );
+  static TextStyle get titleSM =>
+      _base.copyWith(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+        height: 1.4,
+      );
 
-  static TextStyle get bodyMedium => _base.copyWith(
-    fontSize: 13,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0,
-    height: 1.55,
-  );
+  // ── BODY ─────────────────────────────
+  // Descriptions, notes
+  static TextStyle get bodyMD =>
+      _base.copyWith(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0,
+        height: 1.6,
+      );
 
-  // ── LABEL — metadata, chips, badges ──────────────
-  static TextStyle get labelLarge => _base.copyWith(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.02 * 12,
-    height: 1.4,
-  );
+  static TextStyle get bodySM =>
+      _base.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0,
+        height: 1.55,
+      );
 
-  static TextStyle get labelMedium => _base.copyWith(
-    fontSize: 11,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.02 * 11,
-    height: 1.4,
-  );
+  // ── LABEL ────────────────────────────
+  // Buttons, badges, metadata
+  static TextStyle get labelLG =>
+      _base.copyWith(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.1,
+        height: 1.4,
+      );
 
-  static TextStyle get labelSmall => _base.copyWith(
-    fontSize: 10,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.04 * 10,
-    height: 1.4,
-  );
+  static TextStyle get labelMD =>
+      _base.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+        height: 1.4,
+      );
 
-  // ── CAPTION — timestamps, secondary metadata ─────
-  static TextStyle get caption => _base.copyWith(
-    fontSize: 11,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0,
-    height: 1.4,
-  );
+  // ── CAPTION ──────────────────────────
+  // Timestamps, metadata, dim text
+  static TextStyle get caption =>
+      _base.copyWith(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0,
+        height: 1.4,
+      );
 
-  // ── MICRO — chips, tags, badges ──────────────────
-  static TextStyle get micro => _base.copyWith(
-    fontSize: 10,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.03 * 10,
-    height: 1.3,
-  );
+  // ── MICRO ────────────────────────────
+  // Section headers, badges
+  static TextStyle get micro =>
+      _base.copyWith(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+        height: 1.3,
+      );
 
-  // ── BACKWARD COMPATIBILITY ALIASES ───────────────
-  static TextStyle get body => bodyMedium;
-  static TextStyle get bodySemibold =>
-      bodyMedium.copyWith(fontWeight: FontWeight.w600);
-  static TextStyle get headline => headlineSmall;
-  static TextStyle get title1 => displayMedium;
-  static TextStyle get title2 => headlineSmall;
-  static TextStyle get callout => bodyMedium;
-  static TextStyle get calloutMedium =>
-      bodyMedium.copyWith(fontWeight: FontWeight.w500);
-  static TextStyle get calloutSemibold =>
-      bodyMedium.copyWith(fontWeight: FontWeight.w600);
-  static TextStyle get taskTitle => titleMedium.copyWith(
-    fontWeight: FontWeight.w600,
-  );
-  static TextStyle get sectionHeader => labelLarge.copyWith(
-    fontSize: 11,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.08,
-    color: const Color(0xFF94A3B8),
-  );
+  // ── MONOSPACE ────────────────────────
+  // Redeem codes only
+  static TextStyle get mono =>
+      GoogleFonts.jetBrainsMono(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 2.5,
+        height: 1.4,
+      );
+
+  // Backwards compat aliases
+  static TextStyle get body => bodyMD;
+  static TextStyle get headline => headlineMD;
+  
+  static TextStyle get displayLarge => displayXL;
+  static TextStyle get displayMedium => displayLG;
+  static TextStyle get headlineSmall => headlineSM;
+  static TextStyle get titleMedium => titleMD;
+  static TextStyle get titleSmall => titleSM;
+  static TextStyle get bodyLarge => bodyMD;
+  static TextStyle get bodyMedium => bodyMD;
+  static TextStyle get labelLarge => labelLG;
+  static TextStyle get labelMedium => labelMD;
+  static TextStyle get labelSmall => caption;
+  static TextStyle get title1 => displayLG;
+  static TextStyle get taskTitle => displayLG;
+  static TextStyle get callout => bodyMD;
+
+  static TextStyle get bodySemibold => labelLG;
+  static TextStyle get sectionHeader => micro;
   static TextStyle get metadata => caption;
-  static TextStyle get largeTitle => displayLarge;
+  static TextStyle get title2 => headlineSM;
 }

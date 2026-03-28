@@ -299,7 +299,11 @@ class TaskProvider extends ChangeNotifier {
     final idx = _tasks.indexWhere((t) => t.id == id);
     if (idx == -1) return;
     _tasks[idx] = transform(_tasks[idx]).copyWith(updatedAt: DateTime.now());
-    StorageService.instance.saveTask(_tasks[idx]);
+    try {
+      StorageService.instance.saveTask(_tasks[idx]);
+    } catch (e) {
+      debugPrint('❌ TASK_PROVIDER: Failed to save task: $e');
+    }
     ReminderService.instance.updateTasks(_tasks);
     _isCacheDirty = true;
     notifyListeners();

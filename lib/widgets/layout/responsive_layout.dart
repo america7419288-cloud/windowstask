@@ -141,21 +141,26 @@ class _ExpandedLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: [
-          ResizableSidebar(child: sidebar),
-          const VerticalDivider(width: 1),
-          Expanded(child: content),
-          if (showDetailPanel && detailPanel != null) ...[
-            const VerticalDivider(width: 1),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOutCubic,
-              width: showDetailPanel ? 320 : 0,
-              child: ClipRect(child: detailPanel!),
-            ),
-          ],
-        ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1600),
+          child: Row(
+            children: [
+              ResizableSidebar(child: sidebar),
+              const VerticalDivider(width: 1),
+              Expanded(child: content),
+              if (showDetailPanel && detailPanel != null) ...[
+                const VerticalDivider(width: 1),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  width: showDetailPanel ? 320 : 0,
+                  child: ClipRect(child: detailPanel!),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

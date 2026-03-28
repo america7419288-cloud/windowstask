@@ -11,8 +11,11 @@ import '../../shared/sticker_widget.dart';
 import '../../../data/app_stickers.dart';
 import '../../../services/store_service.dart';
 import '../../shared/priority_pill.dart';
+import '../../../data/sticker_packs.dart';
 
 enum KanbanColumn { todo, inProgress, done }
+
+
 
 class KanbanLayout extends StatelessWidget {
   final List<Task> tasks;
@@ -221,7 +224,7 @@ class _KanbanColumnWidgetState extends State<_KanbanColumnWidget> {
       case KanbanColumn.todo:
         return AppColors.indigo;
       case KanbanColumn.inProgress:
-        return AppColors.amber;
+        return AppColors.warning;
       case KanbanColumn.done:
         return AppColors.success;
     }
@@ -319,13 +322,15 @@ class _KanbanCardState extends State<_KanbanCard> {
                 children: [
                   if (t.stickerId != null && t.stickerId!.isNotEmpty) ...[
                     AppStickerWidget(
-                      serverSticker: StoreService.instance.data
-                          ?.stickerById(t.stickerId!),
+                      serverSticker: StoreService.instance.data?.stickerById(t.stickerId!),
+                      localSticker: StickerRegistry.findById(t.stickerId!),
                       size: 36,
                       animate: true,
                     ),
                     const SizedBox(width: 8),
                   ],
+
+
                   Expanded(
                     child: Text(
                       t.title,

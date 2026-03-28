@@ -9,56 +9,36 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColors.surfaceLight,
+      scaffoldBackgroundColor: AppColors.bgLight,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
+        seedColor: AppColors.indigo,
         brightness: Brightness.light,
-        surface: AppColors.surfaceLight,
-        onSurface: AppColors.onSurface,
-        primary: AppColors.primary,
-        onPrimary: AppColors.onPrimary,
-        secondary: AppColors.secondary,
-        tertiary: AppColors.tertiary,
-        error: AppColors.error,
+        surface: AppColors.surLight,
+        onSurface: AppColors.t1Light,
+        primary: AppColors.indigo,
+        onPrimary: Colors.white,
+        secondary: AppColors.indigoL,
+        error: AppColors.danger,
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.nunitoTextTheme(
         ThemeData.light().textTheme,
-      ).apply(
-        bodyColor: AppColors.onSurface,
-        displayColor: AppColors.onSurface,
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.onSurfaceVariant,
+        color: AppColors.t2Light,
         size: 20,
       ),
-      // NO divider lines — Mindful Architect rule
+      // NO divider lines
       dividerColor: Colors.transparent,
       dividerTheme: const DividerThemeData(
         color: Colors.transparent,
         thickness: 0,
         space: 0,
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         border: InputBorder.none,
         focusedBorder: InputBorder.none,
         enabledBorder: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        hintStyle: GoogleFonts.inter(
-          fontSize: 13,
-          color: AppColors.onSurfaceVariant,
-          letterSpacing: -0.1,
-        ),
-      ),
-      scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.hovered)) {
-            return AppColors.onSurfaceVariant.withValues(alpha: 0.3);
-          }
-          return Colors.transparent;
-        }),
-        thickness: WidgetStateProperty.all(6),
-        radius: const Radius.circular(10),
-        interactive: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       extensions: [AppColorsExtension.light(accentColor)],
     );
@@ -68,26 +48,22 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.surfaceDark,
+      scaffoldBackgroundColor: AppColors.bgDark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
+        seedColor: AppColors.indigo,
         brightness: Brightness.dark,
-        surface: AppColors.surfaceDark,
-        onSurface: AppColors.onSurfaceDark,
-        primary: AppColors.primaryLight,
-        onPrimary: AppColors.onPrimary,
-        secondary: AppColors.secondary,
-        tertiary: AppColors.tertiary,
-        error: AppColors.error,
+        surface: AppColors.surDark,
+        onSurface: AppColors.t1Dark,
+        primary: AppColors.indigoL,
+        onPrimary: Colors.white,
+        secondary: AppColors.indigoXL,
+        error: AppColors.danger,
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.nunitoTextTheme(
         ThemeData.dark().textTheme,
-      ).apply(
-        bodyColor: AppColors.onSurfaceDark,
-        displayColor: AppColors.onSurfaceDark,
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.onSurfaceVariantDk,
+        color: AppColors.t2Dark,
         size: 20,
       ),
       dividerColor: Colors.transparent,
@@ -96,29 +72,13 @@ class AppTheme {
         thickness: 0,
         space: 0,
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         border: InputBorder.none,
         focusedBorder: InputBorder.none,
         enabledBorder: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        hintStyle: GoogleFonts.inter(
-          fontSize: 13,
-          color: AppColors.onSurfaceVariantDk,
-          letterSpacing: -0.1,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.hovered)) {
-            return AppColors.onSurfaceVariantDk.withValues(alpha: 0.3);
-          }
-          return Colors.transparent;
-        }),
-        thickness: WidgetStateProperty.all(6),
-        radius: const Radius.circular(10),
-        interactive: true,
-      ),
-      extensions: [AppColorsExtension.dark(accentColor)],
+      extensions: [AppColorsExtension.dark(accentColor, DarkThemePalette.aurora)],
     );
   }
 }
@@ -131,6 +91,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     required this.background,
     required this.surface,
     required this.surfaceElevated,
+    required this.surfaceContainerHigh,
     required this.sidebar,
     required this.sidebarActive,
     required this.textPrimary,
@@ -143,39 +104,42 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   });
 
   AppColorsExtension.light(Color accentColor)
-      : accent = AppColors.primary,
-        background = AppColors.surfaceLight,
-        surface = AppColors.surfaceContainerLowest,
-        surfaceElevated = AppColors.surfaceContainerLow,
-        sidebar = AppColors.surfaceContainerLow,
-        sidebarActive = AppColors.primary.withValues(alpha: 0.08),
-        textPrimary = AppColors.onSurface,
-        textSecondary = AppColors.secondary,
-        textTertiary = AppColors.onSurfaceVariant,
-        textQuaternary = AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+      : accent = AppColors.indigo,
+        background = AppColors.bgLight,
+        surface = AppColors.surLight,
+        surfaceElevated = AppColors.sur2Light,
+        surfaceContainerHigh = AppColors.sur3Light,
+        sidebar = AppColors.sidebarLight, // DARK sidebar in light mode
+        sidebarActive = Colors.white.withValues(alpha: .10),
+        textPrimary = AppColors.t1Light,
+        textSecondary = AppColors.t2Light,
+        textTertiary = AppColors.t3Light,
+        textQuaternary = AppColors.t4Light,
         border = Colors.transparent,
-        divider = Colors.transparent,
+        divider = const Color(0xFF0C0E1A).withValues(alpha: .06),
         isDark = false;
 
-  AppColorsExtension.dark(Color accentColor)
-      : accent = AppColors.primaryLight,
-        background = AppColors.surfaceDark,
-        surface = AppColors.surfaceContainerLowestDk,
-        surfaceElevated = AppColors.surfaceContainerLowDk,
-        sidebar = AppColors.surfaceContainerLowDk,
-        sidebarActive = AppColors.primaryLight.withValues(alpha: 0.12),
-        textPrimary = AppColors.onSurfaceDark,
-        textSecondary = AppColors.onSurfaceVariantDk,
-        textTertiary = AppColors.onSurfaceVariantDk.withValues(alpha: 0.7),
-        textQuaternary = AppColors.onSurfaceVariantDk.withValues(alpha: 0.4),
+  AppColorsExtension.dark(Color accentColor, DarkThemePalette palette)
+      : accent = AppColors.indigoL,
+        background = AppColors.bgDark,
+        surface = AppColors.surDark,
+        surfaceElevated = AppColors.sur2Dark,
+        surfaceContainerHigh = AppColors.sur3Dark,
+        sidebar = AppColors.sidebarDark,
+        sidebarActive = Colors.white.withValues(alpha: .08),
+        textPrimary = AppColors.t1Dark,
+        textSecondary = AppColors.t2Dark,
+        textTertiary = AppColors.t3Dark,
+        textQuaternary = AppColors.t4Dark,
         border = Colors.transparent,
-        divider = Colors.transparent,
+        divider = Colors.white.withValues(alpha: .06),
         isDark = true;
 
   final Color accent;
   final Color background;
   final Color surface;
   final Color surfaceElevated;
+  final Color surfaceContainerHigh;
   final Color sidebar;
   final Color sidebarActive;
   final Color textPrimary;
@@ -192,6 +156,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     Color? background,
     Color? surface,
     Color? surfaceElevated,
+    Color? surfaceContainerHigh,
     Color? sidebar,
     Color? sidebarActive,
     Color? textPrimary,
@@ -207,6 +172,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surfaceElevated: surfaceElevated ?? this.surfaceElevated,
+      surfaceContainerHigh: surfaceContainerHigh ?? this.surfaceContainerHigh,
       sidebar: sidebar ?? this.sidebar,
       sidebarActive: sidebarActive ?? this.sidebarActive,
       textPrimary: textPrimary ?? this.textPrimary,
@@ -227,6 +193,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
       background: Color.lerp(background, other.background, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
       surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
+      surfaceContainerHigh: Color.lerp(surfaceContainerHigh, other.surfaceContainerHigh, t)!,
       sidebar: Color.lerp(sidebar, other.sidebar, t)!,
       sidebarActive: Color.lerp(sidebarActive, other.sidebarActive, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
@@ -245,7 +212,6 @@ extension ThemeExtensionHelper on BuildContext {
   AppColorsExtension get appColors {
     final ext = Theme.of(this).extension<AppColorsExtension>();
     if (ext != null) return ext;
-    // Fallback to default light theme extension
-    return AppColorsExtension.light(const Color(0xFF27389A));
+    return AppColorsExtension.light(AppColors.indigo);
   }
 }

@@ -35,7 +35,7 @@ Future<void> setupWindow() async {
 
   const WindowOptions windowOptions = WindowOptions(
     size: Size(1280, 820),
-    minimumSize: Size(1200, 800),
+    minimumSize: Size(800, 600),
     center: true,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,

@@ -116,32 +116,52 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
     }
   }
 
+  Future<void> _pickSticker(BuildContext context) async {
+    final result = await StickerPicker.show(
+      context,
+      currentStickerId: _task.stickerId,
+    );
+    if (result == null) return;
+    if (!context.mounted) return;
+    final newId = result.isEmpty ? null : result;
+    context.read<TaskProvider>().setSticker(_task.id, newId);
+  }
+
   @override
   Widget build(BuildContext context) {
+
+
     final colors = context.appColors;
     final nav = context.read<NavigationProvider>();
     final accent = Theme.of(context).colorScheme.primary;
 
-    return Container(
-      width: AppConstants.detailPanelWidth,
-      decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: colors.isDark ? 0.85 : 0.72),
-        border: Border(left: BorderSide(color: colors.divider)),
-      ),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Column(
-            children: [
-              // Panel header
-              _PanelHeader(
-                task: _task,
-                onClose: () => nav.closeDetailPanel(),
-                onDelete: () {
-                  context.read<TaskProvider>().moveToTrash(_task.id);
-                  nav.closeDetailPanel();
-                },
-              ),
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: AppConstants.detailPanelWidth,
+        decoration: BoxDecoration(
+          color: colors.surface.withValues(alpha: colors.isDark ? 0.85 : 0.72),
+          border: Border(left: BorderSide(color: colors.divider)),
+        ),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Column(
+              children: [
+                // Panel header
+                _PanelHeader(
+                  task: _task,
+                  onClose: () => nav.closeDetailPanel(),
+                  onDelete: () {
+                    context.read<TaskProvider>().moveToTrash(_task.id);
+                    nav.closeDetailPanel();
+                  },
+                  onChangeSticker: () => _pickSticker(context),
+                ),
+
+
+
+
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -168,7 +188,6 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                         decoration: BoxDecoration(
                           color: colors.surfaceElevated,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: colors.border, width: 0.5),
                         ),
                         child: Column(
                           children: [
@@ -214,7 +233,6 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                                           ? accent.withValues(alpha: 0.08)
                                           : colors.surfaceElevated,
                                       borderRadius: BorderRadius.circular(7),
-                                      border: Border.all(color: colors.border, width: 0.75),
                                     ),
                                     child: Text(
                                       _task.dueHour != null
@@ -251,7 +269,6 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                                           ? accent.withValues(alpha: 0.08)
                                           : colors.surfaceElevated,
                                       borderRadius: BorderRadius.circular(7),
-                                      border: Border.all(color: colors.border, width: 0.75),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -310,7 +327,6 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
                         decoration: BoxDecoration(
                           color: colors.surfaceElevated,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: colors.border, width: 0.5),
                         ),
                         padding: const EdgeInsets.all(16),
                         child: TextField(
@@ -347,8 +363,9 @@ class _TaskDetailPanelState extends State<TaskDetailPanel> {
           ),
         ),
       ),
-    );
+    ));
   }
+
 
   Widget _thinDivider(AppColorsExtension colors) {
     return Padding(
@@ -365,14 +382,18 @@ class _PanelHeader extends StatelessWidget {
     required this.task,
     required this.onClose,
     required this.onDelete,
+    required this.onChangeSticker,
   });
 
   final Task task;
   final VoidCallback onClose;
   final VoidCallback onDelete;
+  final VoidCallback onChangeSticker;
 
   @override
   Widget build(BuildContext context) {
+
+
     final colors = context.appColors;
     final stickerId = task.stickerId;
 
@@ -408,21 +429,26 @@ class _PanelHeader extends StatelessWidget {
             ),
           ),
           Center(
-            child: Consumer<StoreService>(
-              builder: (context, store, _) {
-                final serverSticker = stickerId != null ? store.data?.stickerById(stickerId) : null;
-                final localSticker = stickerId != null ? StickerRegistry.findById(stickerId) : null;
-                
-                return StickerWidget(
-                  serverSticker: serverSticker,
-                  localSticker: localSticker ?? AppStickers.detailDefault,
-                  size: 80,
-                  animate: true,
-                );
-              },
+            child: GestureDetector(
+              onTap: onChangeSticker,
+              child: Consumer<StoreService>(
+                builder: (context, store, _) {
+                  final serverSticker = stickerId != null ? store.data?.stickerById(stickerId) : null;
+                  final localSticker = stickerId != null ? StickerRegistry.findById(stickerId) : null;
+                  
+                  return StickerWidget(
+                    serverSticker: serverSticker,
+                    localSticker: localSticker ?? AppStickers.detailDefault,
+                    size: 80,
+                    animate: true,
+                  );
+                },
+              ),
             ),
           ),
         ],
+
+
       ),
     );
   }

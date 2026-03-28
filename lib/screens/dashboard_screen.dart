@@ -17,6 +17,12 @@ import '../widgets/shared/sticker_widget.dart';
 import '../widgets/shared/section_label.dart';
 import '../widgets/tasks/task_card.dart';
 import '../widgets/tasks/views/view_toggle_bar.dart';
+import '../widgets/tasks/views/grid_view_layout.dart';
+import '../widgets/tasks/views/compact_layout.dart';
+import '../widgets/tasks/views/magazine_layout.dart';
+import '../widgets/tasks/views/kanban_layout.dart';
+import '../widgets/tasks/task_list_view.dart';
+import '../models/app_settings.dart';
 import 'planning_screen.dart';
 import '../widgets/shared/milestone_celebration.dart';
 
@@ -143,13 +149,14 @@ class _DashLeftState extends State<_DashLeft> {
 
           _TodayHeader(totalCount: totalToday, nav: nav, colors: colors),
 
-          ...todayTasks.map((t) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-            child: TaskCard(
-              task: t,
-              isSelected: nav.selectedTaskId == t.id,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: _buildLayout(
+              nav.layoutForCurrentSection(context.watch<SettingsProvider>().currentLayout),
+              todayTasks.toList(),
+              nav,
             ),
-          )),
+          ),
 
           if (DateTime.now().hour < 12 && nav.mitTaskIds.isEmpty && todayTasks.isNotEmpty)
             _PlanMyDayButton(onTap: () => PlanningScreen.show(context)),
@@ -159,7 +166,33 @@ class _DashLeftState extends State<_DashLeft> {
       ),
     );
   }
+
+  Widget _buildLayout(TaskViewLayout layout, List<Task> tasks, NavigationProvider nav) {
+    if (tasks.isEmpty) return const SizedBox.shrink();
+
+    switch (layout) {
+      case TaskViewLayout.list:
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: tasks.length,
+          itemBuilder: (context, i) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TaskCard(task: tasks[i], isSelected: nav.selectedTaskId == tasks[i].id),
+          ),
+        );
+      case TaskViewLayout.grid:
+        return GridViewLayout(tasks: tasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
+      case TaskViewLayout.kanban:
+        return KanbanLayout(tasks: tasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
+      case TaskViewLayout.compact:
+        return CompactLayout(tasks: tasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
+      case TaskViewLayout.magazine:
+        return MagazineLayout(tasks: tasks, shrinkWrap: true, physics: const NeverScrollableScrollPhysics());
+    }
+  }
 }
+
 
 class _GreetingBand extends StatelessWidget {
   final UserProvider user;
@@ -370,28 +403,31 @@ class _TodayHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Row(
         children: [
-          const SectionLabel(text: 'Today\'s Priorities'),
-          Container(
-            margin: const EdgeInsets.only(left: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.indigoDim,
-              borderRadius: BorderRadius.circular(20),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const SectionLabel(text: 'Today\'s Priorities'),
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.indigoDim,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('$totalCount',
+                      style: AppTypography.micro.copyWith(color: AppColors.indigo, letterSpacing: 0)),
+                ),
+              ],
             ),
-            child: Text('$totalCount',
-                style: AppTypography.micro.copyWith(color: AppColors.indigo, letterSpacing: 0)),
           ),
-          const Spacer(),
-          GestureDetector(
-            onTap: () => nav.selectNav(AppConstants.navAll),
-            child: Text('View All →',
-                style: AppTypography.labelMD.copyWith(color: AppColors.indigo)),
-          ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           const ViewToggleBar(),
         ],
       ),
     );
+
+
   }
 }
 

@@ -84,57 +84,80 @@ class TaskListView extends StatelessWidget {
       case AppConstants.navToday:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            sticker: AppStickers.todayEmpty,
-            headline: 'Nothing due today',
-            subline: 'Enjoy the breathing room — or get ahead on tomorrow.',
-            ctaLabel: 'Add a task',
+            stickerPath: AppStickers.emptyTodayPath,
+            headline: 'Nothing on your plate today',
+            subline: 'Use the capture bar to add tasks or check your upcoming schedule.',
+            ctaLabel: 'Add a Task',
             onCta: () => context.read<NavigationProvider>().openQuickAdd(),
           ),
         );
       case AppConstants.navUpcoming:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            sticker: AppStickers.upcomingEmpty,
-            headline: 'Clear skies ahead',
-            subline: 'No tasks scheduled for the coming week.',
+            stickerPath: AppStickers.emptyUpcomingPath,
+            headline: 'Your future is clear',
+            subline: 'Tasks with upcoming due dates will appear here.',
+            ctaLabel: null,
           ),
         );
       case AppConstants.navCompleted:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            sticker: AppStickers.completedEmpty,
-            headline: 'Nothing completed yet',
-            subline: 'Finish a task and it\'ll show up here.',
+            stickerPath: AppStickers.emptyCompletedPath,
+            headline: 'No finished tasks yet',
+            subline: 'Complete tasks to see your progress here and earn XP.',
+            ctaLabel: null,
           ),
         );
       case AppConstants.navTrash:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            sticker: AppStickers.trashEmpty,
+            stickerPath: AppStickers.emptyAllTasksPath,
             headline: 'Trash is empty',
             subline: 'Deleted tasks will appear here.',
+            ctaLabel: null,
           ),
         );
       case AppConstants.navAll:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            sticker: AppStickers.allTasksEmpty,
-            headline: 'Your space, your tasks',
-            subline: 'Start by adding your first task. It only takes a second.',
-            ctaLabel: 'Create your first task',
+            stickerPath: AppStickers.emptyAllTasksPath,
+            headline: 'No tasks yet',
+            subline: 'Start capturing your thoughts and tasks to get organized.',
+            ctaLabel: 'Create First Task',
             onCta: () => context.read<NavigationProvider>().openQuickAdd(),
+          ),
+        );
+      case AppConstants.navFlagged:
+        return EmptyStateWidget(
+          config: EmptyStateConfig(
+            stickerPath: AppStickers.emptyTodayPath,
+            headline: 'No flagged tasks',
+            subline: 'Bookmark important tasks so you can find them quickly.',
+            ctaLabel: null,
+          ),
+        );
+      case AppConstants.navHighPriority:
+        return EmptyStateWidget(
+          config: EmptyStateConfig(
+            stickerPath: AppStickers.emptyAllTasksPath,
+            headline: 'All clear on the urgent front',
+            subline: 'Tasks marked high or urgent priority will appear here.',
+            ctaLabel: null,
           ),
         );
       default:
         return EmptyStateWidget(
           config: EmptyStateConfig(
-            sticker: AppStickers.allTasksEmpty,
+            stickerPath: AppStickers.emptyAllTasksPath,
             headline: 'No tasks here',
             subline: 'Try different keywords or clear your filters.',
+            ctaLabel: null,
           ),
         );
     }
   }
+
 }
 
 // ── Smooth Scroll Wrapper ──────────────────────────────────────────────────

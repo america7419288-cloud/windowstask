@@ -333,6 +333,24 @@ class AppStickers {
 
   static List<Sticker> get allStickers => _registry.values.toList();
 
+  // ── Helpers for Redesign ──────────────────────────
+
+  static String greetingPath({required bool allDone, required int hour}) {
+    if (allDone) return todayAllDone.assetPath;
+    if (hour >= 5 && hour < 12) return todayMorning.assetPath;
+    if (hour >= 12 && hour < 17) return todayAfternoon.assetPath;
+    if (hour >= 17 && hour < 21) return todayEvening.assetPath;
+    return todayNight.assetPath;
+  }
+
+  static String get celebrationPath => celebration.assetPath;
+  static String get greetingMorningPath => todayMorning.assetPath;
+  static String get emptyTodayPath => todayEmpty.assetPath;
+  static String get emptyUpcomingPath => upcomingEmpty.assetPath;
+  static String get emptyAllTasksPath => allTasksEmpty.assetPath;
+  static String get emptyCompletedPath => completedEmpty.assetPath;
+
+
   // Helper: get time-based sticker for Today header
   static Sticker todayHeaderSticker({
     required bool allDone,

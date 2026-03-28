@@ -52,8 +52,7 @@ class TodayHeader extends StatelessWidget {
               Expanded(
                 child: Text(
                   _greeting(),
-                  style: AppTypography.title1.copyWith(
-                    fontSize: 28,
+                  style: AppTypography.displayMedium.copyWith(
                     fontWeight: FontWeight.w700,
                     color: colors.textPrimary,
                     letterSpacing: -0.8,
@@ -70,9 +69,7 @@ class TodayHeader extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             _dateString(),
-            style: AppTypography.callout.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
+            style: AppTypography.bodyMedium.copyWith(
               color: colors.textTertiary,
             ),
           ),
@@ -99,10 +96,7 @@ class TodayHeader extends StatelessWidget {
                           widthFactor: value,
                           child: Container(
                             decoration: BoxDecoration(
-                              gradient: isDone
-                                  ? const LinearGradient(
-                                      colors: [AppColors.success, Color(0xFF34D399)])
-                                  : AppColors.gradientPrimary,
+                              color: isDone ? AppColors.success : AppColors.primary,
                             ),
                           ),
                         ),
@@ -249,13 +243,9 @@ class _QuoteCard extends StatelessWidget {
     final quote = quotes[quoteIndex];
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1), width: 1),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const DecoSticker(
             sticker: AppStickers.quoteSticker,
@@ -266,8 +256,7 @@ class _QuoteCard extends StatelessWidget {
           Expanded(
             child: Text(
               quote,
-              style: AppTypography.body.copyWith(
-                fontSize: 13,
+              style: AppTypography.bodyMedium.copyWith(
                 fontStyle: FontStyle.italic,
                 color: colors.textSecondary,
                 height: 1.4,
@@ -288,15 +277,8 @@ class _PlanningButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          gradient: AppColors.gradientPrimary,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -344,17 +326,6 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? accentColor.withValues(alpha: 0.15) : colors.surfaceElevated,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? accentColor.withValues(alpha: 0.4) : colors.border,
-            width: 1,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ] : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

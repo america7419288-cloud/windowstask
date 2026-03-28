@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/xp_transaction.dart';
 import 'encryption_service.dart';
+import 'device_fingerprint.dart';
 
 class SecureXPStore {
   SecureXPStore._();
@@ -32,7 +33,10 @@ class SecureXPStore {
   List<String> get purchasedItemIds =>
       List.unmodifiable(_purchasedItemIds);
 
+  String? _cachedFingerprint;
+  
   Future<void> init() async {
+    _cachedFingerprint = await DeviceFingerprint.get();
     // Note: IntegrityResult is handled by IntegrityChecker
     await loadAndVerify();
   }
@@ -191,7 +195,8 @@ class SecureXPStore {
 
   String _computeChecksum() {
     // HMAC of ledger + stickers + items
-    const secret = 'T4sk1_Checksum_S3cret_v1';
+    // Use device fingerprint as the dynamic secret instead of a hardcoded string
+    final secret = _cachedFingerprint ?? 'taski_runtime_fallback_key';
     final data = '${_ledger.map((t) => t.id).join(",")}'
         '|${_unlockedStickerIds.join(",")}'
         '|${_purchasedItemIds.join(",")}';

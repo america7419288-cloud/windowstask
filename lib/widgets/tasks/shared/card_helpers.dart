@@ -14,12 +14,8 @@ class CardDesign {
   static const double radius = 14.0;
   static const double borderWidth = 1.0;
   
-  static BoxBorder border(BuildContext context) {
-    final colors = context.appColors;
-    return Border.all(
-      color: colors.border,
-      width: borderWidth,
-    );
+  static BoxBorder? border(BuildContext context) {
+    return null;
   }
 
   static List<BoxShadow> shadow(BuildContext context) {
@@ -79,12 +75,6 @@ class CardTagPill extends StatelessWidget {
             ? accent.withValues(alpha: 0.15)
             : accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colors.isDark
-              ? accent.withValues(alpha: 0.25)
-              : accent.withValues(alpha: 0.15),
-          width: 0.75,
-        ),
       ),
       child: Text(
         '#$tagName',
@@ -235,7 +225,7 @@ class PriorityBadgeInline extends StatelessWidget {
             style: AppTypography.micro.copyWith(
               fontSize: 9,
               color: color,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
           ),

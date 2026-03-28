@@ -434,9 +434,9 @@ class _PrimaryBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         decoration: BoxDecoration(
-          gradient: AppColors.gradientPrimary,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.ambientShadow(opacity: 0.15, blur: 12, offset: const Offset(0, 4)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
         ),
         child: Text(label, style: AppTypography.labelLarge.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
       ),

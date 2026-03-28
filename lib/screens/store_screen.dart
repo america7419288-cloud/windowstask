@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../models/store_item.dart';
-import '../data/store_catalog.dart';
 import '../data/sticker_packs.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -88,7 +87,7 @@ class _StoreScreenState extends State<StoreScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             color: AppColors.primary,
             strokeWidth: 3,
           ),
@@ -113,7 +112,7 @@ class _StoreScreenState extends State<StoreScreen> {
       ),
       child: Row(
         children: [
-          DecoSticker(
+          const DecoSticker(
             sticker: AppStickers.sidebarMascot,
             size: 56,
             animate: true,
@@ -224,9 +223,9 @@ class _StoreScreenState extends State<StoreScreen> {
             width: 320,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 1),
             ),
             child: Row(
               children: [
@@ -234,12 +233,14 @@ class _StoreScreenState extends State<StoreScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'All stickers are now available as single items!',
+                    'All stickers available individually',
                     style: AppTypography.labelMedium.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                   ),
                 ),
               ],
@@ -260,19 +261,13 @@ class _XPBalanceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.xpGold, AppColors.xpGold.withValues(alpha: 0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        gradient: AppColors.gradientMomentum,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.ambientShadow(
+          opacity: 0.20,
+          blur: 16,
+          offset: const Offset(0, 4),
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.xpGold.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          )
-        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -333,88 +328,92 @@ class _UnifiedStoreView extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
       children: [
-        // HIGHLIGHTS (Individual stickers that are marked featured)
-        // For now, we show all since we only have single category
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(
-            searchQuery.isEmpty ? 'Sticker Gallery' : 'Search Results',
+        if (searchQuery.isNotEmpty)
+          Text(
+            'Search Results',
             style: AppTypography.displayMedium.copyWith(fontWeight: FontWeight.w800),
           ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5, // More compact for singles
-              mainAxisSpacing: 24,
-              crossAxisSpacing: 24,
-              mainAxisExtent: 180,
-            ),
-            itemCount: stickers.length,
-            itemBuilder: (context, idx) => _StoreStickerCard(serverSticker: stickers[idx]),
-          ),
-        ),
+        ...() {
+           final widgets = <Widget>[];
+           final packs = store.data?.packs ?? [];
+           for (final pack in packs) {
+             final packStickers = stickers.where((s) => s.packId == pack.id).toList();
+             if (packStickers.isEmpty) continue;
+             widgets.add(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
+                  child: Row(children: [
+                    Text(
+                      pack.name.toUpperCase(),
+                      style: AppTypography.labelSmall
+                          .copyWith(
+                        color: context.appColors.textTertiary,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w700,
+                      )),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary
+                            .withValues(alpha: 0.08),
+                        borderRadius:
+                            BorderRadius.circular(20),
+                      ),
+                      child: Text('${packStickers.length}',
+                        style: AppTypography.micro
+                            .copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ))),
+                  ]),
+                )
+             );
+             widgets.add(
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 5,
+                    mainAxisSpacing: 24,
+                    crossAxisSpacing: 24,
+                    mainAxisExtent: 180,
+                  ),
+                  itemCount: packStickers.length,
+                  itemBuilder: (context, idx) => _StoreStickerCard(serverSticker: packStickers[idx]),
+                )
+             );
+           }
+           if (widgets.isEmpty && searchQuery.isEmpty) {
+             widgets.add(
+               Padding(
+                 padding: const EdgeInsets.symmetric(vertical: 48),
+                 child: Center(
+                   child: Text(
+                     'No stickers available.',
+                     style: AppTypography.bodyLarge.copyWith(color: context.appColors.textTertiary),
+                   ),
+                 ),
+               )
+             );
+           }
+           return widgets;
+        }(),
         const SizedBox(height: 48),
       ],
     );
   }
 }
 
-class _CategoryView extends StatelessWidget {
-  final StoreItemType type;
-  final String searchQuery;
-  const _CategoryView({required this.type, required this.searchQuery});
 
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<StoreService>();
-    final packs = store.data?.packs ?? [];
-    
-    // For individuals, we currently filter from the pack's stickers if they matches individual type
-    // or if the server response has separate stickers.
-    // In part 2 prompt, user mentions type = StoreItemType.pack or individual.
-    // I'll filter packs if type is pack, or stickers if type is individual.
-    
-    final items = type == StoreItemType.pack 
-        ? packs.where((p) => 
-            p.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-            p.description.toLowerCase().contains(searchQuery.toLowerCase())
-          ).toList()
-        : store.data?.stickers.where((s) =>
-            s.name.toLowerCase().contains(searchQuery.toLowerCase())
-          ).toList() ?? [];
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(32),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: type == StoreItemType.pack ? 2 : 4,
-        mainAxisSpacing: 24,
-        crossAxisSpacing: 24,
-        mainAxisExtent: type == StoreItemType.pack ? 180 : 160,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, idx) {
-        if (type == StoreItemType.pack) {
-          return _StorePackCard(serverPack: items[idx] as ServerStickerPack);
-        } else {
-          return _StoreStickerCard(serverSticker: items[idx] as ServerSticker);
-        }
-      },
-    );
-  }
-}
 
 class _StorePackCard extends StatefulWidget {
   final ServerStickerPack serverPack;
-  final bool isFeaturedLarge;
 
-  const _StorePackCard({required this.serverPack, this.isFeaturedLarge = false});
+  const _StorePackCard({required this.serverPack});
 
   @override
   State<_StorePackCard> createState() => _StorePackCardState();
@@ -437,24 +436,20 @@ class _StorePackCardState extends State<_StorePackCard> {
         onTap: () => _showPackDetail(context, widget.serverPack),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: widget.isFeaturedLarge ? 420 : null,
-          margin: widget.isFeaturedLarge ? const EdgeInsets.symmetric(horizontal: 8) : null,
           decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: _hovered ? AppColors.primary.withValues(alpha: 0.3) : colors.divider,
-              width: _hovered ? 2 : 1,
+            color: colors.isDark ? AppColors.surfaceContainerDk : AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppColors.ambientShadow(
+              opacity: 0.04,
+              blur: 10,
+              offset: const Offset(0, 2),
             ),
-            boxShadow: _hovered 
-              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8))]
-              : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
               // PREVIEW MOSAIC
               Container(
-                width: widget.isFeaturedLarge ? 160 : 130,
+                width: 130,
                 height: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -470,7 +465,7 @@ class _StorePackCardState extends State<_StorePackCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.serverPack.isFeatured && !widget.isFeaturedLarge)
+                      if (widget.serverPack.isFeatured)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           margin: const EdgeInsets.only(bottom: 8),
@@ -499,7 +494,6 @@ class _StorePackCardState extends State<_StorePackCard> {
                       _PriceBadge(
                         cost: widget.serverPack.xpCost,
                         isPurchased: isPurchased,
-                        isLarge: widget.isFeaturedLarge,
                       ),
                     ],
                   ),
@@ -598,15 +592,13 @@ class _StoreStickerCardState extends State<_StoreStickerCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: _hovered ? AppColors.primary.withValues(alpha: 0.3) : colors.divider,
-              width: _hovered ? 2 : 1,
+            color: colors.isDark ? AppColors.surfaceContainerDk : AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppColors.ambientShadow(
+              opacity: 0.04,
+              blur: 10,
+              offset: const Offset(0, 2),
             ),
-            boxShadow: _hovered 
-              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8))]
-              : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -697,13 +689,11 @@ class _StickerShimmer extends StatelessWidget {
 class _PriceBadge extends StatelessWidget {
   final int cost;
   final bool isPurchased;
-  final bool isLarge;
 
-  const _PriceBadge({required this.cost, required this.isPurchased, this.isLarge = false});
+  const _PriceBadge({required this.cost, required this.isPurchased});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     if (isPurchased) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -856,6 +846,8 @@ class _PackDetailSheet extends StatelessWidget {
 
   Future<void> _purchase(BuildContext context, StoreItem item) async {
     final user = context.read<UserProvider>();
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => _ConfirmPurchaseDialog(item: item, currentXP: user.totalXP),
@@ -864,11 +856,9 @@ class _PackDetailSheet extends StatelessWidget {
     if (confirmed == true) {
       final result = await user.purchase(item);
       if (result == PurchaseResult.success) {
-        Navigator.pop(context); // Close sheet
-        final state = context.findAncestorStateOfType<_StoreScreenState>();
-        state?.setState(() => state._celebratingItem = item);
+        navigator.pop(); // Close sheet
       } else if (result == PurchaseResult.offline) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Offline: Connect to internet to purchase stickers.'),
             backgroundColor: AppColors.orange,
@@ -876,7 +866,7 @@ class _PackDetailSheet extends StatelessWidget {
           ),
         );
       } else if (result == PurchaseResult.insufficientXP) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Not enough XP to unlock this item.'),
             backgroundColor: AppColors.red,
@@ -887,15 +877,6 @@ class _PackDetailSheet extends StatelessWidget {
     }
   }
 
-  void _showSuccess(BuildContext context, StoreItem item) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Succesfully unlocked ${item.name}!'),
-        backgroundColor: AppColors.tertiary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
 }
 
 class _ConfirmPurchaseDialog extends StatelessWidget {
@@ -986,7 +967,6 @@ class _CelebrationOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final store = context.read<StoreService>();
     final serverSticker = store.data?.stickerById(item.id);
     final localSticker = StickerRegistry.findById(item.id);
@@ -999,7 +979,7 @@ class _CelebrationOverlay extends StatelessWidget {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10 * value, sigmaY: 10 * value),
           child: Container(
-            color: Colors.black.withOpacity(0.6 * value),
+            color: Colors.black.withValues(alpha: 0.6 * value),
             child: child,
           ),
         );
@@ -1015,8 +995,8 @@ class _CelebrationOverlay extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.3),
-                    AppColors.primary.withOpacity(0.0),
+                    AppColors.primary.withValues(alpha: 0.3),
+                    AppColors.primary.withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -1074,7 +1054,7 @@ class _CelebrationOverlay extends StatelessWidget {
                   borderRadius: BorderRadius.circular(100),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -1107,7 +1087,7 @@ class _OfflineBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.warning.withOpacity(0.10),
+      color: AppColors.warning.withValues(alpha: 0.10),
       child: Row(
         children: [
           const Icon(Icons.wifi_off_rounded, size: 14, color: AppColors.warning),

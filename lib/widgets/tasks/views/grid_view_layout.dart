@@ -11,8 +11,10 @@ import '../../shared/empty_state_widget.dart';
 import '../../shared/sticker_widget.dart';
 import '../../../data/app_stickers.dart';
 import '../../../services/store_service.dart';
+import '../../../data/sticker_packs.dart';
 
 class GridViewLayout extends StatelessWidget {
+
   final List<Task> tasks;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
@@ -28,12 +30,13 @@ class GridViewLayout extends StatelessWidget {
     if (tasks.isEmpty) {
       return EmptyStateWidget(
         config: EmptyStateConfig(
-          sticker: AppStickers.allTasksEmpty,
-          headline: 'No tasks',
-          subline: 'Tasks will appear here once added.',
+          stickerPath: AppStickers.emptyAllTasksPath,
+          headline: 'No tasks yet',
+          subline: 'Your grid will look great once you add some tasks.',
         ),
       );
     }
+
 
     return GridView.builder(
       shrinkWrap: shrinkWrap,
@@ -95,6 +98,7 @@ class _GridTaskCardState extends State<_GridTaskCard> {
             boxShadow: AppColors.shadowSM(isDark: colors.isDark),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Cover area (120px)
               Container(
@@ -122,8 +126,8 @@ class _GridTaskCardState extends State<_GridTaskCard> {
                       child: widget.task.stickerId != null &&
                               widget.task.stickerId!.isNotEmpty
                           ? AppStickerWidget(
-                              serverSticker: StoreService.instance.data
-                                  ?.stickerById(widget.task.stickerId!),
+                              serverSticker: StoreService.instance.data?.stickerById(widget.task.stickerId!),
+                              localSticker: StickerRegistry.findById(widget.task.stickerId!),
                               size: 68,
                               animate: true,
                             )
@@ -162,35 +166,39 @@ class _GridTaskCardState extends State<_GridTaskCard> {
                 ),
               ),
 
-              // Content (below cover)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.task.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleMD.copyWith(
-                        color: widget.task.isCompleted
-                            ? colors.textQuaternary
-                            : colors.textPrimary,
-                        decoration: widget.task.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                      ),
-                    ),
-                    if (widget.task.dueDate != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: _MetaChip(
-                          icon: Icons.calendar_today_outlined,
-                          label: _dateLabel(widget.task.dueDate!),
-                          isOverdue: _isOverdue(widget.task),
+              // Content (below cover) — Expanded to prevent overflow
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          widget.task.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleMD.copyWith(
+                            color: widget.task.isCompleted
+                                ? colors.textQuaternary
+                                : colors.textPrimary,
+                            decoration: widget.task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
                         ),
                       ),
-                  ],
+                      if (widget.task.dueDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _MetaChip(
+                            icon: Icons.calendar_today_outlined,
+                            label: _dateLabel(widget.task.dueDate!),
+                            isOverdue: _isOverdue(widget.task),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],

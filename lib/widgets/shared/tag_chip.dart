@@ -36,7 +36,6 @@ class TagChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppConstants.radiusChip),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

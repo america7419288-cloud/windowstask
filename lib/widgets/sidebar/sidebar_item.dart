@@ -50,9 +50,9 @@ class _SidebarItemState extends State<SidebarItem> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.10)
+                    ? (colors.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04))
                     : _hovered
-                        ? AppColors.primary.withValues(alpha: 0.04)
+                        ? (colors.isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02))
                         : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -69,7 +69,7 @@ class _SidebarItemState extends State<SidebarItem> {
                       widget.label,
                       style: AppTypography.bodyMedium.copyWith(
                         fontSize: 13.5,
-                        color: isSelected ? AppColors.primary : colors.textSecondary,
+                        color: isSelected ? colors.textPrimary : colors.textSecondary,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                       ),
                       overflow: TextOverflow.visible,
@@ -83,15 +83,15 @@ class _SidebarItemState extends State<SidebarItem> {
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primary
+                            ? (colors.isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.08))
                             : AppColors.primary.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '${widget.badge}',
                         style: AppTypography.micro.copyWith(
-                          color: isSelected ? Colors.white : AppColors.primary,
-                          fontWeight: FontWeight.w700,
+                          color: isSelected ? colors.textPrimary : AppColors.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -99,24 +99,6 @@ class _SidebarItemState extends State<SidebarItem> {
                 ],
               ),
             ),
-
-            // Left accent line — ONLY on selected
-            if (isSelected)
-              Positioned(
-                left: 0,
-                top: 3,
-                bottom: 3,
-                child: Container(
-                  width: 3,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(2),
-                      bottomRight: Radius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

@@ -15,6 +15,7 @@ import '../context_menu/context_menu_controller.dart';
 import '../../data/app_stickers.dart';
 import '../shared/sticker_widget.dart';
 import '../../services/store_service.dart';
+import '../../data/sticker_packs.dart';
 import 'save_template_dialog.dart';
 import 'package:flutter/services.dart';
 import '../../screens/task_detail_page.dart';
@@ -97,13 +98,7 @@ class _TaskCardState extends State<TaskCard> {
       nav.toggleTaskSelection(widget.task.id);
     } else {
       nav.selectTask(widget.task.id);
-      if (!widget.task.isDeleted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => TaskDetailPage(task: widget.task),
-          ),
-        );
-      } else {
+      if (widget.task.isDeleted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Restore task to edit it', style: TextStyle(color: Colors.white)),
@@ -114,6 +109,7 @@ class _TaskCardState extends State<TaskCard> {
         );
       }
     }
+
   }
 
   void _showContextMenu(BuildContext context) {
@@ -151,11 +147,11 @@ class _TaskCardState extends State<TaskCard> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: _hovered || isSelected
+            color: _hovered || widget.isSelected
                 ? colors.surface
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: _hovered || isSelected
+            boxShadow: _hovered || widget.isSelected
                 ? AppColors.shadowSM(isDark: colors.isDark)
                 : [],
           ),
@@ -273,12 +269,14 @@ class _TaskCardState extends State<TaskCard> {
               if (t.stickerId != null && t.stickerId!.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 AppStickerWidget(
-                  serverSticker:
-                      StoreService.instance.data?.stickerById(t.stickerId!),
+                  serverSticker: StoreService.instance.data?.stickerById(t.stickerId!),
+                  localSticker: StickerRegistry.findById(t.stickerId!),
                   size: 34,
                   animate: !isCompleted,
                 ),
               ],
+
+
 
               // Flag
               if (t.isFlagged) ...[

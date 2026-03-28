@@ -29,33 +29,29 @@ class GroupHeader extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.only(top: 32, bottom: 12, left: 24, right: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
           child: Row(
             children: [
               Text(
-                label,
-                style: AppTypography.headlineSmall.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
+                label.toUpperCase(),
+                style: AppTypography.micro.copyWith(
+                  color: colors.textQuaternary,
+                  letterSpacing: 1.5,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: colors.isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : AppColors.primary.withValues(alpha: 0.08),
+                  color: AppColors.indigoDim,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$count',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: colors.isDark
-                        ? colors.textSecondary
-                        : AppColors.primary,
-                    fontWeight: FontWeight.w600,
+                  style: AppTypography.micro.copyWith(
+                    color: AppColors.indigo,
+                    letterSpacing: 0,
                   ),
                 ),
               ),

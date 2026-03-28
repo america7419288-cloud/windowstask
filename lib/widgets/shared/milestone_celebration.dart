@@ -114,7 +114,7 @@ class _MilestonePage extends StatelessWidget {
 
               // Milestone number
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
                   color: data.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -141,10 +141,9 @@ class _MilestonePage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Subtitle
               Text(
                 data.subtitle,
-                style: AppTypography.bodyMedium.copyWith(
+                style: AppTypography.bodyLarge.copyWith(
                   color: colors.textTertiary,
                 ),
                 textAlign: TextAlign.center,

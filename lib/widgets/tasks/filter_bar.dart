@@ -217,28 +217,28 @@ class _FilterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(8),
+              ? AppColors.indigoDim
+              : colors.surfaceElevated,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14,
-                color: isActive ? AppColors.primary : colors.textSecondary),
-            const SizedBox(width: 6),
+            Icon(icon, size: 13,
+                color: isActive ? AppColors.indigo : colors.textTertiary),
+            const SizedBox(width: 5),
             Text(
               label,
-              style: AppTypography.labelMedium.copyWith(
-                color: isActive ? AppColors.primary : colors.textSecondary,
+              style: AppTypography.labelMD.copyWith(
+                color: isActive ? AppColors.indigo : colors.textSecondary,
               ),
             ),
             const SizedBox(width: 4),
             Icon(Icons.keyboard_arrow_down, size: 14,
-                color: isActive ? AppColors.primary : colors.textTertiary),
+                color: isActive ? AppColors.indigo : colors.textQuaternary),
           ],
         ),
       ),

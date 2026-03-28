@@ -11,8 +11,11 @@ import '../../shared/sticker_widget.dart';
 import '../../../data/app_stickers.dart';
 import '../../shared/empty_state_widget.dart';
 import '../../../services/store_service.dart';
+import '../../../data/sticker_packs.dart';
 
 class CompactLayout extends StatelessWidget {
+
+
   final List<Task> tasks;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
@@ -29,12 +32,13 @@ class CompactLayout extends StatelessWidget {
     if (tasks.isEmpty) {
       return EmptyStateWidget(
         config: EmptyStateConfig(
-          sticker: AppStickers.allTasksEmpty,
+          stickerPath: AppStickers.emptyAllTasksPath,
           headline: 'No tasks',
           subline: 'Tasks will appear here once added.',
         ),
       );
     }
+
 
     return ListView.builder(
       shrinkWrap: shrinkWrap,
@@ -92,12 +96,14 @@ class _CompactRowState extends State<_CompactRow> {
                 ? Stack(
                     children: [
                       AppStickerWidget(
-                        serverSticker: StoreService.instance.data
-                            ?.stickerById(t.stickerId!),
+                        serverSticker: StoreService.instance.data?.stickerById(t.stickerId!),
+                        localSticker: StickerRegistry.findById(t.stickerId!),
                         size: 30,
                         animate: !t.isCompleted,
                       ),
                       if (t.isCompleted)
+
+
                         Positioned(
                           bottom: 0,
                           right: 0,

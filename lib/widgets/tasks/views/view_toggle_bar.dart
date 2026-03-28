@@ -5,6 +5,7 @@ import '../../../models/app_settings.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../theme/colors.dart';
 
 class ViewToggleBar extends StatelessWidget {
   const ViewToggleBar({super.key});
@@ -16,36 +17,42 @@ class ViewToggleBar extends StatelessWidget {
     final colors = context.appColors;
     final accent = Theme.of(context).colorScheme.primary;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: TaskViewLayout.values.map((layout) {
-        final isActive = layout == current;
-        return Tooltip(
-          message: _label(layout),
-          waitDuration: const Duration(milliseconds: 500),
-          child: GestureDetector(
-            onTap: () {
-              context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
-              settings.setViewLayout(layout);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 170),
-              curve: Curves.easeOutCubic,
-              margin: const EdgeInsets.symmetric(horizontal: 1.5),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: isActive ? accent.withValues(alpha: 0.12) : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Icon(
-                isActive ? _iconFilled(layout) : _iconOutline(layout),
-                size: 14,
-                color: isActive ? accent : colors.textTertiary,
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceElevated,
+        borderRadius: BorderRadius.circular(9),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: TaskViewLayout.values.map((layout) {
+          final isActive = layout == current;
+          return Tooltip(
+            message: _label(layout),
+            waitDuration: const Duration(milliseconds: 500),
+            child: GestureDetector(
+              onTap: () {
+                context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
+                settings.setViewLayout(layout);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isActive ? colors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(7),
+                  boxShadow: isActive ? AppColors.shadowSM(isDark: colors.isDark) : [],
+                ),
+                child: Icon(
+                  isActive ? _iconFilled(layout) : _iconOutline(layout),
+                  size: 14,
+                  color: isActive ? AppColors.indigo : colors.textTertiary,
+                ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 

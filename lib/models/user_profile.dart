@@ -14,6 +14,9 @@ class UserProfile {
   final int streakShields;
   final List<String> unlockedStickerIds;
   final List<String> purchasedItemIds;
+  final int totalTasksCompleted;
+  final int totalFocusSessions;
+  final int totalPlanningSessions;
 
   const UserProfile({
     required this.name,
@@ -29,6 +32,9 @@ class UserProfile {
     this.streakShields = 0,
     this.unlockedStickerIds = const [],
     this.purchasedItemIds = const [],
+    this.totalTasksCompleted = 0,
+    this.totalFocusSessions = 0,
+    this.totalPlanningSessions = 0,
   });
 
   UserProfile copyWith({
@@ -45,6 +51,9 @@ class UserProfile {
     int? streakShields,
     List<String>? unlockedStickerIds,
     List<String>? purchasedItemIds,
+    int? totalTasksCompleted,
+    int? totalFocusSessions,
+    int? totalPlanningSessions,
     bool clearAvatar = false,
     bool clearLastActive = false,
   }) {
@@ -62,6 +71,9 @@ class UserProfile {
       streakShields: streakShields ?? this.streakShields,
       unlockedStickerIds: unlockedStickerIds ?? List.from(this.unlockedStickerIds),
       purchasedItemIds: purchasedItemIds ?? List.from(this.purchasedItemIds),
+      totalTasksCompleted: totalTasksCompleted ?? this.totalTasksCompleted,
+      totalFocusSessions: totalFocusSessions ?? this.totalFocusSessions,
+      totalPlanningSessions: totalPlanningSessions ?? this.totalPlanningSessions,
     );
   }
 
@@ -79,6 +91,9 @@ class UserProfile {
     'streakShields': streakShields,
     'unlockedStickerIds': unlockedStickerIds,
     'purchasedItemIds': purchasedItemIds,
+    'totalTasksCompleted': totalTasksCompleted,
+    'totalFocusSessions': totalFocusSessions,
+    'totalPlanningSessions': totalPlanningSessions,
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
@@ -100,6 +115,9 @@ class UserProfile {
         ?.map((e) => e as String).toList() ?? [],
     purchasedItemIds: (j['purchasedItemIds'] as List?)
         ?.map((e) => e as String).toList() ?? [],
+    totalTasksCompleted: j['totalTasksCompleted'] as int? ?? 0,
+    totalFocusSessions: j['totalFocusSessions'] as int? ?? 0,
+    totalPlanningSessions: j['totalPlanningSessions'] as int? ?? 0,
   );
 
   String get firstName => name.split(' ').first;
