@@ -14,6 +14,7 @@ class NavigationProvider extends ChangeNotifier {
   String _searchQuery = '';
   bool _isDetailPanelOpen = false;
   bool _isQuickAddOpen = false;
+  bool _isTrayQuickAddMode = false;
 
   final Set<String> _selectedTaskIds = {};
   bool _isSelectionMode = false;
@@ -41,6 +42,7 @@ class NavigationProvider extends ChangeNotifier {
   bool get isDetailPanelOpen => _isDetailPanelOpen;
   bool get isDetailOpen => _isDetailPanelOpen;
   bool get isQuickAddOpen => _isQuickAddOpen;
+  bool get isTrayQuickAddMode => _isTrayQuickAddMode;
 
   bool get isSelectionMode => _isSelectionMode;
   Set<String> get selectedTaskIds => Set.unmodifiable(_selectedTaskIds);
@@ -200,6 +202,16 @@ class NavigationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void enterTrayQuickAddMode() {
+    _isTrayQuickAddMode = true;
+    notifyListeners();
+  }
+
+  void exitTrayQuickAddMode() {
+    _isTrayQuickAddMode = false;
+    notifyListeners();
+  }
+
   void clearSelection() {
     _selectedTaskIds.clear();
     _isSelectionMode = false;
@@ -294,6 +306,8 @@ class NavigationProvider extends ChangeNotifier {
         return 'Settings';
       case AppConstants.navStore:
         return 'Sticker Store';
+      case AppConstants.navPdfViewer:
+        return 'PDF Reader';
       case AppConstants.navAchievements:
         return 'Achievements';
       default:

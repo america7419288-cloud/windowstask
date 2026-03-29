@@ -37,23 +37,27 @@ class StickerPicker extends StatefulWidget {
 
 class _StickerPickerState extends State<StickerPicker> {
   String? _hoveredId;
+  List<Sticker> _allStickers = [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadStickers();
+    });
   }
 
   @override
-  void dispose() {
-    super.dispose();
+  void didUpdateWidget(StickerPicker old) {
+    super.didUpdateWidget(old);
+    if (old.currentStickerId != widget.currentStickerId) {
+      _loadStickers();
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final accent = Theme.of(context).colorScheme.primary;
-    final user = context.watch<UserProvider>();
-    final store = context.watch<StoreService>();
+  void _loadStickers() {
+    final user = context.read<UserProvider>();
+    final store = context.read<StoreService>();
 
     // 1. Get default stickers
     final defaultStickers = AppStickers.allStickers;
@@ -73,14 +77,25 @@ class _StickerPickerState extends State<StickerPicker> {
       uniqueMap[s.id] = s;
     }
 
-    final allStickers = uniqueMap.values.toList();
+    if (mounted) {
+      setState(() {
+        _allStickers = uniqueMap.values.toList();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = Theme.of(context).colorScheme.primary;
+    final store = context.watch<StoreService>();
 
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
         width: 380,
-        height: 520, // Increased height
+        height: 520, 
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(24),
@@ -109,7 +124,7 @@ class _StickerPickerState extends State<StickerPicker> {
                   if (widget.currentStickerId != null)
                     TextButton(
                       onPressed: () => Navigator.pop(context, ''),
-                      child: Text('Clear', style: TextStyle(color: AppColors.red)),
+                      child: const Text('Clear', style: TextStyle(color: AppColors.red)),
                     ),
                   const SizedBox(width: 8),
                   GestureDetector(
@@ -124,7 +139,7 @@ class _StickerPickerState extends State<StickerPicker> {
 
             // ── Sticker grid ─────────────────────────────────────
             Expanded(
-              child: allStickers.isEmpty 
+              child: _allStickers.isEmpty 
                 ? _buildEmptyState(colors)
                 : GridView.builder(
                     padding: const EdgeInsets.all(20),
@@ -134,9 +149,9 @@ class _StickerPickerState extends State<StickerPicker> {
                       mainAxisSpacing: 16,
                       childAspectRatio: 1,
                     ),
-                    itemCount: allStickers.length,
+                    itemCount: _allStickers.length,
                     itemBuilder: (context, index) {
-                      final sticker = allStickers[index];
+                      final sticker = _allStickers[index];
                       final isSelected = sticker.id == widget.currentStickerId;
                       final isHovered = _hoveredId == sticker.id;
 

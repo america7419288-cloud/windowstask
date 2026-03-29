@@ -32,25 +32,26 @@ class AppStickerWidget extends StatefulWidget {
 typedef StickerWidget = AppStickerWidget;
 
 class _AppStickerWidgetState extends State<AppStickerWidget> {
-  Uint8List? _bytes;
+  LottieComposition? _composition;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadBytes();
+    _loadSticker();
   }
 
   @override
   void didUpdateWidget(StickerWidget old) {
     super.didUpdateWidget(old);
     if (old.serverSticker?.id != widget.serverSticker?.id ||
-        old.localSticker?.id != widget.localSticker?.id) {
-      _loadBytes();
+        old.localSticker?.id != widget.localSticker?.id ||
+        old.assetPath != widget.assetPath) {
+      _loadSticker();
     }
   }
 
-  Future<void> _loadBytes() async {
+  Future<void> _loadSticker() async {
     final assetPath = widget.assetPath ?? widget.localSticker?.assetPath;
     final id = widget.serverSticker?.id ?? widget.localSticker?.id;
     
@@ -63,52 +64,34 @@ class _AppStickerWidgetState extends State<AppStickerWidget> {
     setState(() => _loading = true);
 
     try {
-      // 1. Direct Asset Path Support (High Priority for Redesign)
+      LottieComposition? comp;
+
+      // 1. Asset Path Support
       if (assetPath != null && assetPath.isNotEmpty) {
-        final byteData = await rootBundle.load(assetPath);
-        final compressed = byteData.buffer.asUint8List();
-        final decompressed = GZipCodec().decode(compressed);
-        if (mounted) {
-          setState(() {
-            _bytes = Uint8List.fromList(decompressed);
-            _loading = false;
-          });
+        comp = await TgsLoader.load(assetPath);
+      } 
+      // 2. Server Sticker Support
+      else if (id != null) {
+        final bytes = await StoreService.instance.getStickerBytes(id);
+        if (bytes != null) {
+          comp = await TgsLoader.loadFromBytes(id, bytes);
         }
-        return;
       }
 
-      // 2. Server Sticker Support
-      if (widget.serverSticker != null || (widget.localSticker != null && widget.localSticker!.assetPath.isEmpty)) {
-        final stickerId = id!;
-        final bytes = await StoreService.instance.getStickerBytes(stickerId);
-        if (bytes != null && mounted) {
-          try {
-            final decompressed = GZipCodec().decode(bytes);
-            setState(() {
-              _bytes = Uint8List.fromList(decompressed);
-              _loading = false;
-            });
-          } catch (e) {
-            print('[AppStickerWidget] Decompression error for $stickerId: $e');
-            setState(() {
-              _bytes = bytes; 
-              _loading = false;
-            });
-          }
-        } else if (mounted) {
-          setState(() => _loading = false);
-        }
-        return;
+      if (mounted) {
+        setState(() {
+          _composition = comp;
+          _loading = false;
+        });
       }
     } catch (e) {
-      print('[AppStickerWidget] Error loading sticker: $e');
+      debugPrint('[AppStickerWidget] Error loading sticker: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get emoji fallback
     final emoji = widget.serverSticker?.emoji ?? widget.localSticker?.emoji ?? '✨';
     final size = widget.size;
 
@@ -116,28 +99,20 @@ class _AppStickerWidgetState extends State<AppStickerWidget> {
       return _StickerShimmer(size: size);
     }
 
-    if (_bytes == null) {
+    if (_composition == null) {
       return SizedBox(
-        width: size,
-        height: size,
-        child: Center(
-          child: Text(emoji, style: TextStyle(fontSize: size * 0.7)),
-        ),
+        width: size, height: size,
+        child: Center(child: Text(emoji, style: TextStyle(fontSize: size * 0.7))),
       );
     }
 
     return SizedBox(
-      width: size,
-      height: size,
-      child: Lottie.memory(
-        _bytes!,
-        width: size,
-        height: size,
+      width: size, height: size,
+      child: Lottie(
+        composition: _composition!,
+        width: size, height: size,
         fit: BoxFit.contain,
-        repeat: widget.animate,
-        errorBuilder: (_, __, ___) => Center(
-          child: Text(emoji, style: TextStyle(fontSize: size * 0.7)),
-        ),
+        animate: widget.animate,
       ),
     );
   }

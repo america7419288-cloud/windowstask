@@ -61,6 +61,9 @@ class AppConstants {
   static const String navSettings = 'settings';
   static const String navStore = 'store';
   static const String navAchievements = 'achievements';
+  static const String navPdfViewer = 'pdf_viewer';
+  static const String prefLastPdfPath = 'last_pdf_path';
+  static const String prefLastPdfPage = 'last_pdf_page';
 
   // Emojis for lists
   static const List<String> listEmojis = [

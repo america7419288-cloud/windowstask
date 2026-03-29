@@ -23,6 +23,7 @@ import '../widgets/focus/focus_timer_overlay.dart';
 import '../widgets/shared/task_completed_overlay.dart';
 import '../providers/celebration_provider.dart';
 import '../widgets/layout/responsive_layout.dart';
+import 'pdf_viewer_screen.dart';
 import '../widgets/layout/app_shortcuts.dart';
 import '../widgets/layout/window_controls.dart';
 import '../widgets/layout/app_background.dart';
@@ -41,6 +42,8 @@ import '../services/storage_service.dart';
 import '../services/store_service.dart';
 import '../services/security/device_fingerprint.dart';
 import '../services/security/secure_xp_store.dart';
+import '../utils/global_focus_states.dart';
+import '../widgets/tasks/tray_quick_add_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -108,111 +111,121 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShortcuts(
-      child: Consumer<NavigationProvider>(
-          builder: (context, nav, _) {
-            final colors = context.appColors;
-            Widget mainContent;
-            switch (nav.selectedNavItem) {
-              case AppConstants.navSettings:
-                mainContent = const SettingsScreen();
-                break;
-              case AppConstants.navInsights:
-                mainContent = InsightsScreen();
-                break;
-              case AppConstants.navToday:
-                mainContent = const DashboardScreen();
-                break;
-              case AppConstants.navCalendar:
-                mainContent = const CalendarScreen();
-                break;
-               case AppConstants.navStore:
-                mainContent = const StickerStoreScreen();
-                break;
-              case AppConstants.navAchievements:
-                mainContent = AchievementsScreen();
-                break;
-              default:
-                mainContent = MultiLayoutTaskView();
-            }
+      child: ValueListenableBuilder<bool>(
+        valueListenable: GlobalFocusStates.isTrayQuickAddMode,
+        builder: (context, isTrayMode, _) {
+          if (isTrayMode) {
+            return const TrayQuickAddView();
+          }
 
-
-
-
-
-
-            // Dual-panel logic: Selected task appears in the detail panel slot
-
-
-
-
-            bool showDetail = false;
-            Widget? detailPanel;
-            if (nav.isDetailOpen && nav.selectedTaskId != null) {
-              final task = context.watch<TaskProvider>().getById(nav.selectedTaskId!);
-              if (task != null) {
-                showDetail = true;
-                detailPanel = TaskDetailPanel(task: task);
+          return Consumer<NavigationProvider>(
+            builder: (context, nav, _) {
+              final colors = context.appColors;
+              Widget mainContent;
+              switch (nav.selectedNavItem) {
+                case AppConstants.navSettings:
+                  mainContent = const SettingsScreen();
+                  break;
+                case AppConstants.navInsights:
+                  mainContent = InsightsScreen();
+                  break;
+                case AppConstants.navToday:
+                  mainContent = const DashboardScreen();
+                  break;
+                case AppConstants.navCalendar:
+                  mainContent = const CalendarScreen();
+                  break;
+                case AppConstants.navStore:
+                  mainContent = const StickerStoreScreen();
+                  break;
+                case AppConstants.navPdfViewer:
+                  mainContent = const PdfViewerScreen();
+                  break;
+                case AppConstants.navAchievements:
+                  mainContent = AchievementsScreen();
+                  break;
+                default:
+                  mainContent = MultiLayoutTaskView();
               }
-            }
 
 
+              // Dual-panel logic: Selected task appears in the detail panel slot
 
-            return Container(
-              color: colors.background,
-              child: SafeArea(
-                bottom: false,
-                child: Stack(
-                  children: [
-                  ResponsiveLayout(
-                    sidebar: const Sidebar(),
-                    content: AppBackground(
-                      child: Column(
-                        children: [
-                          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux)
-                            WindowDragArea(child: _ContentHeader())
-                          else
-                            _ContentHeader(),
-                          Expanded(
-                            child: PageTransitionSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
-                                return SharedAxisTransition(
-                                  animation: primaryAnimation,
-                                  secondaryAnimation: secondaryAnimation,
-                                  transitionType: SharedAxisTransitionType.scaled,
-                                  child: child,
-                                );
-                              },
-                              child: KeyedSubtree(
-                                key: ValueKey(nav.selectedNavItem),
-                                child: mainContent,
+
+              bool showDetail = false;
+              Widget? detailPanel;
+              if (nav.isDetailOpen && nav.selectedTaskId != null) {
+                final task = context.watch<TaskProvider>().getById(
+                    nav.selectedTaskId!);
+                if (task != null) {
+                  showDetail = true;
+                  detailPanel = TaskDetailPanel(task: task);
+                }
+              }
+
+
+              return Container(
+                color: colors.background,
+                child: SafeArea(
+                  bottom: false,
+                  child: Stack(
+                    children: [
+                      ResponsiveLayout(
+                        sidebar: const Sidebar(),
+                        content: AppBackground(
+                          child: Column(
+                            children: [
+                              if (Platform.isWindows || Platform.isMacOS ||
+                                  Platform.isLinux)
+                                WindowDragArea(child: _ContentHeader())
+                              else
+                                _ContentHeader(),
+                              Expanded(
+                                child: PageTransitionSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (child, primaryAnimation,
+                                      secondaryAnimation) {
+                                    return SharedAxisTransition(
+                                      animation: primaryAnimation,
+                                      secondaryAnimation: secondaryAnimation,
+                                      transitionType: SharedAxisTransitionType
+                                          .scaled,
+                                      child: child,
+                                    );
+                                  },
+                                  child: KeyedSubtree(
+                                    key: ValueKey(nav.selectedNavItem),
+                                    child: mainContent,
+                                  ),
+
+
+                                ),
                               ),
-
-
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
+                        detailPanel: detailPanel,
+                        showDetailPanel: showDetail,
                       ),
-                    ),
-                    detailPanel: detailPanel,
-                    showDetailPanel: showDetail,
+                      const FocusTimerOverlay(),
+                      const BreakScreen(),
+                      const BulkActionBar(),
+                      if (context
+                          .watch<CelebrationProvider>()
+                          .isCelebrating)
+                        const TaskCompletedOverlay(),
+                      AIChatBubble(),
+                    ],
                   ),
-                  const FocusTimerOverlay(),
-                  const BreakScreen(),
-                  const BulkActionBar(),
-                  if (context.watch<CelebrationProvider>().isCelebrating)
-                    const TaskCompletedOverlay(),
-                  AIChatBubble(),
-                ],
-              ),
-            ),
-          ); // Container return
-          }, // builder
-        ), // Consumer
-    ); // AppShortcuts return
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 }
-
 
 class _ContentHeader extends StatelessWidget {
   @override

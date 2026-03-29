@@ -18,6 +18,8 @@ class _WindowSetupListener with WindowListener {
 }
 
 final _windowStateListener = _WindowSetupListener();
+Size? _previousWindowSize;
+Offset? _previousWindowPosition;
 
 Future<void> setupWindow() async {
   if (Platform.isAndroid || Platform.isIOS) return;
@@ -53,6 +55,21 @@ Future<void> setupWindow() async {
 
   await _initSystemTray();
   await _initHotkeys();
+
+  // Handle window restoration when leaving quick add mode
+  GlobalFocusStates.isTrayQuickAddMode.addListener(() async {
+    if (!GlobalFocusStates.isTrayQuickAddMode.value) {
+      if (_previousWindowSize != null) {
+        await windowManager.setResizable(true);
+        await windowManager.setSize(_previousWindowSize!);
+        if (_previousWindowPosition != null) {
+          await windowManager.setPosition(_previousWindowPosition!);
+        } else {
+          await windowManager.center();
+        }
+      }
+    }
+  });
 }
 
 class _TrayListener with TrayListener {
@@ -66,8 +83,21 @@ class _TrayListener with TrayListener {
     if (menuItem.key == 'show_app') {
       await windowManager.show();
     } else if (menuItem.key == 'quick_add') {
+      // 1. Store current state
+      _previousWindowSize = await windowManager.getSize();
+      _previousWindowPosition = await windowManager.getPosition();
+
+      // 2. Set compact size
+      await windowManager.setSize(const Size(500, 380));
+      await windowManager.setResizable(false);
+      await windowManager.center();
+      
+      // 3. Trigger mode
+      GlobalFocusStates.isTrayQuickAddMode.value = true;
+      
+      // 4. Show & Focus
       await windowManager.show();
-      GlobalFocusStates.quickAddFocus.value++;
+      await windowManager.focus();
     } else if (menuItem.key == 'exit_app') {
       exit(0);
     }
@@ -94,7 +124,7 @@ Future<void> _initSystemTray() async {
       ),
       MenuItem(
         key: 'quick_add',
-        label: 'Quick Add',
+        label: 'Add New Task',
       ),
       MenuItem.separator(),
       MenuItem(

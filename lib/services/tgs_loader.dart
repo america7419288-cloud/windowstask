@@ -23,7 +23,21 @@ class TgsLoader {
       _cache[assetPath] = composition;
       return composition;
     } catch (_) {
-      // Asset not found or parse error — return null, widget shows emoji fallback
+      return null;
+    }
+  }
+
+  // Same as load but from raw compressed bytes (Server/Disk cache)
+  static Future<LottieComposition?> loadFromBytes(String id, Uint8List compressed) async {
+    if (_cache.containsKey(id)) {
+      return _cache[id];
+    }
+    try {
+      final decompressed = GZipCodec().decode(compressed);
+      final composition = await LottieComposition.fromBytes(decompressed);
+      _cache[id] = composition;
+      return composition;
+    } catch (_) {
       return null;
     }
   }

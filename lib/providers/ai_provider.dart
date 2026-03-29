@@ -63,6 +63,18 @@ class AIProvider extends ChangeNotifier {
     await sendMessage(context, "Please build me a perfect daily schedule based on my routine and current tasks.");
   }
 
+  Future<String> summarizePdfText(String text) async {
+    return await _gemini.summarizePdfText(text);
+  }
+
+  Future<List<Map<String, String>>> detectQuestions(String text) async {
+    return await _gemini.detectQuestions(text);
+  }
+
+  Future<String> solveQuestion(String questionId, String text) async {
+    return await _gemini.solveQuestion(questionId, text);
+  }
+
   AIMessage _parseResponse(Map<String, dynamic> response) {
     final typeStr = response['type'] ?? 'text';
     final type = AIMessageType.values.firstWhere(

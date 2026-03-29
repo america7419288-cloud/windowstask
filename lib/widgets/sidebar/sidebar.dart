@@ -46,6 +46,7 @@ class Sidebar extends StatelessWidget {
                 _NavItem(AppConstants.navFlagged, 'Flagged', PhosphorIcons.flag()),
                 _NavItem(AppConstants.navCalendar, 'Calendar', PhosphorIcons.calendarDots()),
                 _NavItem(AppConstants.navAchievements, 'Achievements', PhosphorIcons.trophy()),
+                _NavItem(AppConstants.navPdfViewer, 'PDF Reader', PhosphorIcons.filePdf()),
               ]),
               _Section('MY LISTS', [
                 ..._buildLists(context),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/user_context.dart';
 import '../models/ai_message.dart';
@@ -76,8 +77,6 @@ JSON SCHEMA:
     final systemPrompt = _constructSystemPrompt(ctx, currentTasks);
     
     // Combine system prompt with user message for context-aware generation
-    // Note: Gemini 1.5 prefers system instruction, but if that's not available, 
-    // we prefix the user message.
     final response = await _chat!.sendMessage(Content.text("$systemPrompt\n\nUSER MESSAGE: $message"));
     
     final text = response.text;
@@ -99,6 +98,122 @@ JSON SCHEMA:
         "type": "text",
         "content": text,
       };
+    }
+  }
+
+  Future<String> summarizePdfText(String pdfText) async {
+    if (_model == null) throw Exception('Gemini not initialized');
+
+    final prompt = '''
+You are an expert document analyst and summarizing assistant.
+Please analyze the following document content and provide a structured summary in JSON format.
+
+JSON SCHEMA:
+{
+  "overview": "A high-level 2-3 sentence summary of the core message.",
+  "key_highlights": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],
+  "important_metrics": ["Metric A", "Metric B"], // Important numbers, dates, or specific entities.
+  "takeaway": "A final 1-sentence thought on why this information matters."
+}
+
+Use professional yet accessible language.
+
+DOCUMENT CONTENT:
+$pdfText
+''';
+
+    try {
+      final response = await _model!.generateContent([Content.text(prompt)]);
+      final text = response.text;
+      if (text == null) return "Error: AI returned an empty response.";
+
+      // Parse JSON and convert to beautiful Markdown
+      final data = jsonDecode(text);
+      
+      final buffer = StringBuffer();
+      
+      if (data['overview'] != null) {
+        buffer.writeln('# Overview');
+        buffer.writeln('${data['overview']}\n');
+      }
+      
+      if (data['key_highlights'] != null && (data['key_highlights'] as List).isNotEmpty) {
+        buffer.writeln('## Key Highlights');
+        for (var point in (data['key_highlights'] as List)) {
+          buffer.writeln('- $point');
+        }
+        buffer.writeln('');
+      }
+
+      if (data['important_metrics'] != null && (data['important_metrics'] as List).isNotEmpty) {
+        buffer.writeln('## Important Details');
+        for (var metric in (data['important_metrics'] as List)) {
+          buffer.writeln('- $metric');
+        }
+        buffer.writeln('');
+      }
+
+      if (data['takeaway'] != null) {
+        buffer.writeln('> **Takeaway:** ${data['takeaway']}');
+      }
+
+      return buffer.toString();
+    } catch (e) {
+      debugPrint('AI Summary Parse Error: $e');
+      return "An issue occurred while formatting the summary. Here is the raw data:\n\n${e.toString()}";
+    }
+  }
+
+  Future<List<Map<String, String>>> detectQuestions(String pdfText) async {
+    if (_model == null) throw Exception('Gemini not initialized');
+
+    final prompt = '''
+Scan the following document text and find ALL numbered or bulleted questions (e.g., Q1., 1., Question 1., etc.).
+Extract exactly the question number/ID and a short snippet (max 8-10 words) describing the question.
+
+RESPOND ONLY IN A JSON LIST:
+[
+  {"id": "Q1", "snippet": "A trader sells two articles at..."},
+  {"id": "2", "snippet": "Find the ratio of A to B if..."}
+]
+
+DOCUMENT CONTENT:
+$pdfText
+''';
+
+    try {
+      final response = await _model!.generateContent([Content.text(prompt)]);
+      final text = response.text;
+      if (text == null) return [];
+
+      final cleaned = text.replaceAll('```json', '').replaceAll('```', '').trim();
+      final List<dynamic> list = jsonDecode(cleaned);
+      return list.map((i) => Map<String, String>.from(i as Map)).toList();
+    } catch (e) {
+      debugPrint('AI detectQuestions Error: $e');
+      return [];
+    }
+  }
+
+  Future<String> solveQuestion(String questionId, String pdfText) async {
+    if (_model == null) throw Exception('Gemini not initialized');
+
+    final prompt = '''
+You are an expert tutor. Please solve the following specific question from the document:
+QUESTION TO SOLVE: $questionId
+
+Provide a clear, pedagogical, step-by-step explanation. Highlight the final answer clearly in **bold**. Use professional Markdown formatting.
+
+DOCUMENT CONTEXT:
+$pdfText
+''';
+
+    try {
+      final response = await _model!.generateContent([Content.text(prompt)]);
+      return response.text ?? "Error: AI could not solve this question.";
+    } catch (e) {
+      debugPrint('AI solveQuestion Error: $e');
+      return "An error occurred while solving question $questionId. Error: $e";
     }
   }
 }
