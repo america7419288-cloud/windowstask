@@ -20,6 +20,7 @@ import 'redeem_screen.dart';
 import '../providers/user_context_provider.dart';
 import '../providers/ai_provider.dart';
 import '../models/user_context.dart';
+import '../services/update_service.dart';
 
 // ─── Section definition ──────────────────────────────────────────────────────
 
@@ -1610,6 +1611,20 @@ class _AboutContentState extends State<_AboutContent> {
                     style: AppTypography.bodyMD.copyWith(
                       color: colors.textSecondary,
                     ),
+                  ),
+                ),
+                Divider(height: 1, color: colors.divider),
+                _SettingsRow(
+                  icon: Icons.update_rounded,
+                  label: 'Software Update',
+                  subtitle: 'Check for new releases',
+                  control: OutlinedButton(
+                    onPressed: () => UpdateService.checkForUpdates(context, manual: true),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: colors.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Check Now'),
                   ),
                 ),
                 Divider(height: 1, color: colors.divider),

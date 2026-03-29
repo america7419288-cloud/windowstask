@@ -18,7 +18,9 @@ import 'services/store_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/layout/density_scaled_app.dart';
 
-class TaskiApp extends StatelessWidget {
+import 'services/update_service.dart';
+
+class TaskiApp extends StatefulWidget {
   final UserProvider userProvider;
   final TaskProvider taskProvider;
 
@@ -27,6 +29,19 @@ class TaskiApp extends StatelessWidget {
     required this.userProvider,
     required this.taskProvider,
   });
+
+  @override
+  State<TaskiApp> createState() => _TaskiAppState();
+}
+
+class _TaskiAppState extends State<TaskiApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkForUpdates(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +54,9 @@ class TaskiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FocusProvider()),
         ChangeNotifierProvider(create: (_) => CelebrationProvider()),
         ChangeNotifierProvider(create: (_) => TemplateProvider()..init()),
-        ChangeNotifierProvider.value(value: userProvider),
+        ChangeNotifierProvider.value(value: widget.userProvider),
         ChangeNotifierProxyProvider<UserProvider, TaskProvider>(
-          create: (_) => taskProvider,
+          create: (_) => widget.taskProvider,
           update: (_, user, tasks) => tasks!..userProvider = user,
         ),
         ChangeNotifierProvider.value(value: StoreService.instance..fetchStore()),
