@@ -26,7 +26,6 @@ class Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: sidebarWidth,
       decoration: const BoxDecoration(
         gradient: AppColors.gradientSidebar,
       ),
@@ -46,6 +45,7 @@ class Sidebar extends StatelessWidget {
                 _NavItem(AppConstants.navScheduled, 'Scheduled', PhosphorIcons.clock()),
                 _NavItem(AppConstants.navFlagged, 'Flagged', PhosphorIcons.flag()),
                 _NavItem(AppConstants.navCalendar, 'Calendar', PhosphorIcons.calendarDots()),
+                _NavItem(AppConstants.navAchievements, 'Achievements', PhosphorIcons.trophy()),
               ]),
               _Section('MY LISTS', [
                 ..._buildLists(context),
@@ -314,6 +314,11 @@ class _Footer extends StatelessWidget {
             icon: PhosphorIcons.chartBar(),
             tooltip: 'Insights',
             onTap: () => nav.selectNav(AppConstants.navInsights),
+          ),
+          _FooterIconBtn(
+            icon: PhosphorIcons.trophy(),
+            tooltip: 'Achievements',
+            onTap: () => nav.selectNav(AppConstants.navAchievements),
           ),
           const Spacer(),
           const _StoreBtn(),

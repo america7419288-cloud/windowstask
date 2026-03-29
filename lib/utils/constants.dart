@@ -60,6 +60,7 @@ class AppConstants {
   static const String navInsights = 'insights';
   static const String navSettings = 'settings';
   static const String navStore = 'store';
+  static const String navAchievements = 'achievements';
 
   // Emojis for lists
   static const List<String> listEmojis = [

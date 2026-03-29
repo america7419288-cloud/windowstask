@@ -49,20 +49,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Left 62%
-        Expanded(
-          flex: 62,
-          child: _DashLeft(),
-        ),
-        // Right 38% — fixed width
-        SizedBox(
-          width: 310,
-          child: _DashRight(),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 900;
+        
+        if (isNarrow) {
+          return const _DashLeft(showRightAtBottom: true);
+        }
+
+        return const Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left 62%
+            Expanded(
+              flex: 62,
+              child: _DashLeft(showRightAtBottom: false),
+            ),
+            // Right 310px fixed
+            SizedBox(
+              width: 310,
+              child: _DashRight(),
+            ),
+          ],
+        );
+      }
     );
   }
 }
@@ -72,7 +82,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class _DashLeft extends StatefulWidget {
-  const _DashLeft();
+  final bool showRightAtBottom;
+  const _DashLeft({required this.showRightAtBottom});
 
   @override
   State<_DashLeft> createState() => _DashLeftState();
@@ -161,7 +172,33 @@ class _DashLeftState extends State<_DashLeft> {
           if (DateTime.now().hour < 12 && nav.mitTaskIds.isEmpty && todayTasks.isNotEmpty)
             _PlanMyDayButton(onTap: () => PlanningScreen.show(context)),
 
-          const SizedBox(height: 40),
+          if (widget.showRightAtBottom) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 32, 24, 12),
+              child: SectionLabel(text: 'Daily Stats'),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: _MomentumCard(),
+            ),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: _UpcomingCard(),
+            ),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: _AchievementsCard(),
+            ),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: _QuickStatsCard(),
+            ),
+          ],
+
+          const SizedBox(height: 100),
         ],
       ),
     );
@@ -224,54 +261,65 @@ class _GreetingBand extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          AppStickerWidget(
-            assetPath: AppStickers.greetingPath(
-              allDone: completedCount == totalCount && totalCount > 0,
-              hour: DateTime.now().hour,
-            ),
-            size: 64,
-            animate: true,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_greeting()}, ${user.firstName}',
-                  style: AppTypography.displayLG.copyWith(color: colors.textPrimary),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 400;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AppStickerWidget(
+                assetPath: AppStickers.greetingPath(
+                  allDone: completedCount == totalCount && totalCount > 0,
+                  hour: DateTime.now().hour,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _subtitle(totalCount, completedCount),
-                  style: AppTypography.bodyMD.copyWith(color: colors.textTertiary),
+                size: isNarrow ? 48 : 64,
+                animate: true,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_greeting()}, ${user.firstName}',
+                      style: (isNarrow ? AppTypography.headlineMD : AppTypography.displayLG)
+                          .copyWith(color: colors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _subtitle(totalCount, completedCount),
+                      style: AppTypography.bodyMD.copyWith(color: colors.textTertiary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (!isNarrow) ...[
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${DateTime.now().day}',
+                      style: AppTypography.displayXL.copyWith(
+                        color: AppColors.indigo,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      _dayName(DateTime.now().weekday).toUpperCase(),
+                      style: AppTypography.micro.copyWith(
+                        color: colors.textQuaternary,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${DateTime.now().day}',
-                style: AppTypography.displayXL.copyWith(
-                  color: AppColors.indigo,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                _dayName(DateTime.now().weekday).toUpperCase(),
-                style: AppTypography.micro.copyWith(
-                  color: colors.textQuaternary,
-                  letterSpacing: 2,
-                ),
-              ),
             ],
-          ),
-        ],
+          );
+        }
       ),
     );
   }
@@ -401,29 +449,58 @@ class _TodayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 450) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionLabel(text: 'Today\'s Priorities'),
-                Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.indigoDim,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text('$totalCount',
-                      style: AppTypography.micro.copyWith(color: AppColors.indigo, letterSpacing: 0)),
+                Row(
+                  children: [
+                    const SectionLabel(text: 'Today\'s Priorities'),
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.indigoDim,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('$totalCount',
+                          style: AppTypography.micro.copyWith(color: AppColors.indigo, letterSpacing: 0)),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                const ViewToggleBar(),
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          const ViewToggleBar(),
-        ],
+            );
+          }
+          
+          return Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const SectionLabel(text: 'Today\'s Priorities'),
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.indigoDim,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('$totalCount',
+                          style: AppTypography.micro.copyWith(color: AppColors.indigo, letterSpacing: 0)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const ViewToggleBar(),
+            ],
+          );
+        }
       ),
     );
 

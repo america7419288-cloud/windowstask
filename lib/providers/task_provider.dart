@@ -223,6 +223,8 @@ class TaskProvider extends ChangeNotifier {
     List<String>? tags,
     bool isFlagged = false,
     String? recurrenceJson,
+    int? estimatedMinutes,
+    String? reasoning,
   }) async {
     final now = DateTime.now();
     final autoStickerId = StickerSuggester.suggest(title);
@@ -239,6 +241,8 @@ class TaskProvider extends ChangeNotifier {
       isFlagged: isFlagged,
       recurrenceJson: recurrenceJson,
       stickerId: autoStickerId,
+      estimatedMinutes: estimatedMinutes,
+      reasoning: reasoning,
       createdAt: now,
       updatedAt: now,
       sortOrder: _tasks.length,

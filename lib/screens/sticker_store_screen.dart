@@ -314,76 +314,85 @@ class _StickerStoreScreenState extends State<StickerStoreScreen> {
   Widget _buildSearchAndFilters(AppColorsExtension colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search bar
-          Expanded(
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: AppColors.shadowSM(isDark: colors.isDark),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 12),
-                  Icon(Icons.search_rounded,
-                      size: 16, color: colors.textTertiary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (v) => setState(() => _query = v),
-                      style: AppTypography.bodyMD.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Search stickers...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppColors.shadowSM(isDark: colors.isDark),
             ),
-          ),
-          const SizedBox(width: 12),
-          // Filter pills
-          ...[
-            ('all', 'All'),
-            ('featured', '⭐ Featured'),
-            ('packs', '📦 Packs'),
-            ('stickers', '✨ Stickers'),
-            ('owned', '✓ Owned'),
-            ('afford', '⚡ Can Afford'),
-          ].map(
-            (f) => Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: GestureDetector(
-                onTap: () => setState(() => _filter = f.$1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 140),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: _filter == f.$1
-                        ? AppColors.indigo
-                        : colors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    f.$2,
-                    style: AppTypography.labelMD.copyWith(
-                      color: _filter == f.$1
-                          ? Colors.white
-                          : colors.textSecondary,
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Icon(Icons.search_rounded,
+                    size: 18, color: colors.textTertiary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (v) => setState(() => _query = v),
+                    style: AppTypography.bodyMD.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'Search stickers...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
                     ),
                   ),
                 ),
-              ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Scrollable Filter pills
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            child: Row(
+              children: [
+                ('all', 'All'),
+                ('featured', '⭐ Featured'),
+                ('packs', '📦 Packs'),
+                ('stickers', '✨ Stickers'),
+                ('owned', '✓ Owned'),
+                ('afford', '⚡ Can Afford'),
+              ].map(
+                (f) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _filter = f.$1),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _filter == f.$1
+                            ? AppColors.indigo
+                            : colors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: _filter == f.$1 
+                          ? [BoxShadow(color: AppColors.indigo.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                          : [],
+                      ),
+                      child: Text(
+                        f.$2,
+                        style: AppTypography.labelMD.copyWith(
+                          color: _filter == f.$1
+                              ? Colors.white
+                              : colors.textSecondary,
+                          fontWeight: _filter == f.$1 ? FontWeight.w700 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ).toList(),
             ),
           ),
         ],

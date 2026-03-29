@@ -85,6 +85,9 @@ class Task extends HiveObject {
   @HiveField(28)
   int occurrenceIndex;
 
+  @HiveField(29)
+  String? reasoning;
+
   @HiveField(15)
   int? estimatedMinutes;
 
@@ -148,6 +151,7 @@ class Task extends HiveObject {
     this.recurrenceJson,
     this.recurringParentId,
     this.occurrenceIndex = 0,
+    this.reasoning,
   })  : tags = tags ?? [],
         subtasks = subtasks ?? [],
         attachments = attachments ?? [];
@@ -217,6 +221,7 @@ class Task extends HiveObject {
     String? recurrenceJson,
     String? recurringParentId,
     int? occurrenceIndex,
+    String? reasoning,
     int? estimatedMinutes,
     int? pomodoroCount,
     List<String>? attachments,
@@ -253,6 +258,7 @@ class Task extends HiveObject {
       recurrenceJson: recurrenceJson ?? this.recurrenceJson,
       recurringParentId: recurringParentId ?? this.recurringParentId,
       occurrenceIndex: occurrenceIndex ?? this.occurrenceIndex,
+      reasoning: reasoning ?? this.reasoning,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
       pomodoroCount: pomodoroCount ?? this.pomodoroCount,
       attachments: attachments ?? List.from(this.attachments),
@@ -286,6 +292,7 @@ class Task extends HiveObject {
         'recurrenceJson': recurrenceJson,
         'recurringParentId': recurringParentId,
         'occurrenceIndex': occurrenceIndex,
+        'reasoning': reasoning,
         'estimatedMinutes': estimatedMinutes,
         'pomodoroCount': pomodoroCount,
         'attachments': attachments,
@@ -323,6 +330,7 @@ class Task extends HiveObject {
         recurrenceJson: json['recurrenceJson'] as String?,
         recurringParentId: json['recurringParentId'] as String?,
         occurrenceIndex: json['occurrenceIndex'] as int? ?? 0,
+        reasoning: json['reasoning'] as String?,
         estimatedMinutes: json['estimatedMinutes'] as int?,
         pomodoroCount: json['pomodoroCount'] as int? ?? 0,
         attachments: List<String>.from(json['attachments'] as List? ?? []),

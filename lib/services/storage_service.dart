@@ -22,6 +22,7 @@ class StorageService {
   late Box _settingsBox;
   late Box _profileBox;
   SharedPreferences? _prefs;
+  SharedPreferences get prefs => _prefs!;
 
   Future<void> init() async {
     final secureStorage = FlutterSecureStorage();

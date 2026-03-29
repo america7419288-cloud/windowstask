@@ -195,9 +195,82 @@ class UserProvider extends ChangeNotifier {
       );
     }
     await _persist();
-    notifyListe    }
-    await _persist();
     _checkAutoAchievements(); // Check if any new ones unlocked
+    notifyListeners();
+  }
+
+  Future<void> _updateDailyStreak({bool isActivity = false}) async {
+    if (_profile == null) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final last = _profile!.lastActiveDate;
+
+    if (last == null) {
+       _profile = _profile!.copyWith(lastActiveDate: now);
+       await _persist();
+       return;
+    }
+
+    final lastDay = DateTime(last.year, last.month, last.day);
+    final diff = today.difference(lastDay).inDays;
+
+    if (diff == 1 && isActivity) {
+      // Consecutive day AND meaningful activity — increment streak
+      final newStreak = _profile!.currentStreak + 1;
+      _profile = _profile!.copyWith(
+        currentStreak: newStreak,
+        longestStreak: newStreak > _profile!.longestStreak
+            ? newStreak
+            : _profile!.longestStreak,
+        lastActiveDate: now,
+      );
+      
+      // Award shields at milestones
+      if (newStreak == 7) {
+        _profile = _profile!.copyWith(streakShields: _profile!.streakShields + 1);
+      }
+      if (newStreak == 30) {
+        _profile = _profile!.copyWith(streakShields: _profile!.streakShields + 2);
+      }
+
+      // Check for milestone celebration
+      if (const {3, 7, 14, 30, 60, 100}.contains(newStreak)) {
+        _pendingMilestone = newStreak;
+      }
+
+      // Check streak achievements
+      if (newStreak >= 7) {
+        await earnBadge('streak_7');
+      }
+      if (newStreak >= 30) {
+        await earnBadge('streak_30');
+      }
+
+      // Award streak bonus XP (signed transaction)
+      await addXP(
+        25, // Basic streak bonus
+        source: XPSource.streakBonus,
+      );
+
+    } else if (diff > 1) {
+      // Streak broken — check for shield
+      if (_profile!.streakShields > 0) {
+        // Use shield
+        _profile = _profile!.copyWith(
+          streakShields: _profile!.streakShields - 1,
+          lastActiveDate: today.subtract(const Duration(days: 1)),
+        );
+        _pendingShieldUsed = true;
+      } else {
+        // Streak broken
+        _profile = _profile!.copyWith(
+          currentStreak: 0,
+          lastActiveDate: now,
+        );
+      }
+    }
+    await _persist();
+    _checkAutoAchievements();
   }
 
   Future<void> recordTaskCompletion(Task task) async {
@@ -209,7 +282,6 @@ class UserProvider extends ChangeNotifier {
     );
 
     // ── COOLDOWN CHECK ────────────────
-    // Block if already earned XP for this task today
     if (!XPCooldownTracker.instance.canEarnXP(task.id)) {
       await _touchActiveDate();
       await _persist();
@@ -243,15 +315,6 @@ class UserProvider extends ChangeNotifier {
     await _touchActiveDate();
     await _updateDailyStreak(isActivity: true);
     _checkAutoAchievements();
-    notifyListeners();
-  }
-��────────────
-    if (DateTime.now().hour < 9) {
-      await earnBadge('early_bird');
-    }
-
-    await _touchActiveDate();
-    await _updateDailyStreak(isActivity: true);
     notifyListeners();
   }
 

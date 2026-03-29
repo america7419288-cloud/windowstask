@@ -9,8 +9,11 @@ import 'providers/focus_provider.dart';
 import 'providers/celebration_provider.dart';
 import 'providers/template_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/user_context_provider.dart';
+import 'providers/ai_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'services/storage_service.dart';
 import 'services/store_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/layout/density_scaled_app.dart';
@@ -41,7 +44,17 @@ class TaskiApp extends StatelessWidget {
           create: (_) => taskProvider,
           update: (_, user, tasks) => tasks!..userProvider = user,
         ),
-        ChangeNotifierProvider(create: (_) => StoreService.instance..fetchStore()),
+        ChangeNotifierProvider.value(value: StoreService.instance..fetchStore()),
+        ChangeNotifierProvider(create: (_) => UserContextProvider(StorageService.instance.prefs)),
+        ChangeNotifierProxyProvider<UserContextProvider, AIProvider>(
+          create: (_) => AIProvider(),
+          update: (_, ctx, ai) {
+            if (ctx.hasApiKey) {
+              ai?.init(ctx.apiKey!);
+            }
+            return ai!;
+          },
+        ),
       ],
       child: Consumer2<SettingsProvider, UserProvider>(
         builder: (context, settings, user, _) {

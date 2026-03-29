@@ -17,6 +17,9 @@ import '../data/app_stickers.dart';
 import '../widgets/shared/deco_sticker.dart';
 import 'xp_audit_screen.dart';
 import 'redeem_screen.dart';
+import '../providers/user_context_provider.dart';
+import '../providers/ai_provider.dart';
+import '../models/user_context.dart';
 
 // ─── Section definition ──────────────────────────────────────────────────────
 
@@ -36,6 +39,7 @@ const _sections = <_SettingsSection>[
   _SettingsSection(id: 'layout',     label: 'Layout & Density', icon: Icons.space_dashboard_outlined),
   _SettingsSection(id: 'wallpaper',  label: 'Wallpaper', icon: Icons.wallpaper_outlined),
   _SettingsSection(id: 'tasks',      label: 'Tasks & Defaults', icon: Icons.task_alt_outlined),
+  _SettingsSection(id: 'ai',         label: 'AI Assistant', icon: Icons.auto_awesome_rounded),
   _SettingsSection(id: 'about',      label: 'About', icon: Icons.info_outline_rounded),
 ];
 
@@ -71,6 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'layout':     return AppStickers.settingsLayout;
       case 'wallpaper':  return AppStickers.settingsWallpaper;
       case 'tasks':      return AppStickers.settingsTasks;
+      case 'ai':         return AppStickers.celebration;
       case 'about':      return AppStickers.settingsAbout;
       default:           return AppStickers.settingsAppearance;
     }
@@ -191,6 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'layout':     return const _LayoutDensityContent();
       case 'wallpaper':  return const _WallpaperContent();
       case 'tasks':      return const _TasksDefaultsContent();
+      case 'ai':         return const _AIContent();
       case 'about':      return const _AboutContent();
       default:           return const SizedBox.shrink();
     }
@@ -1667,4 +1673,162 @@ class _AboutContentState extends State<_AboutContent> {
   }
 
 
+}
+class _AIContent extends StatefulWidget {
+  const _AIContent();
+
+  @override
+  State<_AIContent> createState() => _AIContentState();
+}
+
+class _AIContentState extends State<_AIContent> {
+  bool _showKey = false;
+  final _keyCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _keyCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ai = context.watch<AIProvider>();
+    final ctxProvider = context.watch<UserContextProvider>();
+    final colors = context.appColors;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 700),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SettingsCard(
+            label: 'Gemini Integration',
+            child: Column(
+              children: [
+                _SettingsRow(
+                  label: 'Gemini API Key',
+                  subtitle: 'Required for all AI features',
+                  control: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (ctxProvider.hasApiKey) ...[
+                        Text(
+                          _showKey ? (ctxProvider.apiKey ?? '') : '••••••••••••••••',
+                          style: AppTypography.mono.copyWith(fontSize: 12, color: colors.textSecondary),
+                        ),
+                        IconButton(
+                          icon: Icon(_showKey ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 16),
+                          onPressed: () => setState(() => _showKey = !_showKey),
+                        ),
+                      ],
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.surfaceElevated,
+                          foregroundColor: AppColors.indigo,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => _showKeyEdit(context, ctxProvider),
+                        child: Text(ctxProvider.hasApiKey ? 'Update' : 'Setup'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (ctxProvider.hasApiKey)
+                  _SettingsRow(
+                    label: 'Status',
+                    value: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8, height: 8,
+                          decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('Connected', style: AppTypography.labelMD.copyWith(color: AppColors.success)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          _SettingsCard(
+            label: 'Profile & Context',
+            child: Column(
+              children: [
+                _SettingsRow(
+                  label: 'Daily Routine',
+                  subtitle: 'Current: ${ctxProvider.context.wakeUpTime.format(context)} - ${ctxProvider.context.sleepTime.format(context)}',
+                  control: TextButton(
+                    onPressed: () {
+                      // Navigate to routine step of onboarding or simple dialog
+                    },
+                    child: const Text('Edit Routine'),
+                  ),
+                ),
+                _SettingsRow(
+                  label: 'Energy Pattern',
+                  value: Text(ctxProvider.context.energyPattern.name, style: AppTypography.labelMD.copyWith(color: AppColors.indigo)),
+                ),
+                const Divider(),
+                _SettingsRow(
+                  label: 'Reset Assistant',
+                  subtitle: 'Clear conversation history and onboarding status',
+                  control: TextButton(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Reset AI Assistant?'),
+                          content: const Text('This will clear your routine preferences and chat history.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true), 
+                              child: const Text('Reset', style: TextStyle(color: AppColors.danger))
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        await ctxProvider.resetOnboarding();
+                        await ai.resetChat();
+                      }
+                    },
+                    child: const Text('Reset', style: TextStyle(color: AppColors.secondary)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showKeyEdit(BuildContext context, UserContextProvider provider) {
+    _keyCtrl.text = provider.apiKey ?? '';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Gemini API Key'),
+        content: TextField(
+          controller: _keyCtrl,
+          decoration: const InputDecoration(hintText: 'Paste key here...'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              await provider.saveApiKey(_keyCtrl.text.trim());
+              if (context.mounted) Navigator.pop(context);
+            }, 
+            child: const Text('Save')
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'colors.dart';
 
 class AppTheme {
@@ -40,6 +41,14 @@ class AppTheme {
         enabledBorder: InputBorder.none,
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
+      appBarTheme: const AppBarTheme(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: AppColors.bgLight,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+      ),
       extensions: [AppColorsExtension.light(accentColor)],
     );
   }
@@ -77,6 +86,14 @@ class AppTheme {
         focusedBorder: InputBorder.none,
         enabledBorder: InputBorder.none,
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      appBarTheme: const AppBarTheme(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: AppColors.bgDark,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
       ),
       extensions: [AppColorsExtension.dark(accentColor, DarkThemePalette.aurora)],
     );

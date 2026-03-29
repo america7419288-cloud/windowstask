@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/task.dart';
@@ -112,10 +113,10 @@ class _TaskCardState extends State<TaskCard> {
 
   }
 
-  void _showContextMenu(BuildContext context) {
+  void _showContextMenu(BuildContext context, [Offset? position]) {
     CustomContextMenuController.show(
       context: context,
-      position: Offset.zero,
+      position: position ?? Offset.zero,
       task: widget.task,
       taskProvider: context.read<TaskProvider>(),
       listProvider: context.read<ListProvider>(),
@@ -135,11 +136,19 @@ class _TaskCardState extends State<TaskCard> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: _openDetail,
-        onSecondaryTapUp: (details) => _showContextMenu(context),
-        onLongPress: () async {
-          final saved = await SaveTemplateDialog.show(context, t);
-          if (saved) {
+        onSecondaryTapUp: (details) => _showContextMenu(context, details.globalPosition),
+        onLongPressStart: (details) {
+          if (Platform.isAndroid || Platform.isIOS) {
             HapticFeedback.mediumImpact();
+            _showContextMenu(context, details.globalPosition);
+          }
+        },
+        onLongPress: () async {
+          if (!Platform.isAndroid && !Platform.isIOS) {
+            final saved = await SaveTemplateDialog.show(context, widget.task);
+            if (saved) {
+              HapticFeedback.mediumImpact();
+            }
           }
         },
         child: AnimatedContainer(

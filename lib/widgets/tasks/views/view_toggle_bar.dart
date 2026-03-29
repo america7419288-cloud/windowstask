@@ -23,35 +23,39 @@ class ViewToggleBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
       ),
       padding: const EdgeInsets.all(3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: TaskViewLayout.values.map((layout) {
-          final isActive = layout == current;
-          return Tooltip(
-            message: _label(layout),
-            waitDuration: const Duration(milliseconds: 500),
-            child: GestureDetector(
-              onTap: () {
-                context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
-                settings.setViewLayout(layout);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isActive ? colors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(7),
-                  boxShadow: isActive ? AppColors.shadowSM(isDark: colors.isDark) : [],
-                ),
-                child: Icon(
-                  isActive ? _iconFilled(layout) : _iconOutline(layout),
-                  size: 14,
-                  color: isActive ? AppColors.indigo : colors.textTertiary,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: TaskViewLayout.values.map((layout) {
+            final isActive = layout == current;
+            return Tooltip(
+              message: _label(layout),
+              waitDuration: const Duration(milliseconds: 500),
+              child: GestureDetector(
+                onTap: () {
+                  context.read<NavigationProvider>().setLayoutForCurrentSection(layout);
+                  settings.setViewLayout(layout);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isActive ? colors.surface : Colors.transparent,
+                    borderRadius: BorderRadius.circular(7),
+                    boxShadow: isActive ? AppColors.shadowSM(isDark: colors.isDark) : [],
+                  ),
+                  child: Icon(
+                    isActive ? _iconFilled(layout) : _iconOutline(layout),
+                    size: 14,
+                    color: isActive ? AppColors.indigo : colors.textTertiary,
+                  ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

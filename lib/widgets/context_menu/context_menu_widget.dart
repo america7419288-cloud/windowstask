@@ -11,6 +11,7 @@ import 'context_menu_divider.dart';
 import 'priority_submenu.dart';
 import 'move_to_list_submenu.dart';
 import 'context_menu_controller.dart';
+import '../tasks/save_template_dialog.dart';
 import 'package:provider/provider.dart';
 
 class ContextMenuWidget extends StatefulWidget {
@@ -264,10 +265,19 @@ class _ContextMenuWidgetState extends State<ContextMenuWidget> with SingleTicker
                   ),
                   _buildAnimatedItem(
                     index: 7,
-                    child: const ContextMenuDivider(),
+                    child: ContextMenuItem(
+                      icon: PhosphorIcons.copy(),
+                      label: 'Save as Template',
+                      onHoverAction: () => CustomContextMenuController.hideSubmenu(),
+                      onTap: () => _closeAnd(() => SaveTemplateDialog.show(context, widget.task)),
+                    ),
                   ),
                   _buildAnimatedItem(
                     index: 8,
+                    child: const ContextMenuDivider(),
+                  ),
+                  _buildAnimatedItem(
+                    index: 9,
                     child: ContextMenuItem(
                       icon: PhosphorIcons.trash(),
                       label: 'Delete Task',
@@ -275,8 +285,6 @@ class _ContextMenuWidgetState extends State<ContextMenuWidget> with SingleTicker
                       onHoverAction: () => CustomContextMenuController.hideSubmenu(),
                       onTap: () => _closeAnd(() {
                         widget.taskProvider.moveToTrash(widget.task.id);
-                        // The Undo Snackbar is handled in task_card.dart when this action completes
-                        // because we need the card's BuildContext to show it securely.
                       }),
                     ),
                   ),

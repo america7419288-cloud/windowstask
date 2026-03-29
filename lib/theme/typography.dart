@@ -25,6 +25,14 @@ class AppTypography {
         height: 1.15,
       );
 
+  static TextStyle get displaySM =>
+      _base.copyWith(
+        fontSize: 22,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.3,
+        height: 1.2,
+      );
+
   // ── HEADLINE ─────────────────────────
   // Section titles, card headers
   static TextStyle get headlineMD =>
@@ -59,6 +67,14 @@ class AppTypography {
         fontWeight: FontWeight.w600,
         letterSpacing: 0,
         height: 1.4,
+      );
+
+  static TextStyle get titleLG =>
+      _base.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+        height: 1.35,
       );
 
   // ── BODY ─────────────────────────────

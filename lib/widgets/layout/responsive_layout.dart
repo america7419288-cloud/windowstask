@@ -70,11 +70,6 @@ class _CompactLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: Drawer(width: 260, child: sidebar),
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
-      ),
       body: Stack(
         children: [
           content,

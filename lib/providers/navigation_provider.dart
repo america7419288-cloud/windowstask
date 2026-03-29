@@ -294,6 +294,8 @@ class NavigationProvider extends ChangeNotifier {
         return 'Settings';
       case AppConstants.navStore:
         return 'Sticker Store';
+      case AppConstants.navAchievements:
+        return 'Achievements';
       default:
         return _selectedNavItem;
     }

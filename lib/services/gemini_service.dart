@@ -1,0 +1,104 @@
+import 'dart:convert';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import '../models/user_context.dart';
+import '../models/ai_message.dart';
+import '../models/task.dart';
+
+class GeminiService {
+  static const String _modelName = 'gemini-2.5-flash';
+
+  GenerativeModel? _model;
+  ChatSession? _chat;
+
+  void init(String apiKey) {
+    _model = GenerativeModel(
+      model: _modelName,
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+      ),
+    );
+    _chat = _model!.startChat();
+  }
+
+  Future<void> reset() async {
+    _chat = _model?.startChat();
+  }
+
+  String _constructSystemPrompt(UserContext ctx, List<Task> currentTasks) {
+    return '''
+You are Taski AI, a mindful productivity assistant.
+Your goal is to help the user build a perfect daily schedule using Google Gemini.
+
+USER CONTEXT:
+- Routine: Wake at ${ctx.wakeUpTime.hour}:${ctx.wakeUpTime.minute.toString().padLeft(2, "0")}, Sleep at ${ctx.sleepTime.hour}:${ctx.sleepTime.minute.toString().padLeft(2, "0")}
+- Work: Starts at ${ctx.workStartTime.hour}:${ctx.workStartTime.minute.toString().padLeft(2, "0")}, Ends at ${ctx.workEndTime.hour}:${ctx.workEndTime.minute.toString().padLeft(2, "0")}
+- Energy: ${ctx.energyPattern.name} (${ctx.energyPattern.displayName})
+- Focus Duration: ${ctx.preferredTaskDurationMinutes} min
+- Life Description: ${ctx.rawLifeDescription}
+
+CURRENT TASKS:
+${currentTasks.map((t) => "- ${t.title} (Priority: ${t.priority.name}, Duration: ${t.estimatedMinutes ?? 0}m)").join('\n')}
+
+INSTRUCTIONS:
+1. Always respond in JSON format.
+2. Response Types:
+   - "text": A simple text response for conversation.
+   - "schedule": A list of generated tasks to add to the user's day.
+   - "taskSuggestion": A specific edit to an existing task.
+3. Be encouraging, mindful, and concise.
+
+JSON SCHEMA:
+{
+  "type": "text" | "schedule" | "taskSuggestion",
+  "content": "Your text response goes here",
+  "tasks": [ // Only for "schedule" type
+    {
+      "title": "Task title",
+      "priority": 0-4 (None, Low, Medium, High, Urgent),
+      "estimatedMinutes": int,
+      "scheduledTime": "HH:mm",
+      "reasoning": "Why this task is here"
+    }
+  ],
+  "suggestion": { // Only for "taskSuggestion" type
+    "suggestionText": "Why I suggest this change",
+    "originalTaskId": "id",
+    "updatedFields": { "title": "new", "priority": 1, etc. }
+  }
+}
+''';
+  }
+
+  Future<Map<String, dynamic>> sendMessage(String message, UserContext ctx, List<Task> currentTasks) async {
+    if (_chat == null) throw Exception('Gemini not initialized');
+
+    final systemPrompt = _constructSystemPrompt(ctx, currentTasks);
+    
+    // Combine system prompt with user message for context-aware generation
+    // Note: Gemini 1.5 prefers system instruction, but if that's not available, 
+    // we prefix the user message.
+    final response = await _chat!.sendMessage(Content.text("$systemPrompt\n\nUSER MESSAGE: $message"));
+    
+    final text = response.text;
+    if (text == null) throw Exception('No response from Gemini');
+
+    try {
+      // Find JSON block if it's wrapped in markdown
+      String jsonStr = text;
+      if (text.contains('```json')) {
+        jsonStr = text.split('```json')[1].split('```')[0].trim();
+      } else if (text.contains('```')) {
+        jsonStr = text.split('```')[1].split('```')[0].trim();
+      }
+      
+      return jsonDecode(jsonStr);
+    } catch (e) {
+      // Fallback for non-JSON or malformed responses
+      return {
+        "type": "text",
+        "content": text,
+      };
+    }
+  }
+}

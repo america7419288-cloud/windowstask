@@ -150,6 +150,26 @@ class AppColors {
     ),
   ];
 
+  static List<BoxShadow> shadowLG({
+    bool isDark = false}) => [
+    BoxShadow(
+      color: isDark
+        ? Colors.black.withValues(alpha:.40)
+        : const Color(0xFF0C0E1A)
+            .withValues(alpha:.12),
+      blurRadius: 32,
+      offset: const Offset(0, 12),
+    ),
+    BoxShadow(
+      color: isDark
+        ? Colors.black.withValues(alpha:.20)
+        : const Color(0xFF0C0E1A)
+            .withValues(alpha:.04),
+      blurRadius: 10,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
   static List<BoxShadow> shadowPrimary() => [
     BoxShadow(
       color: indigo.withValues(alpha:.28),
@@ -269,3 +289,9 @@ class AppColors {
 }
 
 enum DarkThemePalette { aurora, obsidian }
+
+extension PriorityExtension on Priority {
+  Color get color => AppColors.priorityColor(this);
+  Color get bgColor => AppColors.priorityBg(this);
+  String get label => AppColors.priorityLabel(this);
+}

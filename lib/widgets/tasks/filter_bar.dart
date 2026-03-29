@@ -32,50 +32,56 @@ class FilterBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-      child: Row(
-        children: [
-          _FilterChip(
-            label: 'Priority: $priorityLabel',
-            icon: Icons.filter_list_rounded,
-            isActive: nav.filterPriority != null,
-            onTap: () => _showPriorityFilter(context, nav),
-          ),
-          const SizedBox(width: 8),
-          _FilterChip(
-            label: 'List: $listLabel',
-            icon: Icons.folder_outlined,
-            isActive: nav.filterListId != null,
-            onTap: () => _showListFilter(context, nav),
-          ),
-          const SizedBox(width: 8),
-          _FilterChip(
-            label: 'Date: $dateLabel',
-            icon: Icons.calendar_today_outlined,
-            isActive: nav.filterDateRange != null,
-            onTap: () => _showDateFilter(context, nav),
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              Text(
-                'Sort by: ',
-                style: AppTypography.caption.copyWith(
-                  color: colors.textTertiary,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _showSortPicker(context, tasks),
-                child: Text(
-                  '$sortLabel ↓',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        clipBehavior: Clip.none,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _FilterChip(
+              label: 'Priority: $priorityLabel',
+              icon: Icons.filter_list_rounded,
+              isActive: nav.filterPriority != null,
+              onTap: () => _showPriorityFilter(context, nav),
+            ),
+            const SizedBox(width: 8),
+            _FilterChip(
+              label: 'List: $listLabel',
+              icon: Icons.folder_outlined,
+              isActive: nav.filterListId != null,
+              onTap: () => _showListFilter(context, nav),
+            ),
+            const SizedBox(width: 8),
+            _FilterChip(
+              label: 'Date: $dateLabel',
+              icon: Icons.calendar_today_outlined,
+              isActive: nav.filterDateRange != null,
+              onTap: () => _showDateFilter(context, nav),
+            ),
+            const SizedBox(width: 20),
+            Row(
+              children: [
+                Text(
+                  'Sort by: ',
+                  style: AppTypography.caption.copyWith(
+                    color: colors.textTertiary,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                GestureDetector(
+                  onTap: () => _showSortPicker(context, tasks),
+                  child: Text(
+                    '$sortLabel ↓',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

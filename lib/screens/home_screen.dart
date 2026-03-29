@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import 'package:provider/provider.dart';
@@ -27,8 +28,10 @@ import '../widgets/layout/window_controls.dart';
 import '../widgets/layout/app_background.dart';
 import 'settings_screen.dart';
 import 'insights_screen.dart';
-import 'dashboard_screen.dart';
-import 'sticker_store_screen.dart';
+import 'achievements_screen.dart';
+import '../screens/dashboard_screen.dart';
+import '../screens/sticker_store_screen.dart';
+import '../widgets/ai/ai_chat_bubble.dart';
 import '../providers/user_provider.dart';
 import '../services/reminder_service.dart';
 import '../widgets/tasks/bulk_action_bar.dart';
@@ -58,13 +61,15 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         await context.read<UserProvider>().init(context);
         
-        // Fetch store data from server
         final storeService = context.read<StoreService>();
         await storeService.fetchStore();
+        if (!mounted) return;
 
         // Ping user stats (fire and forget)
         final user = context.read<UserProvider>();
         final fingerprint = await DeviceFingerprint.get();
+        if (!mounted) return;
+
         final tasks = context.read<TaskProvider>();
         
         storeService.pingUserStats(
@@ -112,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainContent = const SettingsScreen();
                 break;
               case AppConstants.navInsights:
-                mainContent = const InsightsScreen();
+                mainContent = InsightsScreen();
                 break;
               case AppConstants.navToday:
                 mainContent = const DashboardScreen();
@@ -122,6 +127,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 break;
                case AppConstants.navStore:
                 mainContent = const StickerStoreScreen();
+                break;
+              case AppConstants.navAchievements:
+                mainContent = AchievementsScreen();
                 break;
               default:
                 mainContent = MultiLayoutTaskView();
@@ -151,14 +159,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
             return Container(
               color: colors.background,
-              child: Stack(
-                children: [
+              child: SafeArea(
+                bottom: false,
+                child: Stack(
+                  children: [
                   ResponsiveLayout(
                     sidebar: const Sidebar(),
                     content: AppBackground(
                       child: Column(
                         children: [
-                          WindowDragArea(child: _ContentHeader()),
+                          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux)
+                            WindowDragArea(child: _ContentHeader())
+                          else
+                            _ContentHeader(),
                           Expanded(
                             child: PageTransitionSwitcher(
                               duration: const Duration(milliseconds: 300),
@@ -189,9 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const BulkActionBar(),
                   if (context.watch<CelebrationProvider>().isCelebrating)
                     const TaskCompletedOverlay(),
+                  AIChatBubble(),
                 ],
               ),
-            ); // Container return
+            ),
+          ); // Container return
           }, // builder
         ), // Consumer
     ); // AppShortcuts return
@@ -214,6 +229,17 @@ class _ContentHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          LayoutBuilder(builder: (context, constraints) {
+            final isCompact = MediaQuery.of(context).size.width < 600;
+            if (!isCompact) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _HeaderIconBtn(
+                icon: PhosphorIcons.list(),
+                onTap: () => Scaffold.of(context).openDrawer(),
+              ),
+            );
+          }),
           if (!nav.isSearchOpen)
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -268,8 +294,10 @@ class _ContentHeader extends StatelessWidget {
               isSmall: true,
               onTap: () => nav.openQuickAdd(),
             ),
-          const SizedBox(width: 8),
-          const _WindowCaptionButtons(),
+          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) ...[
+            const SizedBox(width: 8),
+            const _WindowCaptionButtons(),
+          ],
         ],
       ),
     );
@@ -306,6 +334,8 @@ class _ContentHeader extends StatelessWidget {
         return 'Your productivity overview';
       case AppConstants.navCalendar:
         return 'See your schedule at a glance';
+      case AppConstants.navAchievements:
+        return 'Your journey and earned milestones';
       default:
         if (navItem.startsWith('list_')) {
           return '$count tasks in this list';

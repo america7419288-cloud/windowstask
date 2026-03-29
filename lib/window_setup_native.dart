@@ -20,6 +20,8 @@ class _WindowSetupListener with WindowListener {
 final _windowStateListener = _WindowSetupListener();
 
 Future<void> setupWindow() async {
+  if (Platform.isAndroid || Platform.isIOS) return;
+
   await windowManager.ensureInitialized();
   await Window.initialize();
   
